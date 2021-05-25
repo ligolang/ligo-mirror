@@ -51,9 +51,10 @@ let rec fold_type_expression : ('a, 'err) folder -> 'a -> type_expr -> ('a, 'err
       self init field_type
     in
     bind_fold_ne_list aux init @@ npseq_to_ne_list value.ne_elements
-  | TApp    {value;region=_} ->
-    let (_, tuple) = value in
-    bind_fold_ne_list self init @@ npseq_to_ne_list tuple.value.inside
+  | TApp    {value;region=_} -> ignore value ; failwith "REMITODO"
+    (* let (_, tuple) = value in
+    bind_fold_ne_list self init @@ npseq_to_ne_list tuple.value.inside *)
+  | TArg _ -> failwith "REMITODO"
   | TFun    {value;region=_} ->
     let (ty1, _, ty2) = value in
     let* res = self init ty1 in
@@ -282,11 +283,13 @@ let rec map_type_expression : ('err) mapper -> type_expr -> ('b, 'err) result = 
     let value = {value with ne_elements} in
     return @@ TRecord {value;region}
   | TApp    {value;region} ->
-    let (const, tuple) = value in
+    ignore (value,region) ; failwith "REMITODO"
+    (* let (const, tuple) = value in
     let* inside = bind_map_npseq self tuple.value.inside in
     let tuple = {tuple with value = {tuple.value with inside }} in
     let value = (const, tuple) in
-    return @@ TApp {value;region}
+    return @@ TApp {value;region} *)
+  | TArg _ -> failwith "REMITODO"
   | TFun    {value;region} ->
     let (ty1, wild, ty2) = value in
     let* ty1 = self ty1 in
@@ -455,11 +458,11 @@ let rec map_expression : ('err) mapper -> expr -> (expr, 'err) result = fun f e 
     return @@ EPar {value;region}
   | ELetIn   {value;region} ->
     let {kwd_let=_;kwd_rec=_;binding;kwd_in=_;body;attributes=_} = value in
-    let {binders;lhs_type;eq;let_rhs} = binding in
+    let {binders;type_params;lhs_type;eq;let_rhs} = binding in
     let* let_rhs = self let_rhs in
     let* lhs_type = bind_map_option (fun (a,b) ->
       let* b = self_type b in ok (a,b)) lhs_type in
-    let binding = {binders;lhs_type;eq;let_rhs} in
+    let binding : let_binding = {binders;type_params;lhs_type;eq;let_rhs} in
     let* body = self body in
     let value = {value with binding;body} in
     return @@ ELetIn {value;region}
@@ -521,11 +524,11 @@ and map_declaration : ('err) mapper -> declaration -> (declaration, 'err) result
   match d with
     Let {value;region} ->
     let (kwd_let,kwd_rec,let_binding,attr) = value in
-    let {binders;lhs_type;eq;let_rhs} = let_binding in
+    let {binders;type_params;lhs_type;eq;let_rhs} = let_binding in
     let* let_rhs = self_expr let_rhs in
     let* lhs_type = bind_map_option (fun (a,b) ->
       let* b = self_type b in ok (a,b)) lhs_type in
-    let let_binding = {binders;lhs_type;eq;let_rhs} in
+    let let_binding = {binders;type_params;lhs_type;eq;let_rhs} in
     let value = (kwd_let,kwd_rec,let_binding,attr) in
     return @@ Let {value;region}
   | TypeDecl {value;region} ->

@@ -107,8 +107,9 @@ let rec decompile_type_expr : AST.type_expression -> _ result = fun te ->
     let type_constant = wrap @@ Var.to_name type_operator in
     let* arguments = bind_map_list decompile_type_expr arguments in
     let* arguments = list_to_nsepseq arguments in
-    let lst : _ CST.par = {lpar=ghost;inside=arguments;rpar=ghost} in
-    return @@ CST.TApp (wrap (type_constant,wrap lst))
+    let par : _ CST.par = {lpar=ghost;inside=arguments;rpar=ghost} in
+    let lst : CST.type_constr_arg = CST.CArgTuple (wrap par) in
+    return @@ CST.TApp (wrap (type_constant,lst))
   | T_annoted _annot ->
     failwith "let's work on it later"
   | T_module_accessor {module_name;element} ->
@@ -144,12 +145,13 @@ let get_e_tuple : AST.expression -> _ result = fun expr ->
 
 let pattern_type ({var;ascr;attributes}: _ AST.binder) =
   let attributes = attributes |> Tree_abstraction_shared.Helpers.strings_of_binder_attributes `CameLIGO |> decompile_attributes in
-  let var = CST.PVar {var = decompile_variable var.wrap_content; attributes = attributes} in
+  let var : CST.var_pattern = {variable = decompile_variable var.wrap_content; attributes = attributes} in
+  let pattern : CST.pattern = CST.PVar (wrap var) in
   match ascr with
     Some s ->
       let* type_expr = decompile_type_expr s in
-      ok @@ CST.PTyped (wrap @@ CST.{pattern=var;colon=ghost;type_expr})
-  | None -> ok @@ var
+      ok @@ CST.PTyped (wrap @@ CST.{pattern;colon=ghost;type_expr})
+  | None -> ok @@ pattern
 
 let rec decompile_expression : AST.expression -> _ result = fun expr ->
   let return_expr expr = ok @@ expr in
@@ -227,11 +229,11 @@ let rec decompile_expression : AST.expression -> _ result = fun expr ->
     failwith "corner case : annonymous recursive function"
   | E_let_in {let_binder={var;ascr;attributes=var_attributes};rhs;let_result;attributes} ->
     let var_attributes = var_attributes |> Tree_abstraction_shared.Helpers.strings_of_binder_attributes `CameLIGO |> decompile_attributes in
-    let var = CST.PVar { var = decompile_variable @@ var.wrap_content; attributes = var_attributes } in
+    let var : CST.pattern = CST.PVar (wrap ({variable = decompile_variable @@ var.wrap_content; attributes = var_attributes } : CST.var_pattern)) in
     let binders = (var,[]) in
     let* lhs_type = bind_map_option (bind_compose (ok <@ prefix_colon) decompile_type_expr) @@ ascr in
     let* let_rhs = decompile_expression rhs in
-    let binding : CST.let_binding = {binders;lhs_type;eq=ghost;let_rhs} in
+    let binding : CST.let_binding = {binders;type_params=None(* REMITODO *);lhs_type;eq=ghost;let_rhs} in
     let* body = decompile_expression let_result in
     let attributes = decompile_attributes attributes in
     let lin : CST.let_in = {kwd_let=ghost;kwd_rec=None;binding;kwd_in=ghost;body;attributes} in
@@ -239,7 +241,7 @@ let rec decompile_expression : AST.expression -> _ result = fun expr ->
   | E_type_in {type_binder;rhs;let_result} ->
     let name = decompile_variable type_binder in
     let* type_expr = decompile_type_expr rhs in
-    let type_decl : CST.type_decl = {kwd_type=ghost;name;eq=ghost;type_expr} in
+    let type_decl : CST.type_decl = {kwd_type=ghost;params=None(* REMITODO *);name;eq=ghost;type_expr} in
     let* body = decompile_expression let_result in
     let tin : CST.type_in = {type_decl;kwd_in=ghost;body} in
     return_expr @@ CST.ETypeIn (wrap tin)
@@ -478,27 +480,27 @@ and decompile_declaration : AST.declaration Location.wrap -> (CST.declaration, _
     Declaration_type {type_binder;type_expr} ->
     let name = decompile_variable type_binder in
     let* type_expr = decompile_type_expr type_expr in
-    ok @@ CST.TypeDecl (wrap (CST.{kwd_type=ghost; name; eq=ghost; type_expr}))
+    ok @@ CST.TypeDecl (wrap (CST.{kwd_type=ghost;params=None(* REMITODO *);name; eq=ghost; type_expr}))
   | Declaration_constant {binder;attr;expr}-> (
     let attributes : CST.attributes = decompile_attributes attr in
     let var_attributes = binder.attributes |> Tree_abstraction_shared.Helpers.strings_of_binder_attributes `CameLIGO |> decompile_attributes in
-    let var = CST.PVar {var = decompile_variable binder.var.wrap_content; attributes = var_attributes } in
+    let var = CST.PVar (wrap ({variable = decompile_variable binder.var.wrap_content; attributes = var_attributes } : CST.var_pattern)) in
     let binders = (var,[]) in
     let* lhs_type = bind_map_option (bind_compose (ok <@ prefix_colon) decompile_type_expr) binder.ascr in
     match expr.expression_content with
       E_lambda lambda ->
       let* let_rhs = decompile_expression @@ AST.make_e @@ AST.E_lambda lambda in
-      let let_binding : CST.let_binding = {binders;lhs_type;eq=ghost;let_rhs} in
+      let let_binding : CST.let_binding = {binders;type_params=None(* REMITODO *);lhs_type;eq=ghost;let_rhs} in
       let let_decl : CST.let_decl = (ghost,None,let_binding,attributes) in
       ok @@ CST.Let (wrap @@ let_decl)
     | E_recursive {lambda; _} ->
       let* let_rhs = decompile_expression @@ AST.make_e @@ AST.E_lambda lambda in
-      let let_binding : CST.let_binding = {binders;lhs_type;eq=ghost;let_rhs} in
+      let let_binding : CST.let_binding = {binders;type_params=None(* REMITODO *);lhs_type;eq=ghost;let_rhs} in
       let let_decl : CST.let_decl = (ghost,Some ghost,let_binding,attributes) in
       ok @@ CST.Let (wrap @@ let_decl)
     | _ ->
       let* let_rhs = decompile_expression expr in
-      let let_binding : CST.let_binding = {binders;lhs_type;eq=ghost;let_rhs} in
+      let let_binding : CST.let_binding = {binders;type_params=None(* REMITODO *);lhs_type;eq=ghost;let_rhs} in
       let let_decl : CST.let_decl = (ghost,None,let_binding,attributes) in
       ok @@ CST.Let (wrap @@ let_decl)
   )
@@ -520,7 +522,8 @@ and decompile_pattern : AST.type_expression AST.pattern -> (CST.pattern,_) resul
     | AST.P_var v ->
       let name = (decompile_variable v.var.wrap_content).value in
       let attributes = v.attributes |> Tree_abstraction_shared.Helpers.strings_of_binder_attributes `CameLIGO |> decompile_attributes in
-      ok @@ CST.PVar {var = wrap name; attributes }
+      let pvar : CST.var_pattern = {variable = wrap name; attributes } in
+      ok @@ CST.PVar (wrap pvar)
     | AST.P_list pl -> (
       let ret x = ok (CST.PList x) in
       match pl with
