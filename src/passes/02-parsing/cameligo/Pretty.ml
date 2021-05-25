@@ -112,16 +112,27 @@ and pp_string s = string "\"" ^^ pp_ident s ^^ string "\""
 and pp_verbatim s = string "{|" ^^ pp_ident s ^^ string "|}"
 
 and pp_let_binding (binding : let_binding) =
-  let {binders; lhs_type; let_rhs; eq; _} = binding in
+  let {binders; type_params; lhs_type; let_rhs; eq; _} = binding in
   let head, tail = binders in
-  let patterns =
-    group (nest 2 (separate_map (break 1) pp_pattern (head::tail))) in
+  let lhs = pp_pattern head in
   let lhs =
-    patterns ^^
+    match type_params with
+      None -> lhs
+    | Some params -> lhs ^/^ pp_par pp_type_params params in
+  let lhs =
+    group (nest 2 (lhs ^/^ separate_map (break 1) pp_pattern tail)) in
+  let lhs =
+    lhs ^^
     match lhs_type with
             None -> empty
     | Some (c,e) -> prefix 2 1 (pp_region_t (string " :") c) (pp_type_expr e)
-  in prefix 2 1 (group lhs ^^ group (pp_region_t (string " =") eq)) (group (pp_expr let_rhs))
+  in prefix 2 1 (group lhs ^^ group (pp_region_t (string " =") eq))
+            (group (pp_expr let_rhs))
+
+and pp_type_params (node : type_params) =
+  let type_vars = Utils.nseq_to_list node.type_vars in
+  let type_vars = separate_map (string " ") pp_ident type_vars
+  in string "type " ^^ type_vars
 
 and pp_pattern = function
   PConstr   p -> pp_pconstr p
@@ -201,11 +212,20 @@ and pp_ptyped {value; _} =
   group (pp_pattern pattern ^^ (pp_region_t (string " :") colon) ^/^ pp_type_expr type_expr)
 
 and pp_type_decl decl =
-  let {name; type_expr; kwd_type; eq; _} = decl.value in
-  (* let padding = match type_expr with TSum _ -> 0 | _ -> 2 in *)
-  pp_region_t (string "type ") kwd_type
-  ^^ pp_region_reg pp_ident name ^^ (pp_region_t (string " = ") eq)
-  ^^ pp_type_expr type_expr
+  let {kwd_type; params; name; type_expr; eq; _} = decl.value in
+  group (pp_region_t (string "type ") kwd_type
+         ^^ (match params with
+               None -> empty
+             | Some params -> pp_quoted_params params ^^ string " ")
+         ^^ pp_region_reg pp_ident name
+         ^^ (pp_region_t (string " = ") eq)
+         ^/^ pp_type_expr type_expr)
+
+and pp_quoted_params = function
+  QParam p -> pp_quoted_param p
+| QParamTuple tuple -> pp_par pp_quoted_params_nsepseq tuple
+
+and pp_quoted_params_nsepseq seq = pp_nsepseq "," pp_quoted_param seq
 
 and pp_module_decl decl =
   let {kwd_module; name; module_; eq; kwd_struct; kwd_end} = decl.value in
@@ -314,7 +334,9 @@ and pp_arith_expr = function
 | Mult  e -> pp_region_reg (pp_bin_op "*") e
 | Div   e -> pp_region_reg (pp_bin_op "/") e
 | Mod   e -> pp_region_reg (pp_bin_op "mod") e
-| Neg   e -> pp_region_reg (fun e -> string "-" ^^ pp_expr e.value.arg) e
+| Neg   e -> pp_region_reg
+              (fun (e : minus un_op reg) ->
+                 string "-" ^^ pp_expr e.value.arg) e
 | Int   e -> pp_region_reg pp_int e
 | Nat   e -> pp_region_reg pp_nat e
 | Mutez e -> pp_region_reg pp_mutez e
@@ -537,8 +559,9 @@ and pp_type_expr = function
 | TModA   t -> pp_region_reg (pp_module_access pp_type_expr) t
 | TArg    t -> pp_region_reg pp_quoted_param t
 
-and pp_quoted_param {value; _} =
-  pp_region_reg pp_ident value.name
+and pp_quoted_param (param : quoted_param reg) =
+  let quoted = {param with value = "'" ^ param.value.name.value}
+  in pp_region_reg pp_ident quoted
 
 and pp_cartesian {value; _} =
   let head, tail = value in
@@ -554,7 +577,8 @@ and pp_cartesian {value; _} =
 and pp_sum_type {value; _} =
   let {lead_vbar; variants; attributes; _} = value in
   let rec inner result = function
-  | (c, item) :: rest -> inner (result ^^ break 1 ^^ pp_region_t (string "| ") c  ^^ (pp_variant item)) rest
+  | (c, item) :: rest ->
+       inner (result ^^ break 1 ^^ pp_region_t (string "| ") c  ^^ (pp_variant item)) rest
   | [] -> result
   in
   let whole =

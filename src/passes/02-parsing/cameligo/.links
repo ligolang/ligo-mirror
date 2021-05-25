@@ -19,5 +19,6 @@ $HOME/git/ligo/src/passes/00-preprocessing/cameligo/File.ml
 $HOME/git/ligo/src/passes/01-lexing/cameligo/Self_tokens.ml
 $HOME/git/ligo/src/passes/01-lexing/cameligo/Token.mll
 $HOME/git/ligo/src/passes/01-lexing/cameligo/Style.ml
+$HOME/git/ligo/src/passes/01-lexing/cameligo/AttachComments.ml
 $HOME/git/ligo/src/passes/01-lexing/shared/LexerMainGen.ml
 $HOME/git/ligo/src/passes/01-lexing/shared/Lexer.mll
