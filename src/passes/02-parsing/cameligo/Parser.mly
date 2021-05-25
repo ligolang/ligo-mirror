@@ -62,7 +62,6 @@ let mk_wild region =
 %on_error_reduce fun_type
 %on_error_reduce cartesian
 %on_error_reduce core_irrefutable
-%on_error_reduce type_arg
 
 (* See [ParToken.mly] for the definition of tokens. *)
 
@@ -186,10 +185,10 @@ type_decl:
     in {region; value} }
 
 quoted_type_params:
-  quoted_type_parameter             { QParam      $1 }
-| par(tuple(quoted_type_parameter)) { QParamTuple $1 }
+  quoted_param             { QParam      $1 }
+| par(tuple(quoted_param)) { QParamTuple $1 }
 
-quoted_type_parameter:
+quoted_param:
   "'" type_var {
     let region = cover $1 $2.region
     and value = {quote=$1; name=$2}
@@ -242,6 +241,7 @@ core_type:
 | "<int>"          {    TInt $1 }
 | module_access_t  {   TModA $1 }
 | type_constr_app  {    TApp $1 }
+| quoted_param     {    TArg $1 }
 
 type_constr_app:
   type_constr_arg type_name {
@@ -252,16 +252,8 @@ type_constr_app:
     in {region; value} }
 
 type_constr_arg:
-  unique_type_arg      { CArg      $1 }
-| par(tuple(type_arg)) { CArgTuple $1 }
-
-unique_type_arg:
-  core_type             { $1 }
-| quoted_type_parameter { TArg $1 }
-
-type_arg:
-  type_expr             { $1 }
-| quoted_type_parameter { TArg $1 }
+  core_type             { CArg      $1 }
+| par(tuple(type_expr)) { CArgTuple $1 }
 
 sum_type:
   nsepseq(variant,"|") {

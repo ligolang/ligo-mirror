@@ -877,8 +877,7 @@ and pp_quoted_params state = function
     in List.iteri (apply arity) quoted_params
 
 and pp_quoted_param state (node : quoted_param reg) =
-  pp_node  state "'";
-  pp_ident state node.value.name
+  pp_ident state {node with value = "'" ^ node.value.name.value}
 
 and pp_module_decl state decl =
   pp_ident     (state#pad 2 0) decl.name;
