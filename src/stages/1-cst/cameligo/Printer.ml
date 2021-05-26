@@ -742,8 +742,12 @@ and pp_pattern state = function
     pp_node         state "PCtor";
     pp_ctor_pattern (state#pad 1 0) p
 | PVar p ->
-    pp_node  state "PVar";
-    pp_ident (state#pad 1 0) p
+    let {var; attributes} = p in
+    pp_node state "PVar";
+    let arity = if attributes = [] then 1 else 2 in
+    pp_ident (state#pad 1 0) var;
+    if attributes <> [] then
+      pp_attributes (state#pad arity 1) attributes
 | PInt p ->
     pp_node state "PInt";
     pp_int  state p

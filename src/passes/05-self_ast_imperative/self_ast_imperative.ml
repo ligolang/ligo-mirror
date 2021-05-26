@@ -2,6 +2,8 @@ open Trace
 module Errors = Errors
 
 let all_expression_mapper = [
+  Vars.capture_expression ;
+  Consts.assign_expression ;
   Tezos_type_annotation.peephole_expression ;
   None_variant.peephole_expression ;
   Literals.peephole_expression ;
@@ -21,6 +23,19 @@ let all_module =
 
 let all_expression =
   let all_p = List.map Helpers.map_expression all_expression_mapper in
+  bind_chain all_p
+
+let decompile_imperative =
+  let all_p = List.map Helpers.map_module @@
+    List.map (fun el -> Helpers.Expression el) [
+    Assign_heuristic.peephole_expression ;
+  ] in
+  bind_chain all_p
+
+let decompile_imperative_expression =
+  let all_p = List.map Helpers.map_expression @@ [
+    Assign_heuristic.peephole_expression ;
+  ] in
   bind_chain all_p
 
 let map_expression = Helpers.map_expression
