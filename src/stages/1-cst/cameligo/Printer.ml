@@ -766,18 +766,7 @@ let pp_verbatim state {value=name; region} =
   let node = sprintf "%s{|%s|} (%s)\n" state#pad_path name reg
   in Buffer.add_string state#buffer node
 
-let pp_markup_item state c =
-  let comment = match c with
-    LineCom (c, _) -> sprintf "//%s" c.value
-  | BlockCom (c, _) -> sprintf "(*%s*)" c.value
-  in
-  Buffer.add_string state#buffer comment
-
-let pp_markup state comments =
-  List.iter (pp_markup_item state) comments
-
 let pp_loc_node state name region =
-  pp_markup state region#markup;
   pp_ident state {value=name; region}
 
 let rec pp_cst state {decl; _} =
@@ -788,8 +777,7 @@ let rec pp_cst state {decl; _} =
   List.iteri (List.length decls |> apply) decls
 
 and pp_declaration state = function
-  Let {value = (kwd_let, kwd_rec, let_binding, attr); region} ->
-    pp_markup state kwd_let#markup;
+  Let {value = (_kwd_let, kwd_rec, let_binding, attr); region} ->
     pp_loc_node state "Let" region;
     (if kwd_rec <> None then pp_node (state#pad 0 0) "rec"); (* Hack *)
     pp_let_binding state let_binding attr
@@ -826,7 +814,7 @@ and pp_let_binding state node attr =
     | Some params ->
         let state = state#pad arity (rank+1) in
         pp_node state "<type_params>";
-        pp_type_params (state#pad 1 0) params; rank+1 in
+        pp_type_params state params; rank+1 in
   let rank =
     match lhs_type with
       None -> rank
@@ -848,6 +836,12 @@ and pp_let_binding state node attr =
       let apply len rank = pp_ident (state#pad len rank)
       in List.iteri (apply length) attr
   in ()
+
+and pp_binders state patterns =
+  let patterns       = Utils.nseq_to_list patterns in
+  let arity          = List.length patterns in
+  let apply len rank = pp_pattern (state#pad len rank)
+  in List.iteri (apply arity) patterns
 
 and pp_type_params state (node : type_params par reg) =
   let {value={inside; _}; _} = node in
@@ -890,25 +884,17 @@ and pp_module_alias state decl =
   pp_ident (state#pad (1+len) 0) decl.alias;
   List.iteri (apply len) binders
 
-and pp_binders state patterns =
-  let patterns       = Utils.nseq_to_list patterns in
-  let arity          = List.length patterns in
-  let apply len rank = pp_pattern (state#pad len rank)
-  in List.iteri (apply arity) patterns
-
 and pp_pattern state = function
   PConstr p ->
     pp_node state "PConstr";
     pp_constr_pattern (state#pad 1 0) p
 | PVar {value; _} ->
    let {variable; attributes} = value in
-   pp_attributes (state#pad 2 0) attributes;
-   pp_ident      (state#pad 2 1) variable
-
-(*   let arity = if attributes = [] then 1 else 2 in
-   pp_ident (state#pad 1 0) var;
-   if attributes <> [] then
-     pp_attributes (state#pad arity 1) attributes*)
+   if attributes = [] then
+     pp_ident (state#pad 1 0) variable
+   else
+     pp_node state "PVar";
+     pp_attributes (state#pad 0 1) attributes
 | PInt i ->
     pp_node state "PInt";
     pp_int  state i
