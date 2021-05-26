@@ -83,8 +83,9 @@ let rec vars_of_pattern env = function
 | PUnit _
 | PInt _ | PNat _ | PBytes _
 | PString _ | PVerbatim _ -> ok @@ env
-| PVar {var} when is_wildcard var -> ok @@ env
-| PVar {var} ->
+| PVar var when is_wildcard var.value.variable -> ok @@ env
+| PVar x ->
+    let var = x.value.variable in
     let* () = check_reserved_name var in
     if VarSet.mem var env then
       fail @@ non_linear_pattern var
@@ -164,6 +165,7 @@ let peephole_type : unit -> type_expr -> (unit,'err) result = fun _ t ->
      let* () =
        Utils.nsepseq_to_list value.ne_elements |> check_fields
      in ok @@ ()
+  | TArg    _
   | TProd   _
   | TApp    _
   | TFun    _

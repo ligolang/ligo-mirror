@@ -65,7 +65,7 @@ let rec compile_type_expression : CST.type_expr -> _ result = fun te ->
     let lst = npseq_to_list nsepseq in
     let* lst = bind_map_list self lst in
     return @@ t_tuple ~loc lst
-  | TApp app ->
+  | TApp app -> (
     let get_t_string_singleton_opt = function
       | CST.TString s -> Some s.value
       | _ -> None
@@ -77,12 +77,15 @@ let rec compile_type_expression : CST.type_expr -> _ result = fun te ->
       | _ -> None
     in
     let ((operator,args), loc) = r_split app in
+    let args = match args with
+      | CArg x -> [x]
+      | CArgTuple args -> npseq_to_list args.value.inside
+    in
     (* this is a bad design, michelson_or and pair should be an operator
        see AnnotType *)
-    (match operator.value with
-      | "michelson_or" ->
-        let lst = npseq_to_list args.value.inside in
-        (match lst with
+    match operator.value with
+      | "michelson_or" -> (
+        match args with
         | [a ; b ; c ; d ] -> (
           let* b' =
             trace_option (michelson_type_wrong te operator.value) @@
@@ -94,10 +97,10 @@ let rec compile_type_expression : CST.type_expr -> _ result = fun te ->
           let* c' = self c in
           return @@ t_michelson_or ~loc a' b' c' d'
           )
-        | _ -> fail @@ michelson_type_wrong_arity loc operator.value)
-      | "michelson_pair" ->
-        let lst = npseq_to_list args.value.inside in
-        (match lst with
+        | _ -> fail @@ michelson_type_wrong_arity loc operator.value
+      )
+      | "michelson_pair" -> (
+        match args with
         | [a ; b ; c ; d ] -> (
           let* b' =
             trace_option (michelson_type_wrong te operator.value) @@
@@ -109,10 +112,10 @@ let rec compile_type_expression : CST.type_expr -> _ result = fun te ->
           let* c' = self c in
           return @@ t_michelson_pair ~loc a' b' c' d'
           )
-        | _ -> fail @@ michelson_type_wrong_arity loc operator.value)
-      | "sapling_state" ->
-        let lst = npseq_to_list args.value.inside in
-        (match lst with
+        | _ -> fail @@ michelson_type_wrong_arity loc operator.value
+      )
+      | "sapling_state" -> (
+        match args with
         | [(a : CST.type_expr)] -> (
           let sloc = Location.lift @@ Raw.type_expr_to_region a in
           let* a' =
@@ -121,10 +124,10 @@ let rec compile_type_expression : CST.type_expr -> _ result = fun te ->
           let singleton = t_singleton ~loc:sloc (Literal_int a') in
           return @@ t_sapling_state ~loc singleton
           )
-        | _ -> fail @@ michelson_type_wrong_arity loc operator.value)
-      | "sapling_transaction" ->
-        let lst = npseq_to_list args.value.inside in
-        (match lst with
+        | _ -> fail @@ michelson_type_wrong_arity loc operator.value
+      )
+      | "sapling_transaction" -> (
+        match args with
         | [(a : CST.type_expr)] -> (
           let sloc = Location.lift @@ Raw.type_expr_to_region a in
           let* a' =
@@ -133,13 +136,13 @@ let rec compile_type_expression : CST.type_expr -> _ result = fun te ->
           let singleton = t_singleton ~loc:sloc (Literal_int a') in
           return @@ t_sapling_transaction ~loc singleton
           )
-        | _ -> fail @@ michelson_type_wrong_arity loc operator.value)
+        | _ -> fail @@ michelson_type_wrong_arity loc operator.value
+      )
     | _ ->
       let operator = Var.of_name operator.value in
-      let lst = npseq_to_list args.value.inside in
-      let* lst = bind_map_list self lst in
+      let* lst = bind_map_list self args in
       return @@ t_app ~loc operator lst
-    )
+  )
   | TFun func ->
     let ((input_type,_,output_type), loc) = r_split func in
     let* input_type = self input_type in
@@ -157,6 +160,10 @@ let rec compile_type_expression : CST.type_expr -> _ result = fun te ->
   | TWild _ -> fail @@ unsupported_twild te
   | TString _s -> fail @@ unsupported_string_singleton te
   | TInt _s -> fail @@ unsupported_string_singleton te
+  | TArg var ->
+    let (quoted_var,loc) = r_split var in
+    let v = Var.of_name quoted_var.name.value in
+    return @@ t_variable ~loc v
   | TModA ma ->
     let (ma, loc) = r_split ma in
     let (module_name, _) = r_split ma.module_name in
@@ -507,11 +514,12 @@ let rec compile_expression : CST.expr -> (AST.expr , abs_error) result = fun e -
 and conv : CST.pattern -> (AST.ty_expr AST.pattern,_) result =
   fun p ->
   match unepar p with
-  | CST.PVar {var;attributes} ->
-    let (var,loc) = r_split var in
-    let attributes = attributes |> List.map (fun x -> x.Region.value) |>
-                       Tree_abstraction_shared.Helpers.binder_attributes_of_strings in
+  | CST.PVar x ->
+    let (pvar,loc) = r_split x in
+    let attributes = pvar.attributes |> List.map (fun x -> x.Region.value) |>
+    Tree_abstraction_shared.Helpers.binder_attributes_of_strings in
     let b =
+      let (var, loc) = r_split pvar.variable in
       let var = Location.wrap ~loc @@ Var.of_name var in
       { var ; ascr = None ; attributes }
     in
@@ -613,7 +621,7 @@ and untpar = function
 | _ as v -> v
 
 and check_annotation = function
-| CST.PVar {var} -> fail (missing_funarg_annotation var)
+| CST.PVar var -> fail (missing_funarg_annotation var.value.variable)
 | CST.PPar { value = { inside ; _ }; _ } -> check_annotation inside
 | CST.PTuple { value ; _ } ->
   let l = Utils.nsepseq_to_list value in
@@ -644,7 +652,9 @@ and compile_let_binding ?kwd_rec attributes binding =
   | CST.PPar par, [] ->
     let par, _ = r_split par in
     aux (par.inside, [])
-  | PVar {var=name;attributes=var_attributes}, args -> (*function *)
+  | PVar pvar, args -> (* function *)
+    let (pvar, _loc) = r_split pvar in (* TODO: shouldn't _loc be used somewhere bellow ?*)
+    let {variable=name;attributes=var_attributes} : CST.var_pattern = pvar in
     let var_attributes = var_attributes |> List.map (fun x -> x.Region.value) |>
                         Tree_abstraction_shared.Helpers.binder_attributes_of_strings in
     let* () = bind_list_iter check_annotation args in
@@ -684,8 +694,10 @@ and compile_parameter : CST.pattern -> (_ binder * (_ -> _),_) result =
   | PUnit the_unit  ->
     let loc = Location.lift the_unit.region in
     return_1 ~ascr:(t_unit ~loc ()) loc @@ Var.fresh ()
-  | PVar {var;attributes} ->
-    let (var,loc) = r_split var in
+  | PVar pvar ->
+    let (pvar, _loc) = r_split pvar in (* TODO: shouldn't _loc be used somewhere bellow ?*)
+    let {variable;attributes} : CST.var_pattern = pvar in
+    let (var,loc) = r_split variable in
     let attributes = attributes |> List.map (fun x -> x.Region.value) |>
                        Tree_abstraction_shared.Helpers.binder_attributes_of_strings in
     return_1 ~attributes loc @@ mk_var var
