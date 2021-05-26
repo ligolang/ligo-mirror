@@ -11,12 +11,7 @@ module type TOKEN =
     type token
     type t = token
 
-    val to_lexeme : token -> string
-    val to_string : offsets:bool -> [`Byte | `Point] -> token -> string
     val to_region : token -> Region.t
-    val is_eof    : token -> bool
-
-    val eof       : Region.t -> token
   end
 
 (* Generic signature of input lexers *)
@@ -32,7 +27,7 @@ module type LEXER =
 
     type window = <
       last_token    : token option;
-      current_token : token           (* Including EOF *)
+      current_token : token
     >
 
     val get_window : unit -> window option
@@ -82,19 +77,10 @@ module Make (Lexer  : LEXER)
   sig
     type token = Lexer.token
 
-    (* The source configuration gathers information about the input:
-         * The method [offsets] returns [true] if error messages
-           should refer to horizontal offsets (a la Emacs) instead of
-           column numbers (a la Vim).
-         * The method [mode] indicates whether source locations should
-           be refer to Unicode points (UTF-8) or bytes *)
-
     type message = string Region.reg
 
     type 'src parser =
       'src -> (Parser.tree, message) Stdlib.result
-
-    val get_window : unit -> Lexer.window
 
     (* Monolithic API of Menhir *)
 

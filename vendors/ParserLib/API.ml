@@ -11,12 +11,7 @@ module type TOKEN =
     type token
     type t = token
 
-    val to_lexeme : token -> string
-    val to_string : offsets:bool -> [`Byte | `Point] -> token -> string
     val to_region : token -> Region.t
-    val is_eof    : token -> bool
-
-    val eof       : Region.t -> token
   end
 
 (* Generic signature of input lexers *)
@@ -32,7 +27,7 @@ module type LEXER =
 
     type window = <
       last_token    : token option;
-      current_token : token           (* Including EOF *)
+      current_token : token
     >
 
     val get_window : unit -> window option
@@ -76,8 +71,8 @@ module type PAR_ERR =
 
 (* The functor integrating the parser with its errors *)
 
-module Make (Lexer: LEXER)
-            (Parser: PARSER with type token = Lexer.Token.token) =
+module Make (Lexer  : LEXER)
+            (Parser : PARSER with type token = Lexer.Token.token) =
   struct
     module Token = Lexer.Token
     type token = Lexer.token
@@ -89,15 +84,12 @@ module Make (Lexer: LEXER)
 
     (* Errors and error messages *)
 
-    let get_window () : Lexer.window =
-      let invalid_eof =
-        object
-          method last_token    = None
-          method current_token = Token.eof Region.ghost
-        end in
+    let wrap_parse_error msg =
       match Lexer.get_window () with
-        None -> invalid_eof
-      | Some window -> window
+        None -> Stdlib.Error (Region.wrap_ghost msg)
+      | Some window ->
+          let region = Token.to_region window#current_token
+          in Stdlib.Error Region.{region; value=msg}
 
     (* THE MONOLITHIC API *)
 
@@ -114,12 +106,9 @@ module Make (Lexer: LEXER)
       let menhir_lexer = mk_menhir_lexer Lexer.scan in
       try Stdlib.Ok (Parser.main menhir_lexer lexbuf) with
         (* See [mk_menhir_lexer]: *)
-        LexingError msg ->
-          Stdlib.Error msg
-      | Parser.Error -> (* Menhir exception *)
-          let window = get_window () in
-          let region = Token.to_region window#current_token
-          in Stdlib.Error Region.{value=""; region}
+        LexingError msg -> Stdlib.Error msg
+        (* Menhir exception *)
+      | Parser.Error -> wrap_parse_error "Syntax error."
 
     let mono_from_lexbuf  = mono_menhir (fun x -> x)
     let mono_from_channel = mono_menhir Lexing.from_channel
@@ -150,14 +139,14 @@ module Make (Lexer: LEXER)
 
     module Inter = Parser.MenhirInterpreter
 
-    (* The call [state checkpoint] extracts the number of the current
-       state out of a parser checkpoint. The case [None] denotes the
-       case of an error state with an empty LR stack: Menhir does not
-       know how to determine that state. Until this is fixed, we
-       return [None] and a generic error message (see function
-       [message] below.) *)
+    (* The call [get_state checkpoint] extracts the number of the
+       current state out of a parser checkpoint. The case [None]
+       denotes the case of an error state with an empty LR stack:
+       Menhir does not know how to determine that state. Until this is
+       fixed, we return [None] and a generic error message (see
+       function [message] below.) *)
 
-    let state checkpoint : int option =
+    let get_state checkpoint : int option =
       let stack = function
         Inter.HandlingError env -> Some (Inter.stack env)
       |                       _ -> None in
@@ -176,7 +165,7 @@ module Make (Lexer: LEXER)
 
     let failure (module ParErr : PAR_ERR) checkpoint =
       let msg =
-        match state checkpoint with
+        match get_state checkpoint with
           (* A MenhirLib limitation (see [state]). Work around. *)
           None -> "Syntax error."
         | Some state ->
@@ -205,13 +194,10 @@ module Make (Lexer: LEXER)
       let parser       = Incr.main lexbuf.Lexing.lex_curr_p in
       let tree =
         try Stdlib.Ok (interpreter parser) with
-        (* See [mk_menhir_lexer]: *)
-          LexingError msg -> Stdlib.Error msg
-        | ParsingError msg ->
-            let window = get_window () in
-            let region = Token.to_region window#current_token in
-            let msg    = msg ^ "\n"
-            in Stdlib.Error Region.{value=msg; region}
+          (* See [mk_menhir_lexer]: *)
+          LexingError  msg -> Stdlib.Error msg
+          (* See above definition of [ParsingError] *)
+        | ParsingError msg -> wrap_parse_error (msg ^ "\n")
       in flush_all (); tree
 
     let incr_from_lexbuf  = incr_menhir (fun x -> x)
