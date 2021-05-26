@@ -248,6 +248,11 @@ and 'a module_path = {
 (* IMPORTANT: The data constructors are sorted alphabetically. If you
    add or modify some, please make sure they remain in order. *)
 
+and bound_variable = {
+  var: variable;
+  attributes: attributes;
+}
+
 and pattern =
   P_Bytes  of (lexeme * Hex.t) reg
 | P_Cons   of (pattern, cons) nsepseq reg
@@ -265,7 +270,7 @@ and pattern =
 | P_Tuple  of tuple_pattern
 | P_Typed  of typed_pattern reg
 | P_Unit   of the_unit reg
-| P_Var    of variable
+| PVar      of bound_variable
 
 and tuple_pattern = (pattern, comma) nsepseq par reg
 
@@ -497,7 +502,7 @@ let pattern_to_region = function
 | P_Tuple  {region; _}
 | P_Typed  {region; _}
 | P_Unit   {region; _}
-| P_Var    {region; _}
+| P_Var    {var={region;_};_}
   -> region
 
 let expr_to_region = function

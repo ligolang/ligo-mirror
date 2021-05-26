@@ -366,7 +366,7 @@ let_decl:
 
 let_binding:
   "<ident>" nseq(sub_irrefutable) type_annotation? "=" expr {
-    let binders = Utils.nseq_cons (PVar $1) $2 in
+    let binders = Utils.nseq_cons (PVar {var = $1; attributes = [] }) $2 in
     {binders; lhs_type=$3; eq=$4; let_rhs=$5}
   }
 | irrefutable type_annotation? "=" expr {
@@ -386,7 +386,7 @@ irrefutable:
 
 sub_irrefutable:
   "_"                     { P_Var (mk_wild $1) }
-| "<ident>"               { P_Var    $1 }
+  var_pattern             { P_Var $1    }
 | unit                    { P_Unit   $1 }
 | record_pattern          { P_Record $1 }
 | par(closed_irrefutable) { P_Par    $1 }
@@ -438,7 +438,7 @@ core_pattern:
 | "None"         { P_None   $1 }
 | some_pattern   { P_Some   $1 }
 | unit           { P_Unit   $1 }
-| variable       { P_Var    $1 }
+| var_pattern    { PVar     $1 }
 | list_pattern   { P_List   $1 }
 | ctor_pattern   { P_Ctor   $1 }
 | record_pattern { P_Record $1 }
@@ -461,6 +461,9 @@ ctor_pattern:
   }
 | ctor { {$1 with value = ($1, None)} }
 
+var_pattern:
+  "<ident>" seq("[@attr]")        {  {var=$1; attributes=$2} }
+
 record_pattern:
   "{" sep_or_term_list(field_pattern,";") "}" {
     let ne_elements, terminator = $2 in
@@ -472,7 +475,7 @@ record_pattern:
 field_pattern:
   field_name {
     let region  = $1.region
-    and value  = {field_name=$1; eq=Region.ghost; pattern=PVar $1}
+    and value  = {field_name=$1; eq=Region.ghost; pattern=PVar { var = $1; attributes = [] }}
     in {region; value}
   }
 | field_name "=" core_pattern {

@@ -209,10 +209,15 @@ and field_decl = {
 
 and type_tuple = (type_expr, comma) nsepseq par reg
 
+and bound_variable = {
+  var: variable;
+  attributes: attributes;
+}
+
 and pattern =
   PCtor     of ctor_pattern
 | PUnit     of the_unit reg
-| PVar      of variable
+| PVar      of bound_variable
 | PInt      of (lexeme * Z.t) reg
 | PNat      of (lexeme * Z.t) reg
 | PBytes    of (lexeme * Hex.t) reg
@@ -515,7 +520,7 @@ let ctor_pattern_to_region = function
 let pattern_to_region = function
 | PList p -> list_pattern_to_region p
 | PCtor c -> ctor_pattern_to_region c
-| PUnit {region;_}  | PTuple {region;_}  | PVar {region;_}
+| PUnit {region;_}  | PTuple {region;_}  | PVar {var={region;_};_}
 | PInt {region;_}   | PString {region;_} | PVerbatim {region;_}
 | PPar {region;_}    | PRecord {region;_}
 | PTyped {region;_} | PNat {region;_}    | PBytes {region;_}

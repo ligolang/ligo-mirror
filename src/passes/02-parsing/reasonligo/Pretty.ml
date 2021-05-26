@@ -77,7 +77,7 @@ and pp_let_binding let_ (binding : let_binding) =
 and pp_pattern = function
   PCtor     p -> pp_pctor p
 | PUnit     _ -> string "()"
-| PVar      v -> pp_ident v
+| PVar      v -> pp_pvar v
 | PInt      i -> pp_int i
 | PNat      n -> pp_nat n
 | PBytes    b -> pp_bytes b
@@ -95,6 +95,8 @@ and pp_pctor = function
 | PFalse   _ -> string "false"
 | PTrue    _ -> string "true"
 | PCtorApp a -> pp_patt_c_app a
+
+and pp_pvar {var; attributes} = pp_ident var ^^ pp_attributes attributes
 
 and pp_patt_c_app {value; _} =
   match value with
