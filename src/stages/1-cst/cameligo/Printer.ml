@@ -804,33 +804,34 @@ and pp_let_binding state node attr =
     | None,   Some _ -> 3
     | Some _, Some _ -> 4 in
   let arity = if attr = [] then arity else arity+1 in
-  let rank =
-    let state = state#pad arity 0 in
-    pp_node    state "<binders>";
-    pp_binders state binders; 0 in
+  let rank = 0 in
   let rank =
     match type_params with
       None -> rank
     | Some params ->
-        let state = state#pad arity (rank+1) in
+        let state = state#pad arity rank in
         pp_node state "<type_params>";
         pp_type_params state params; rank+1 in
+  let rank =
+    let state = state#pad arity rank in
+    pp_node    state "<binders>";
+    pp_binders state binders; rank+1 in
   let rank =
     match lhs_type with
       None -> rank
     | Some (_, type_expr) ->
-       let state = state#pad arity (rank+1) in
-       pp_node state "<lhs type>";
-       pp_type_expr (state#pad 1 0) type_expr;
-       rank+1 in
+        let state = state#pad arity rank in
+        pp_node state "<lhs type>";
+        pp_type_expr (state#pad 1 0) type_expr;
+        rank+1 in
   let rank =
-    let state = state#pad arity (rank+1) in
+    let state = state#pad arity rank in
     pp_node state "<rhs>";
     pp_expr (state#pad 1 0) let_rhs;
     rank+1 in
   let () =
     if attr <> [] then
-      let state = state#pad arity (rank+1) in
+      let state = state#pad arity rank in
       pp_node state "<attributes>";
       let length         = List.length attr in
       let apply len rank = pp_ident (state#pad len rank)
@@ -862,7 +863,7 @@ and pp_type_decl state decl =
   pp_type_expr (state#pad arity rank) decl.type_expr
 
 and pp_quoted_params state = function
-  QParam p -> pp_quoted_param state p
+  QParam p -> pp_quoted_param (state#pad 1 0) p
 | QParamTuple p ->
     let {value = {inside; _}; _} = p in
     let quoted_params = Utils.nsepseq_to_list inside in
@@ -891,10 +892,11 @@ and pp_pattern state = function
 | PVar {value; _} ->
    let {variable; attributes} = value in
    if attributes = [] then
-     pp_ident (state#pad 1 0) variable
+     pp_ident state variable
    else
-     pp_node state "PVar";
-     pp_attributes (state#pad 0 1) attributes
+     (pp_node       state "PVar";
+      pp_ident      (state#pad 2 0) variable;
+      pp_attributes (state#pad 2 1) attributes)
 | PInt i ->
     pp_node state "PInt";
     pp_int  state i
