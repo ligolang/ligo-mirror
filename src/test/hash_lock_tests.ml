@@ -244,7 +244,7 @@ let reveal () =
   expect_eq ~options (program,env) "reveal"
     (e_pair reveal init_storage) (e_pair empty_op_list post_storage)
 
-let main = test_suite "Hashlock" [
+let main = test_suite "Hashlock (CameLIGO)" [
     test "compile" compile_main ;
     test "commit" commit ;
     test "reveal (fail if no commitment)" reveal_no_commit ;
