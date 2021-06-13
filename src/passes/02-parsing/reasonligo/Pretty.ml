@@ -291,8 +291,8 @@ and pp_injection :
     let {compound; elements; _} = value in
     let sep = (string ",") ^^ break 1 in
     let elements = Utils.sepseq_to_list elements in
-    let elements = separate_map sep print elements in
-    match Option.map pp_compound compound with
+    let elements = separate_map sep printer elements in
+    match Option.map ~f:pp_compound compound with
       None -> elements
     | Some (opening, closing) ->
         string opening ^^ nest 1 elements ^^ string closing
@@ -328,7 +328,7 @@ and pp_ne_injection :
     let {compound; ne_elements; attributes; _} = value in
     let elements = pp_nsepseq "," print ne_elements in
     let inj =
-      match Option.map pp_compound compound with
+      match Option.map ~f:pp_compound compound with
         None -> elements
       | Some (opening, closing) ->
           string opening ^^ nest 2 (break 0 ^^ elements)
@@ -459,7 +459,7 @@ and pp_seq {value; _} =
   let sep = string ";" ^^ hardline in
   let elements = Utils.sepseq_to_list elements in
   let elements = separate_map sep pp_expr elements in
-  match Option.map pp_compound compound with
+  match Option.map ~f:pp_compound compound with
     None -> elements
   | Some (opening, closing) ->
      string opening

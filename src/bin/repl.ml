@@ -55,13 +55,13 @@ let repl_result_jsonformat = function
      let func_declarations  = Ligo_compile.Of_core.list_declarations module_ in
      let type_declarations  = Ligo_compile.Of_core.list_type_declarations module_ in
      let name n = `Assoc [("name", `String n)] in
-     let defs = List.map name (func_declarations @ type_declarations) in
+     let defs = List.map ~f:name (func_declarations @ type_declarations) in
      `Assoc [("definitions", `List defs)]
   | Defined_values_typed module' ->
      let func_declarations  = Ligo_compile.Of_typed.list_declarations module' in
      let type_declarations  = Ligo_compile.Of_typed.list_type_declarations module' in
      let name n = `Assoc [("name", `String n)] in
-     let defs = List.map name (func_declarations @ type_declarations) in
+     let defs = List.map ~f:name (func_declarations @ type_declarations) in
      `Assoc [("definitions", `List defs)]
   | Just_ok -> `Assoc []
 
@@ -110,7 +110,12 @@ let try_contract state s =
                                mod_types = mod_types; } in
       ok @@ (state, Defined_values_core core_prg) in
   try_catch (function
-        (`Main_parser _ : Main_errors.all) -> try_eval state s
+        (`Main_parser _ : Main_errors.all)
+      | (`Main_cit_jsligo _ : Main_errors.all)
+      | (`Main_cit_pascaligo _ : Main_errors.all)
+      | (`Main_cit_cameligo _ : Main_errors.all)
+      | (`Main_cit_reasonligo _ : Main_errors.all) ->
+         try_eval state s
       | e -> fail e) c
 
 let import_file state file_name module_name =
@@ -193,15 +198,10 @@ let make_initial_state syntax protocol infer dry_run_opts =
     mod_types = Ast_core.SMap.empty }
 
 let rec read_input prompt delim =
-  let module Let_syntax = struct
-      let bind m ~f = Option.(>>=) m f
-      module Open_on_rhs_bind = struct end
-    end in
   let open Option in
-  let (let*) x f = Let_syntax.bind ~f x in
   let s = LNoise.linenoise prompt in
   match s with
-  | None -> none
+  | None -> None
   | Some s -> LNoise.history_add s |> ignore;
               let result = Str.split_delim (Str.regexp delim) s in
               match result with
