@@ -41,10 +41,10 @@ let mk_str (p: char list) : string =
 
 type mode = Copy | Skip
 
-(* Trace of directives. We keep track of directives #if, #elif, #else,
-   #region and #endregion. *)
+(* Trace of directives. We keep track of directives #if, #elif and
+   #else *)
 
-type cond  = If of mode | Elif of mode | Else | Region
+type cond  = If of mode | Elif of mode | Else
 type trace = cond list
 
 (* The type [state] groups the information that needs to be
@@ -80,9 +80,11 @@ type config = <
   dirs    : file_path list (* Directories to search for #include files *)
 >
 
+module Env = Set.Make (String)
+
 type state = {
   config : config;
-  env    : E_AST.Env.t;
+  env    : Env.t;
   mode   : mode;
   trace  : trace;
   out    : Buffer.t;
@@ -107,9 +109,6 @@ type error =
 | Newline_in_string
 | Unterminated_string
 | Dangling_endif
-| Open_region_in_conditional
-| Dangling_endregion
-| Conditional_in_region
 | If_follows_elif
 | Else_follows_else
 | Dangling_else
@@ -118,12 +117,13 @@ type error =
 | Reserved_symbol of string
 | Multiply_defined_symbol of string
 | Error_directive of string           (* #error ONLY *)
-| Parse_error
 | Invalid_symbol
 | File_not_found of string
 | Unterminated_comment of string
 | Missing_filename                    (* #include *)
 | Unexpected_argument                 (* #include and #import *)
+| Invalid_character of char           (* #if #elif *)
+| Parse_error                         (* #if #elif *)
 
 let error_to_string = function
   Directive_inside_line ->
@@ -138,15 +138,6 @@ let error_to_string = function
 | Dangling_endif ->
     sprintf "Dangling #endif directive.\n\
              Hint: Remove it or add a #if before."
-| Open_region_in_conditional ->
-    sprintf "Unterminated of #region in conditional.\n\
-             Hint: Close with #endregion before #endif."
-| Dangling_endregion ->
-   sprintf "Dangling #endregion directive.\n\
-            Hint: Remove it or use #region before."
-| Conditional_in_region ->
-    sprintf "Conditional in region.\n\
-             Hint: Remove the conditional or the region."
 | If_follows_elif ->
     sprintf "Directive #if found in a clause #elif."
 | Else_follows_else ->
@@ -167,7 +158,7 @@ let error_to_string = function
 | Error_directive msg ->
     if msg = "" then sprintf "Directive #error reached." else msg
 | Parse_error ->
-    "Parse error in expression."
+    "Parse error in Boolean expression."
 | Invalid_symbol ->
    "Expected a symbol (identifier)."
 | File_not_found name ->
@@ -179,6 +170,8 @@ let error_to_string = function
     sprintf "Filename expected in a string literal."
 | Unexpected_argument ->
     sprintf "Unexpected argument."
+| Invalid_character c ->
+    sprintf "Invalid character '%c' (%d)." c (Char.code c)
 
 let format_error config ~msg (region: Region.t) =
   let file  = config#input <> None in
@@ -214,18 +207,8 @@ let reduce_cond state region =
   let rec reduce = function
                 [] -> fail state region Dangling_endif
   | If mode::trace -> {state with mode; trace}
-  |      Region::_ -> fail state region Open_region_in_conditional
   |       _::trace -> reduce trace
   in reduce state.trace
-
-(* The function [reduce_region] is called when a #endregion directive
-   is read, and the trace needs updating. *)
-
-let reduce_region state region =
-  match state.trace with
-    [] -> fail state region Dangling_endregion
-  | Region::trace -> {state with trace}
-  |             _ -> fail state region Conditional_in_region
 
 (* The function [extend] is called when encountering conditional
    directives #if, #else and #elif. As its name suggests, it extends
@@ -284,25 +267,6 @@ let proc_nl state buffer =
 (* Copying a string *)
 
 let print state = Buffer.add_string state.out
-
-(* Evaluating a preprocessor expression
-
-   The evaluation of conditional directives may involve symbols whose
-   value may be defined using #define directives, or undefined by
-   means of #undef. Therefore, we need to evaluate conditional
-   expressions in an environment made of a set of defined symbols.
-
-     Note that we rely on an external lexer and parser for the
-   conditional expressions. See modules [E_AST], [E_Lexer] and
-   [E_Parser]. *)
-
-let expr state buffer : mode =
-  let ast =
-    try E_Parser.expr E_Lexer.scan buffer with
-      E_Lexer.Error e -> raise (Error (state.out, e))
-    | E_Parser.Error  -> stop state buffer Parse_error in
-  let () = print state "\n" in
-  if E_AST.eval state.env ast then Copy else Skip
 
 (* END OF HEADER *)
 }
@@ -488,7 +452,18 @@ let string_delimiter =
 
    Important note: Comments and strings are recognised as such only in
    copy mode, which is a different behaviour from the preprocessor of
-   GNU GCC, which always does. *)
+   GNU GCC, which always does.
+
+
+   About evaluating a preprocessor expression (after #if and #elif)
+
+   The evaluation of conditional directives may involve symbols whose
+   value may be defined using #define directives, or undefined by
+   means of #undef. Therefore, we need to evaluate conditional
+   expressions in an environment made of a set of defined symbols.
+
+     Note that we rely on an external parser [E_Parser] for the
+   conditional expressions. See modules [E_AST] and [E_Parser]. *)
 
 rule scan state = parse
   nl    { proc_nl state lexbuf; scan state lexbuf }
@@ -497,7 +472,7 @@ rule scan state = parse
 
   (* Directives *)
 
-| '#' (blank* as space) (small+ as id) {
+| '#' blank* (small+ as id) {
     let  region = mk_reg lexbuf in
     if   region#start#offset `Byte > 0
     then stop state lexbuf Directive_inside_line
@@ -539,12 +514,15 @@ rule scan state = parse
               Some p -> fst p
             | None -> fail state reg (File_not_found import_file) in
           let state  =
-            {state with import = (import_path, imported_module)
-                                 :: state.import}
+            {state with
+              import = (import_path, imported_module) :: state.import}
           in (proc_nl state lexbuf; scan state lexbuf)
         else (proc_nl state lexbuf; scan state lexbuf)
     | "if" ->
-        let mode  = expr state lexbuf in
+        let bool =
+          try E_Parser.expr (if_expr state) lexbuf state.env with
+            E_Parser.Error -> stop state lexbuf Parse_error in
+        let mode  = if bool then Copy else Skip in
         let mode  = if state.mode = Copy then mode else Skip in
         let trace = extend (If state.mode) state region in
         let state = {state with mode; trace}
@@ -557,7 +535,10 @@ rule scan state = parse
         let trace = extend Else state region
         in scan {state with mode; trace} lexbuf
     | "elif" ->
-        let mode = expr state lexbuf in
+        let bool =
+          try E_Parser.expr (if_expr state) lexbuf state.env with
+            E_Parser.Error -> stop state lexbuf Parse_error in
+        let mode  = if bool then Copy else Skip in
         let trace, mode =
           match state.mode with
             Copy -> extend (Elif Skip) state region, Skip
@@ -574,29 +555,20 @@ rule scan state = parse
           if id="true" || id="false"
           then fail state region (Reserved_symbol id)
           else
-            if E_AST.Env.mem id state.env
+            if Env.mem id state.env
             then fail state region (Multiply_defined_symbol id)
             else
-              let state = {state with env = E_AST.Env.add id state.env}
+              let state = {state with env = Env.add id state.env}
               in scan state lexbuf
         else scan state lexbuf
     | "undef" ->
         let id, _ = variable state lexbuf in
         if state.mode = Copy then
-          let state = {state with env = E_AST.Env.remove id state.env}
+          let state = {state with env = Env.remove id state.env}
           in scan state lexbuf
         else scan state lexbuf
     | "error" ->
         fail state region (Error_directive (message [] lexbuf))
-    | "region" ->
-        let msg = message [] lexbuf
-        in print state ("#" ^ space ^ "region" ^ msg ^ "\n");
-           let state = {state with trace = Region::state.trace}
-           in scan state lexbuf
-    | "endregion" ->
-        let msg = message [] lexbuf
-        in print state ("#" ^ space ^ "endregion" ^ msg ^ "\n");
-           scan (reduce_region state region) lexbuf
     | _ -> if state.mode = Copy then copy state lexbuf;
            scan state lexbuf }
 
@@ -656,6 +628,30 @@ rule scan state = parse
 | _ { if state.mode = Copy then copy state lexbuf;
       scan state lexbuf }
 
+(* Scanning boolean expressions after #if and #elif *)
+
+and if_expr state = parse
+  blank+      { if_expr state lexbuf     }
+| nl          { proc_nl state lexbuf;
+                E_Parser.EOL             }
+| eof         { E_Parser.EOL             }
+| "true"      { E_Parser.True            }
+| "false"     { E_Parser.False           }
+| ident as id { E_Parser.Ident id        }
+| '('         { E_Parser.LPAR            }
+| ')'         { E_Parser.RPAR            }
+| "||"        { E_Parser.OR              }
+| "&&"        { E_Parser.AND             }
+| "=="        { E_Parser.EQ              }
+| "!="        { E_Parser.NEQ             }
+| "!"         { E_Parser.NOT             }
+| "//"        { if_expr_com state lexbuf }
+| _ as c      { stop state lexbuf (Invalid_character c) }
+
+and if_expr_com state = parse
+  nl  { proc_nl state lexbuf; E_Parser.EOL }
+| eof { E_Parser.EOL                       }
+| _   { if_expr_com state lexbuf           }
 
 (* Scanning a series of characters *)
 
@@ -680,7 +676,7 @@ and skip_line state = parse
 | eof { rollback lexbuf        }
 | _   { skip_line state lexbuf }
 
-(* For #error, #region and #endregion *)
+(* For #error *)
 
 and message acc = parse
   nl     { Lexing.new_line lexbuf; mk_str acc }
@@ -708,7 +704,7 @@ and in_block block opening state = parse
          in in_block block opening state lexbuf
     else let n     = String.length lexeme in
          let ()    = rollback lexbuf in
-         let n     = if n > 0 then n else 1 in (* <= 0 should not happen *)
+         let n     = if n > 0 then n else 1 in (* 0 should not happen *)
          let state = scan_n_char n state lexbuf
          in in_block block opening state lexbuf }
 
@@ -718,7 +714,7 @@ and in_block block opening state = parse
     then (copy state lexbuf; state)
     else let n     = String.length lexeme in
          let ()    = rollback lexbuf in
-         let n     = if n > 0 then n else 1 in (* <= 0 should not happen *)
+         let n     = if n > 0 then n else 1 in (* 0 should not happen *)
          let state = scan_n_char n state lexbuf
          in in_block block opening state lexbuf }
 
@@ -818,7 +814,7 @@ let from_lexbuf config buffer =
   let path = Lexing.(buffer.lex_curr_p.pos_fname) in
   let state = {
     config;
-    env    = E_AST.Env.empty;
+    env    = Env.empty;
     mode   = Copy;
     trace  = [];
     out    = Buffer.create 80;

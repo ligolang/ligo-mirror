@@ -3,6 +3,7 @@
 (library
   (name Preprocessor)
   (public_name Preprocessor)
+  (instrumentation (backend bisect_ppx))
   (wrapped true)
   (libraries
     ;; Vendor
@@ -10,13 +11,11 @@
     ;; Third party
     getopt
     str)
-  (modules Version CLI E_Parser E_Lexer E_AST API PreprocMainGen)
-  (preprocess
-    (pps bisect_ppx --conditional)))
+  (modules Version CLI E_Parser API PreprocMainGen))
 
-;; Building the lexers of the preprocessor
+;; Building the lexer of the preprocessor
 
-(ocamllex E_Lexer API)
+(ocamllex API)
 
 ;; Building the parser of the preprocessor (for boolean expressions)
 
@@ -27,32 +26,9 @@
 
 (executable
   (name PreprocMain)
+  (instrumentation (backend bisect_ppx))
   (modules PreprocMain)
-  (libraries Preprocessor)
-  (preprocess
-    (pps bisect_ppx --conditional)))
-
-;; Building E_LexerMain.exe for a standalone lexer of boolean
-;; expressions
-
-(executable
-  (name E_LexerMain)
-  (modules
-    E_LexerMain)
-  (libraries Preprocessor)
-  (preprocess
-    (pps bisect_ppx --conditional)))
-
-;; Building E_ParserMain.exe for a standalone parser of boolean
-;; expressions
-
-(executable
-  (name E_ParserMain)
-  (modules
-    E_ParserMain)
-  (libraries Preprocessor)
-  (preprocess
-    (pps bisect_ppx --conditional)))
+  (libraries Preprocessor))
 
 ;; Building the version source (for the user, as a CLI option)
 

@@ -1,6 +1,6 @@
-%{
-(* Grammar for boolean expressions in preprocessing directives of C# *)
-%}
+(* Grammar for boolean expressions in preprocessing directives *)
+
+(* Tokens *)
 
 %token <string> Ident "<ident>"
 %token True "true"
@@ -14,37 +14,45 @@
 %token RPAR ")"
 %token EOL
 
+%{
+(* START OF HEADER *)
+
+module Env = Set.Make (String)
+
+(* END OF HEADER *)
+%}
+
 (* Entries *)
 
 %start expr
-%type <E_AST.t> expr
+%type <Set.Make (String).t -> bool> expr
 
 %%
 
 (* Grammar *)
 
 expr:
-  or_expr EOL { $1 }
+  or_expr_level EOL { $1 }
 
-or_expr:
-  or_expr "||" and_expr         { E_AST.Or ($1,$3)  }
-| and_expr                      { $1                }
+or_expr_level:
+  or_expr_level "||" and_expr_level    { fun env -> $1 env || $3 env }
+| and_expr_level                       { $1                      }
 
-and_expr:
-  and_expr "&&" unary_expr      { E_AST.And ($1,$3) }
-| equality_expr                 { $1                }
+and_expr_level:
+  and_expr_level "&&" unary_expr_level { fun env -> $1 env && $3 env }
+| eq_expr_level                        { $1                       }
 
-equality_expr:
-  equality_expr "==" unary_expr { E_AST.Eq ($1,$3)  }
-| equality_expr "!=" unary_expr { E_AST.Neq ($1,$3) }
-| unary_expr                    { $1                }
+eq_expr_level:
+  eq_expr_level "==" unary_expr_level  { fun env -> $1 env = $3 env  }
+| eq_expr_level "!=" unary_expr_level  { fun env -> $1 env <> $3 env }
+| unary_expr_level                     { $1                        }
 
-unary_expr:
-  primary_expr                  { $1                }
-| "!" unary_expr                { E_AST.Not $2      }
+unary_expr_level:
+  "!" unary_expr_level                 { fun env -> not ($2 env) }
+| core_expr                            { $1                    }
 
-primary_expr:
-  "true"                        { E_AST.True        }
-| "false"                       { E_AST.False       }
-| "<ident>"                     { E_AST.Ident $1    }
-| "(" or_expr ")"               { $2                }
+core_expr:
+  "true"                               { fun _ -> true             }
+| "false"                              { fun _ -> false            }
+| "<ident>"                            { fun env -> Env.mem $1 env }
+| "(" or_expr_level ")"                { $2                      }
