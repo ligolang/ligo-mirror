@@ -1,0 +1,6 @@
+(library
+  (name GNUgetopt)
+  (public_name GNUgetopt)
+  (instrumentation (backend bisect_ppx))
+  (wrapped false)
+  (modules Getopt))
