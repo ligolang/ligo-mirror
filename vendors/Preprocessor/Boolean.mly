@@ -17,8 +17,6 @@
 %{
 (* START OF HEADER *)
 
-module Env = Set.Make (String)
-
 let bin op arg1 arg2 env = op (arg1 env) (arg2 env)
 let (<@) f g x = f (g x)
 
@@ -28,7 +26,7 @@ let (<@) f g x = f (g x)
 (* Entries *)
 
 %start expr
-%type <Set.Make (String).t -> bool> expr
+%type <Env.t -> bool> expr
 
 %%
 

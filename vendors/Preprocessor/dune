@@ -3,15 +3,13 @@
 (library
   (name Preprocessor)
   (public_name Preprocessor)
-  (instrumentation (backend bisect_ppx))
-  (wrapped true)
   (libraries
     ;; Vendor
     simple-utils
     GNUgetopt
     ;; Third party
     str)
-  (modules Version CLI E_Parser API PreprocMainGen))
+  (modules Version Env CLI Boolean API PreprocMainGen))
 
 ;; Building the lexer of the preprocessor
 
@@ -20,13 +18,12 @@
 ;; Building the parser of the preprocessor (for boolean expressions)
 
 (menhir
-  (modules E_Parser))
+  (modules Boolean))
 
 ;; Building PreprocMain.exe for a standalone preprocessor
 
 (executable
   (name PreprocMain)
-  (instrumentation (backend bisect_ppx))
   (modules PreprocMain)
   (libraries Preprocessor))
 

@@ -462,8 +462,8 @@ let string_delimiter =
    means of #undef. Therefore, we need to evaluate conditional
    expressions in an environment made of a set of defined symbols.
 
-     Note that we rely on an external parser [E_Parser] for the
-   conditional expressions. See modules [E_AST] and [E_Parser]. *)
+     Note that we rely on an external parser [Boolean] for the
+   conditional expressions. See module [Boolean]. *)
 
 rule scan state = parse
   nl    { proc_nl state lexbuf; scan state lexbuf }
@@ -520,8 +520,8 @@ rule scan state = parse
         else (proc_nl state lexbuf; scan state lexbuf)
     | "if" ->
         let bool =
-          try E_Parser.expr (if_expr state) lexbuf state.env with
-            E_Parser.Error -> stop state lexbuf Parse_error in
+          try Boolean.expr (if_expr state) lexbuf state.env with
+            Boolean.Error -> stop state lexbuf Parse_error in
         let mode  = if bool then Copy else Skip in
         let mode  = if state.mode = Copy then mode else Skip in
         let trace = extend (If state.mode) state region in
@@ -536,8 +536,8 @@ rule scan state = parse
         in scan {state with mode; trace} lexbuf
     | "elif" ->
         let bool =
-          try E_Parser.expr (if_expr state) lexbuf state.env with
-            E_Parser.Error -> stop state lexbuf Parse_error in
+          try Boolean.expr (if_expr state) lexbuf state.env with
+            Boolean.Error -> stop state lexbuf Parse_error in
         let mode  = if bool then Copy else Skip in
         let trace, mode =
           match state.mode with
@@ -633,25 +633,25 @@ rule scan state = parse
 and if_expr state = parse
   blank+      { if_expr state lexbuf     }
 | nl          { proc_nl state lexbuf;
-                E_Parser.EOL             }
-| eof         { E_Parser.EOL             }
-| "true"      { E_Parser.True            }
-| "false"     { E_Parser.False           }
-| ident as id { E_Parser.Ident id        }
-| '('         { E_Parser.LPAR            }
-| ')'         { E_Parser.RPAR            }
-| "||"        { E_Parser.OR              }
-| "&&"        { E_Parser.AND             }
-| "=="        { E_Parser.EQ              }
-| "!="        { E_Parser.NEQ             }
-| "!"         { E_Parser.NOT             }
+                Boolean.EOL              }
+| eof         { Boolean.EOL              }
+| "true"      { Boolean.True             }
+| "false"     { Boolean.False            }
+| ident as id { Boolean.Ident id         }
+| '('         { Boolean.LPAR             }
+| ')'         { Boolean.RPAR             }
+| "||"        { Boolean.OR               }
+| "&&"        { Boolean.AND              }
+| "=="        { Boolean.EQ               }
+| "!="        { Boolean.NEQ              }
+| "!"         { Boolean.NOT              }
 | "//"        { if_expr_com state lexbuf }
 | _ as c      { stop state lexbuf (Invalid_character c) }
 
 and if_expr_com state = parse
-  nl  { proc_nl state lexbuf; E_Parser.EOL }
-| eof { E_Parser.EOL                       }
-| _   { if_expr_com state lexbuf           }
+  nl  { proc_nl state lexbuf; Boolean.EOL }
+| eof { Boolean.EOL                       }
+| _   { if_expr_com state lexbuf          }
 
 (* Scanning a series of characters *)
 
