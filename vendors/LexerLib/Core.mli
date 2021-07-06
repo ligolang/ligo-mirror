@@ -86,6 +86,9 @@ val mk_thread : string Region.reg -> thread
    single character has been matched: that depends on the regular
    expression that matched the lexing buffer.
 
+     The field [window] is a two-token window, that is, a buffer that
+   contains the last recognised token, and the penultimate (if any).
+
      The fields [decoder] and [supply] offer the support needed for
    the lexing of UTF-8 encoded characters in comments (the only place
    where they are allowed in our input languages). The former is the
@@ -220,11 +223,7 @@ val mk_scan : 'token client -> 'token scanner
      * a lexing buffer [lexbuf] to read tokens from;
      * a function [close] that closes that buffer;
      * a function [window] that returns a window of zero, one or
-       two tokens.
-
-     The type [window] is a two-token window, that is, a buffer
-   that contains the last recognised token, and the penultimate
-   (if any). *)
+       two tokens. *)
 
 type input =
   File    of file_path

@@ -5,8 +5,6 @@
 (library
   (name LexerLib)
   (public_name LexerLib)
-  (instrumentation (backend bisect_ppx))
-  (wrapped true)
   (modules CLI Core API Markup Directive Version)
   (libraries
     ;; Vendor
