@@ -27,7 +27,7 @@ module type LEXER =
 
     type window = <
       last_token    : token option;
-      current_token : token
+      current_token : token           (* Including EOF *)
     >
 
     val get_window : unit -> window option

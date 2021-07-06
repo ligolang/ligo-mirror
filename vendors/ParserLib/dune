@@ -3,8 +3,6 @@
 (library
   (name ParserLib)
   (public_name ParserLib)
-  (instrumentation (backend bisect_ppx))
-  (wrapped true)
   (modules CLI API Version)
   (libraries
     ;; Vendors
