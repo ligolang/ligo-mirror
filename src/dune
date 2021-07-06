@@ -5,9 +5,8 @@
   (public_name ligo)
   (instrumentation (backend bisect_ppx))
   (libraries
-     Preprocessor
+;;     Preprocessor
      simple-utils
      tezos-utils
      tezos-micheline
-     ligo_main)
-)
+     ligo_main))

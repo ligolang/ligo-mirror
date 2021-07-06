@@ -226,11 +226,9 @@ module T =
     type token = t
 
     let project = function
-        (* Preprocessing directives *)
+      (* Preprocessing directives *)
 
-      Directive d ->
-        let Region.{region; value} = Directive.project d
-        in region, value
+      Directive d -> Directive.project d
 
       (* Literals *)
 
@@ -570,8 +568,8 @@ and scan_uident region lexicon = parse
       let value = lexeme, `Hex norm
       in Bytes Region.{region; value}
 
-    type int_err = 
-      Non_canonical_zero 
+    type int_err =
+      Non_canonical_zero
 
     let mk_int lexeme region =
       let z =
@@ -597,7 +595,7 @@ and scan_uident region lexicon = parse
           then Error Non_canonical_zero_nat
           else Ok (Nat Region.{region; value = lexeme,z})
 
-    type mutez_err = 
+    type mutez_err =
         Unsupported_mutez_syntax
       | Non_canonical_zero_tez
 
@@ -667,7 +665,7 @@ and scan_uident region lexicon = parse
 
     (* Code injection *)
 
-    type lang_err = 
+    type lang_err =
       Unsupported_lang_syntax
 
     let mk_lang lang region = Ok(Lang Region.{value=lang; region})

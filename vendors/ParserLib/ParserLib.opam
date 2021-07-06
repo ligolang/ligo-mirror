@@ -10,7 +10,7 @@ homepage     : "https://gitlab.com/ligolang/ligo/-/tree/dev/vendors/ParserLib"
 bug-reports  : "https://gitlab.com/ligolang/ligo/-/issues"
 # If you change the dependencies, run `opam lock` in the root
 depends      : ["dune" "base" "ocaml" "simple-utils" "bisect_ppx"
-                "menhir" "getopt"]
+                "menhir" "GNUgetopt"]
 build        : [
                 [ "dune" "build" "-p" name "-j" jobs ]
                ]

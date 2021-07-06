@@ -3,14 +3,15 @@ name         : "Preprocessor"
 version      : "1.1"
 synopsis     : "A C#-like preprocessor"
 description  : "The following preprocessing directives are supported: #define,  #elif, #else, #endif, #endregion, #error, #if, #include, #region, #undef."
-maintainer   : "rinderknecht@free.fr"
+maintainer   : "Christian Rinderknecht <rinderknecht@free.fr>"
 authors      : "Christian Rinderknecht"
 license      : "MIT"
 homepage     : "https://gitlab.com/ligolang/ligo/-/tree/dev/vendors/Preprocessor"
 bug-reports  : "https://gitlab.com/ligolang/ligo/-/issues"
+
 # If you change the dependencies, run `opam lock` in the root
 depends      : ["dune" "base" "ocaml" "simple-utils"
-                "bisect_ppx" "menhir" "getopt"]
+                "bisect_ppx" "menhir" "GNUgetopt"]
 build        : [
                 [ "dune" "build" "-p" name "-j" jobs ]
                ]

@@ -13,8 +13,7 @@
     lexing_shared
     ;; Third party
     str
-    hex)
-)
+    hex))
 
 ;; Build of a standalone lexer for PascaLIGO
 
@@ -27,8 +26,7 @@
     lexing_pascaligo
     ;; Third party
     str)
-  (modules Version LexerMain)
-)
+  (modules Version LexerMain))
 
 
 ;; Build of the unlexer (for covering the
@@ -42,8 +40,7 @@
     lexing_pascaligo
     ;; Third party
     str)
-  (modules Unlexer)
-)
+  (modules Unlexer))
 
 ;; --------------------------------------------------------------------
 ;; Build of the version source (for the user, as a CLI option)

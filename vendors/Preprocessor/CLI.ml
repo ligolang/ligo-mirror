@@ -2,7 +2,8 @@
 
 (* Vendor dependencies *)
 
-module Argv = Simple_utils.Argv
+module Argv   = Simple_utils.Argv
+module Getopt = GNUgetopt.Getopt
 
 (* The signature [COMMENTS] specifies the kind of comments
    expected. Those fields do not correspond to CLI (command-line
@@ -262,6 +263,7 @@ module Make (Comments: COMMENTS) : S =
 
     let () =
       (* Options "help", "version" and "cli" are not given. *)
+      (* Do not change the spacing before "=" *)
       let options = [
         "CLI options";
         sprintf "input      = %s" (string_of_opt (fun x -> x) !input);

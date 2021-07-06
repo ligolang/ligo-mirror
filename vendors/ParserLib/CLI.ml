@@ -2,7 +2,8 @@
 
 (* Vendor dependencies *)
 
-module Argv = Simple_utils.Argv
+module Argv   = Simple_utils.Argv
+module Getopt = GNUgetopt.Getopt
 
 (* Comments *)
 

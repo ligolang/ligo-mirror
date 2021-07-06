@@ -1,10 +1,10 @@
 name: "ligo"
 opam-version: "2.0"
 maintainer: "Galfour <contact@ligolang.org>"
-authors: [ "Galfour" ]
+authors: [ "Galfour" "Christian Rinderknecht"]
 homepage: "https://gitlab.com/ligolang/tezos"
 bug-reports: "https://gitlab.com/ligolang/tezos/issues"
-synopsis: "A high-level language which compiles to Michelson"
+synopsis: "A high-level language for smart contracts on Tezos"
 dev-repo: "git+https://gitlab.com/ligolang/tezos.git"
 license: "MIT"
 # If you change the dependencies, run `opam lock` in the root
@@ -23,13 +23,13 @@ depends: [
   "ligo-008-PtEdo2Zk-test-helpers"
   "yojson"
   "alcotest" { with-test & >= "1.0" & < "1.1" }
-  "getopt"
   "terminal_size"
   "pprint"
   "ParserLib"
   "LexerLib"
   "UnionFind"
   "RedBlackTrees"
+  "GNUgetopt"
   "linenoise"
   # work around upstream in-place update
   "ocaml-migrate-parsetree" { = "2.1.0" }

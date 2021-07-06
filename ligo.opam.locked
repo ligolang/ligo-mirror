@@ -1,16 +1,15 @@
 name: "ligo"
 opam-version: "2.0"
 maintainer: "Galfour <contact@ligolang.org>"
-authors: [ "Galfour" ]
+authors: [ "Galfour" "Christian Rinderknecht"]
 homepage: "https://gitlab.com/ligolang/tezos"
 bug-reports: "https://gitlab.com/ligolang/tezos/issues"
-synopsis: "A high-level language which compiles to Michelson"
+synopsis: "A high-level language for smart contracts on Tezos"
 dev-repo: "git+https://gitlab.com/ligolang/tezos.git"
 license: "MIT"
 # If you change the dependencies, run `opam lock` in the root
 depends: [
-  "LexerLib" {= "1.1"}
-  "ParserLib" {= "1.0"}
+  "GNUgetopt" {= "1.0"}
   "RedBlackTrees" {= "1.0"}
   "UnionFind" {= "1.0"}
   "alcotest" {= "1.0.1"}
@@ -28,7 +27,6 @@ depends: [
   "bigstring" {= "0.3"}
   "bigstringaf" {= "0.7.0"}
   "biniou" {= "1.2.1"}
-  "bisect_ppx" {= "2.6.0"}
   "bls12-381" {= "0.3.15"}
   "bos" {= "0.2.0"}
   "ca-certs" {= "0.2.1"}
@@ -69,7 +67,6 @@ depends: [
   "fieldslib" {= "v0.14.0"}
   "fmt" {= "0.8.9"}
   "fpath" {= "0.7.3"}
-  "getopt" {= "20120615"}
   "gmap" {= "0.3.0"}
   "hacl-star" {= "0.3.2"}
   "hacl-star-raw" {= "0.3.2"}
@@ -223,3 +220,7 @@ build: [
   [ "dune" "build" "-p" name "-j" jobs ]
 ]
 version: "dev"
+pin-depends: [
+  "menhir.20200624"
+  "git+https://gitlab.inria.fr/fbour/menhir.git#new-ijkstra"
+]

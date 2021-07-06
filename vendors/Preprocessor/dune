@@ -8,8 +8,8 @@
   (libraries
     ;; Vendor
     simple-utils
+    GNUgetopt
     ;; Third party
-    getopt
     str)
   (modules Version CLI E_Parser API PreprocMainGen))
 

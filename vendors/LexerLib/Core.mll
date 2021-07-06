@@ -1,4 +1,4 @@
-(* A library for writing UTF8-aware lexers *)
+(* An ocamllex-based library for writing UTF8-aware lexers *)
 
 {
 (* START HEADER *)
@@ -61,17 +61,16 @@ type lexeme = string
 (* THREAD FOR STRUCTURED CONSTRUCTS (STRINGS, COMMENTS) *)
 
 type thread = <
-  opening       : string Region.reg;
-  closing       : string;
-  length        : int;
-  acc           : char list;
-  to_string     : string;
-  push_char     : char -> thread;
-  push_string   : string -> thread;
-  set_enclosure : opening:string Region.reg -> closing:string -> thread
+  opening     : string Region.reg;
+  length      : int;
+  acc         : char list;
+  to_string   : string;
+  push_char   : char -> thread;
+  push_string : string -> thread;
+  set_opening : string Region.reg -> thread;
 >
 
-let mk_thread ~(opening: string Region.reg) ~(closing: string) : thread =
+let mk_thread (opening: string Region.reg) : thread =
   (* The call [explode s a] is the list made by pushing the characters
      in the string [s] on top of [a], in reverse order. For example,
      [explode "ba" ['c';'d'] = ['a'; 'b'; 'c'; 'd']]. *)
@@ -85,11 +84,7 @@ let mk_thread ~(opening: string Region.reg) ~(closing: string) : thread =
     val opening = opening
     method opening = opening
 
-    val closing = closing
-    method closing = closing
-
-    method set_enclosure ~opening ~closing =
-      {< opening = opening; closing = closing >}
+    method set_opening opening = {< opening >}
 
     val length = 0
     method length = length
@@ -189,7 +184,6 @@ type 'token client = <
   mk_string           : 'token cut;
   mk_eof              : 'token scanner;
   callback            : 'token scanner;
-  (*  delimiters*)
   is_string_delimiter : string -> bool
 >
 
@@ -253,16 +247,14 @@ let mk_state ~config ~window ~pos ~decoder ~supply : 'token state =
       in Markup markup, self#set_pos stop
 
     method mk_line thread =
-      (*      let start  = thread#opening#start in*)
-      let start  = thread#enclosure#opening#start in
+      let start  = thread#opening.region#start in
       let region = Region.make ~start ~stop:self#pos
       and value  = thread#to_string in
       let markup = Markup.LineCom Region.{region; value}
       in Markup markup, self
 
     method mk_block thread =
-      (*      let start  = thread#opening#start in*)
-      let start  = thread#enclosure#opening#start in
+      let start  = thread#opening.region#start in
       let region = Region.make ~start ~stop:self#pos
       and value  = thread#to_string in
       let markup = Markup.BlockCom Region.{region; value}
@@ -589,10 +581,8 @@ rule scan client state = parse
     let lexeme = Lexing.lexeme lexbuf in
     if client#is_string_delimiter lexeme then
       let {region; state; _} = state#sync lexbuf in
-      (*      let thread             = mk_thread region in
-      let thread             = thread#set_delimiter lexeme *)
-      let thread = mk_thread ~opening:{region; value=lexeme} ~closing:lexeme
-      in scan_string thread state lexbuf |> client#mk_string
+      let thread             = mk_thread Region.{region; value=lexeme}
+      in scan_string thread client state lexbuf |> client#mk_string
     else (* Not a string for this syntax *)
       (rollback lexbuf; client#callback state lexbuf) }
 
@@ -603,8 +593,7 @@ rule scan client state = parse
     match state#config#block with
       Some block when block#opening = lexeme ->
         let {region; state; _} = state#sync lexbuf in
-        let thread             = mk_thread region in
-        let thread             = thread#push_string lexeme in
+        let thread             = mk_thread Region.{region; value=lexeme} in
         let thread, state      = scan_block block thread client state lexbuf
         in state#mk_block thread
     | Some _ | None -> (* Not a comment for this syntax *)
@@ -615,8 +604,7 @@ rule scan client state = parse
     match state#config#line with
       Some line when line = lexeme ->
         let {region; state; _} = state#sync lexbuf in
-        let thread             = mk_thread region in
-        let thread             = thread#push_string lexeme in
+        let thread             = mk_thread Region.{region; value=lexeme} in
         let thread, state      = scan_line thread client state lexbuf
         in state#mk_line thread
     | Some _ | None -> (* Not a comment for this syntax *)
@@ -657,10 +645,10 @@ and scan_block block thread client state = parse
     if   client#is_string_delimiter lexeme
     then let opening            = thread#opening in
          let {region; state; _} = state#sync lexbuf in
- (*         let thread             = thread#set_delimiter lexeme in*)
          let thread             = thread#push_string lexeme in
-         let thread             = thread#set_opening region in
-         let thread, state      = scan_string thread state lexbuf in
+         let opening'           = Region.{region; value=lexeme} in
+         let thread             = thread#set_opening opening' in
+         let thread, state      = scan_string thread client state lexbuf in
          let thread             = thread#set_opening opening
          in scan_block block thread client state lexbuf
     else begin
@@ -673,7 +661,8 @@ and scan_block block thread client state = parse
     then let opening            = thread#opening in
          let {region; state; _} = state#sync lexbuf in
          let thread             = thread#push_string lexeme in
-         let thread             = thread#set_opening region in
+         let opening'           = Region.{region; value=lexeme} in
+         let thread             = thread#set_opening opening' in
          let scan_next          = scan_block block in
          let thread, state      = scan_next thread client state lexbuf in
          let thread             = thread#set_opening opening
@@ -696,14 +685,14 @@ and scan_block block thread client state = parse
         and thread = thread#push_string nl in
         scan_block block thread client state lexbuf }
 | eof { let err = Unterminated_comment block#closing
-        in fail thread#opening err }
+        in fail thread#opening.region err }
 | _   { rollback lexbuf;
         scan_char_in_block block thread client state lexbuf }
 
 and scan_char_in_block block thread client state = parse
   _ { let if_eof thread =
         let err = Unterminated_comment block#closing
-        in fail thread#opening err in
+        in fail thread#opening.Region.region err in
       let scan_utf8 = scan_utf8_char if_eof
       and callback  = scan_block block in
       scan_utf8_wrap scan_utf8 callback thread client state lexbuf }
@@ -735,40 +724,41 @@ and scan_utf8_char if_eof thread client state = parse
 
 (* Scanning strings *)
 
-and scan_string thread state = parse
+and scan_string thread client state = parse
   string_delimiter {
          let {state; lexeme; _} = state#sync lexbuf in
-         if thread#delimiter = lexeme then thread, state
+         if   client#is_string_delimiter lexeme
+         then thread, state
          else let thread = thread#push_string lexeme
-              in scan_string thread state lexbuf }
+              in scan_string thread client state lexbuf }
 | '\\' { let {state; _} = state#sync lexbuf
-         in scan_escape thread state lexbuf }
-| nl   { fail thread#opening Broken_string }
-| eof  { fail thread#opening Unterminated_string }
+         in scan_escape thread client state lexbuf }
+| nl   { fail thread#opening.region Broken_string }
+| eof  { fail thread#opening.region Unterminated_string }
 | ['\000' - '\031'] as c
        { let {region; _} = state#sync lexbuf
-         in fail region (Invalid_character_in_string c )}
+         in fail region (Invalid_character_in_string c) }
 | _    { let {state; lexeme; _} = state#sync lexbuf in
          let thread = thread#push_string lexeme
-         in scan_string thread state lexbuf }
+         in scan_string thread client state lexbuf }
 
-and scan_escape thread state = parse
+and scan_escape thread client state = parse
   string_delimiter {
          let {state; lexeme; _} = state#sync lexbuf in
          let thread =
-           if thread#delimiter = lexeme
+           if   client#is_string_delimiter lexeme
            then thread#push_string lexeme
            else thread#push_string ("\\" ^ lexeme)
-         in scan_string thread state lexbuf }
+         in scan_string thread client state lexbuf }
 | 'n'  { let {state; _} = state#sync lexbuf in
          let thread = thread#push_char '\n'
-         in scan_string thread state lexbuf }
+         in scan_string thread client state lexbuf }
 | '\\' { let {state; _} = state#sync lexbuf in
          let thread = thread#push_char '\\'
-         in scan_string thread state lexbuf }
+         in scan_string thread client state lexbuf }
 | _    { rollback lexbuf;
          let thread = thread#push_char '\\'
-         in scan_string thread state lexbuf }
+         in scan_string thread client state lexbuf }
 
 (* Scanner called first *)
 
