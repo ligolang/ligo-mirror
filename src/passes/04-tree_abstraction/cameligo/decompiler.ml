@@ -138,6 +138,8 @@ let get_e_tuple : AST.expression -> _ result = fun expr ->
   | E_constant _
   | E_lambda _ -> ok @@ ([expr], false)
   | E_application _ -> ok @@ ([expr], true)
+  | E_accessor _
+  | E_module_accessor _ -> ok @@ ([expr], false)
   | _ -> failwith @@
     Format.asprintf "%a should be a tuple expression"
     AST.PP.expression expr
@@ -148,7 +150,7 @@ let pattern_type ({var;ascr;attributes}: _ AST.binder) =
   match ascr with
     Some s ->
       let* type_expr = decompile_type_expr s in
-      ok @@ CST.PTyped (wrap @@ CST.{pattern=var;colon=ghost;type_expr})
+      ok @@ CST.PPar (wrap @@ par (CST.PTyped (wrap @@ CST.{pattern=var;colon=ghost;type_expr})))
   | None -> ok @@ var
 
 let rec decompile_expression : AST.expression -> _ result = fun expr ->
