@@ -23,7 +23,6 @@ module Make (Token : Token.S) =
     type error =
       Unexpected_character of char
     | Non_canonical_zero
-    | Reserved_name of string
     | Invalid_symbol of string
     | Unsupported_nat_syntax
     | Unsupported_mutez_syntax
@@ -40,9 +39,6 @@ module Make (Token : Token.S) =
     | Non_canonical_zero ->
         "Non-canonical zero.\n\
          Hint: Use 0."
-    | Reserved_name s ->
-        sprintf "Reserved name: \"%s\".\n\
-         Hint: Change the name." s
     | Invalid_symbol s ->
         sprintf "Invalid symbol: %S.\n\
                  Hint: Check the LIGO syntax you use." s
@@ -139,18 +135,18 @@ module Make (Token : Token.S) =
     let format_tez s =
       match String.index s '.' with
         index ->
-          let len         = String.length s in
-          let integral    = Str.first_chars s index
-          and fractional  = Str.last_chars s (len-index-1) in
-          let num         = Z.of_string (integral ^ fractional)
-          and den         = Z.of_string ("1" ^ String.make (len-index-1) '0')
-          and million     = Q.of_string "1000000" in
-          let mutez       = Q.make num den |> Q.mul million in
-          let should_be_1 = Q.den mutez in
-          if Z.equal Z.one should_be_1 then Some (Q.num mutez) else None
+          let period     = String.length s - index - 1 in
+          let integral   = Str.first_chars s index
+          and fractional = Str.last_chars s period in
+          let num        = Z.of_string (integral ^ fractional)
+          and den        = Z.of_string ("1" ^ String.make period '0')
+          and million    = Q.of_string "1000000" in
+          let mutez      = Q.make num den |> Q.mul million in
+          let one        = Q.den mutez in
+          if Z.equal Z.one one then Some (Q.num mutez) else None
       | exception Not_found -> assert false
 
-    let mk_tez_decimal state buffer =
+    let mk_tez_dec state buffer =
       let Core.{region; lexeme; state} = state#sync buffer in
       let lexeme = Str.(global_replace (regexp "_") "" lexeme) in
       let lexeme = Str.string_before lexeme (String.index lexeme 't') in
@@ -167,11 +163,8 @@ module Make (Token : Token.S) =
 
     let mk_ident state buffer =
       let Core.{region; lexeme; state} = state#sync buffer in
-      match Token.mk_ident lexeme region with
-        Stdlib.Ok token ->
-          Core.Token token, state
-      | Stdlib.Error Token.Reserved_name ->
-          fail region (Reserved_name lexeme)
+      let token = Token.mk_ident lexeme region
+      in Core.Token token, state
 
     let mk_attr attr state buffer =
       let Core.{region; state; _} = state#sync buffer in
@@ -185,10 +178,10 @@ module Make (Token : Token.S) =
 
     let mk_lang lang state buffer =
       let Core.{region; state; _} = state#sync buffer in
-      let start              = region#start#shift_bytes 1 in
-      let stop               = region#stop in
-      let lang_reg           = Region.make ~start ~stop in
-      let lang               = Region.{value=lang; region=lang_reg} in
+      let start    = region#start#shift_bytes 1 in
+      let stop     = region#stop in
+      let lang_reg = Region.make ~start ~stop in
+      let lang     = Region.{value=lang; region=lang_reg} in
       match Token.mk_lang lang region with
         Ok token ->
           Core.Token token, state
@@ -228,42 +221,50 @@ module Make (Token : Token.S) =
 
 (* START LEXER DEFINITION *)
 
-(* Those regular expressions must be identical to those in Token.mll *)
+(* Named regular expressions *)
+
+let nl         = ['\n' '\r'] | "\r\n"
+let blank      = ' ' | '\t'
+
+let digit      = ['0'-'9']
+let natural    = digit | digit (digit | '_')* digit
+let decimal    = natural '.' natural
 
 let small      = ['a'-'z']
 let capital    = ['A'-'Z']
-let digit      = ['0'-'9']
 let letter     = small | capital
 let ident      = small (letter | '_' | digit)* |
                  '_' (letter | '_' (letter | digit) | digit)+
 let uident     = capital (letter | '_' | digit)*
 
-(* Local regular expressions *)
-
-let nl         = ['\n' '\r'] | "\r\n"
-let blank      = ' ' | '\t'
-let natural    = digit | digit (digit | '_')* digit
-let decimal    = natural '.' natural
 let attr       = letter (letter | '_' | ':' | digit)*
 let lang       = attr
+
 let hexa_digit = digit | ['A'-'F' 'a'-'f']
 let byte       = hexa_digit hexa_digit
 let byte_seq   = byte | byte (byte | '_')* byte
-let bytes      = "0x" (byte_seq? as seq)
+let bytes      = "0x" (byte_seq? as b)
+
 let string     = [^'"' '\\' '\n']*  (* For strings of #include *)
 let directive  = '#' (blank* as space) (small+ as id) (* For #include *)
 
 (* Symbols *)
 
-let common_sym     =   ';' | ',' | '(' | ')'  | '[' | ']'  | '{' | '}'
-                     | '=' | ':' | '|' | '.' | '_' | '^'
-                     | '+' | '-' | '*' | '/'  | '<' | "<=" | '>' | ">="
-let pascaligo_sym  = "->" | "=/=" | '#' | ":="
-let cameligo_sym   = "->" | "<>" | "::" | "||" | "&&"
-let reasonligo_sym = '!' | "=>" | "!=" | "==" | "++" | "..." | "||" | "&&"
-let jsligo_sym     = "++" | "--" | "..." | '?' | '&' | '!' | '~' | '%'
-                     | "<<<" | ">>>" | "==" | "!=" | "+=" | "-=" | "*="
-                     | "%=" | "<<<=" | ">>>=" | "&=" | "|=" | "^=" | "=>"
+let common_sym     =   ";" | "," | "(" | ")" | "[" | "]"  | "{" | "}"
+                     | "=" | ":" | "|" | "." | "_" | "^"
+                     | "+" | "-" | "*" | "/" | "<" | "<=" | ">" | ">="
+
+let pascaligo_sym  = "->" | "=/=" | "#" | ":="
+
+let cameligo_sym   = "->" | "<>" | "::" | "||" | "&&" | "'"
+
+let reasonligo_sym =   "!"  | "=>" | "!=" | "==" | "++" | "..."
+                     | "||" | "&&"
+
+let jsligo_sym     =   "++" | "--"   | "..." | "?"  | "&"  | "!"  | "~"
+                     | "%"  | "<<<"  | "=="  | "!=" | "+=" | "-=" | "*="
+                     | "%=" | "<<<=" | "&="  | "|="
+                     | "^=" | "=>" (* | ">>>" | ">>>=" *)
 
 let symbol =
   common_sym
@@ -278,22 +279,20 @@ let symbol =
    through recursive calls. *)
 
 rule scan state = parse
-  ident                { mk_ident           state lexbuf }
-| uident               { mk_uident          state lexbuf }
-| bytes                { mk_bytes       seq state lexbuf }
-| natural 'n'          { mk_nat             state lexbuf }
-| natural "mutez"      { mk_mutez           state lexbuf }
-| natural "tz"
-| natural "tez"        { mk_tez             state lexbuf }
-| decimal "tz"
-| decimal "tez"        { mk_tez_decimal     state lexbuf }
-| natural              { mk_int             state lexbuf }
-| symbol               { mk_sym             state lexbuf }
-| eof                  { mk_eof             state lexbuf }
-| "[@" (attr as a) "]" { mk_attr          a state lexbuf }
-| "[%" (lang as l)     { mk_lang          l state lexbuf }
-| "`" | "{|"           { try_verb scan_verb state lexbuf }
-| _                    { unexpected         state lexbuf }
+  ident                  { mk_ident           state lexbuf }
+| uident                 { mk_uident          state lexbuf }
+| bytes                  { mk_bytes         b state lexbuf }
+| natural "n"            { mk_nat             state lexbuf }
+| natural "mutez"        { mk_mutez           state lexbuf }
+| natural ("tz" | "tez") { mk_tez             state lexbuf }
+| decimal ("tz" | "tez") { mk_tez_dec         state lexbuf }
+| natural                { mk_int             state lexbuf }
+| symbol                 { mk_sym             state lexbuf }
+| eof                    { mk_eof             state lexbuf }
+| "[@" (attr as a) "]"   { mk_attr          a state lexbuf }
+| "[%" (attr as l)       { mk_lang          l state lexbuf }
+| "`" | "{|"             { try_verb scan_verb state lexbuf }
+| _                      { unexpected         state lexbuf }
 
 (* Scanning verbatim strings *)
 

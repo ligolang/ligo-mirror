@@ -5,7 +5,6 @@
 
 module Core   = LexerLib.Core
 module Region = Simple_utils.Region
-(*module Pos = Simple_utils.Pos*)
 module Utils  = Simple_utils.Utils
 
 (* Signature *)

@@ -82,6 +82,7 @@ let is_sym =
   | BOOL_OR  _ (* "||"  *)
   | BOOL_AND _ (* "&&"  *)
   | NOT      _ (* "!"   *)
+  | QUOTE    _ (* "'"   *)
     -> true
 
   (* Preprocessing directives *)
@@ -104,20 +105,16 @@ let is_sym =
   (* Keywords *)
 
   | Else      _  (* else   *)
-  | False     _  (* false  *)
   | If        _  (* if     *)
   | Let       _  (* let    *)
   | Mod       _  (* mod    *)
   | Module    _  (* module *)
-  | Ctor_None _  (* None   *)
   | Or        _  (* or     *)
   | Rec       _  (* rec    *)
-  | Ctor_Some _  (* Some   *)
   | Switch    _  (* switch *)
-  | True      _  (* true   *)
   | Type      _  (* type   *)
 
-  (* End Of File *)
+  (* End-Of-File *)
 
   | EOF _
 

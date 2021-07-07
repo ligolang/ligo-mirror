@@ -108,7 +108,6 @@ let is_sym =
   | Contains  _  (* contains   *)
   | Else      _  (* else       *)
   | End       _  (* end        *)
-  | False     _  (* False      *)
   | For       _  (* for        *)
   | From      _  (* from       *)
   | Function  _  (* function   *)
@@ -120,7 +119,6 @@ let is_sym =
   | Mod       _  (* mod        *)
   | Module    _  (* module     *)
   | Nil       _  (* nil        *)
-  | Ctor_None _  (* None       *)
   | Not       _  (* not        *)
   | Of        _  (* of         *)
   | Or        _  (* or         *)
@@ -129,14 +127,11 @@ let is_sym =
   | Recursive _  (* recursive  *)
   | Remove    _  (* remove     *)
   | Set       _  (* set        *)
-  | Ctor_Some _  (* Some       *)
   | Skip      _  (* skip       *)
   | Step      _  (* step       *)
   | Then      _  (* then       *)
   | To        _  (* to         *)
-  | True      _  (* True       *)
   | Type      _  (* type       *)
-  | Unit      _  (* Unit       *)
   | Var       _  (* var        *)
   | While     _  (* while      *)
   | With      _  (* with       *)
@@ -158,6 +153,7 @@ let rec check orig = function
     let region = Region.make ~start:pos ~stop:pos in
     (match next_token units with
        Some ([], next) ->
+         let open Token in
          if   is_int token || is_string token
          then if   is_sym next || is_eof next
               then check orig units

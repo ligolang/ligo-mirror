@@ -80,6 +80,7 @@ let is_sym =
   | GE       _  (* ">=" *)
   | BOOL_OR  _  (* "||" *)
   | BOOL_AND _  (* "&&" *)
+  | QUOTE    _  (* "'"  *)
     -> true
 
   (* Preprocessing directives *)
@@ -104,7 +105,6 @@ let is_sym =
   | Begin     _  (* begin  *)
   | Else      _  (* else   *)
   | End       _  (* end    *)
-  | False     _  (* false  *)
   | Fun       _  (* fun    *)
   | If        _  (* if     *)
   | In        _  (* in     *)
@@ -112,19 +112,16 @@ let is_sym =
   | Match     _  (* match  *)
   | Mod       _  (* mod    *)
   | Module    _  (* module *)
-  | Ctor_None _  (* None   *)
   | Not       _  (* not    *)
   | Of        _  (* of     *)
   | Or        _  (* or     *)
   | Rec       _  (* rec    *)
-  | Ctor_Some _  (* Some   *)
   | Then      _  (* then   *)
-  | True      _  (* true   *)
   | Type      _  (* type   *)
   | With      _  (* with   *)
   | Struct    _  (* struct *)
 
-  (* End Of File *)
+  (* End-Of-File *)
 
   | EOF _ -> false
 

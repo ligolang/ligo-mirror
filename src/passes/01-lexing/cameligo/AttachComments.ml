@@ -1,10 +1,12 @@
+[@@@warning "-42"]
+
 module Core   = LexerLib.Core
 module Region = Simple_utils.Region
 
 let ok x = Stdlib.Ok x
 
 let set_markup markup tokens =
-  let open Token in
+  let open! Token in
   let set_markup token markup =
     let token = Region.set_markup token markup in
     token
@@ -39,10 +41,10 @@ let set_markup markup tokens =
       | GE token -> GE (set_markup token markup)
       | BOOL_OR token -> BOOL_OR (set_markup token markup)
       | BOOL_AND token -> BOOL_AND (set_markup token markup)
+      | QUOTE token -> QUOTE (set_markup token markup)
       | Begin token -> Begin (set_markup token markup)
       | Else token -> Else (set_markup token markup)
       | End token -> End (set_markup token markup)
-      | False token -> False (set_markup token markup)
       | Fun token -> Fun (set_markup token markup)
       | Rec token -> Rec (set_markup token markup)
       | If token -> If (set_markup token markup)
@@ -54,13 +56,10 @@ let set_markup markup tokens =
       | Of token -> Of (set_markup token markup)
       | Or token -> Or (set_markup token markup)
       | Then token -> Then (set_markup token markup)
-      | True token -> True (set_markup token markup)
       | Type token -> Type (set_markup token markup)
       | With token -> With (set_markup token markup)
       | Module token -> Module (set_markup token markup)
       | Struct token -> Struct (set_markup token markup)
-      | C_None token -> C_None (set_markup token markup)
-      | C_Some token -> C_Some (set_markup token markup)
       | EOF token -> EOF (set_markup token markup)
       | String i -> String {i with region = (set_markup i.region markup)}
       | Verbatim i -> Verbatim {i with region = (set_markup i.region markup)}
@@ -69,7 +68,7 @@ let set_markup markup tokens =
       | Nat i -> Nat {i with region = (set_markup i.region markup)}
       | Mutez i -> Mutez {i with region = (set_markup i.region markup)}
       | Ident i -> Ident {i with region = (set_markup i.region markup)}
-      | Constr i -> Constr {i with region = (set_markup i.region markup)}
+      | UIdent i -> UIdent {i with region = (set_markup i.region markup)}
       | Lang i -> Lang {i with region = (set_markup i.region markup)}
       | Attr i -> Attr {i with region = (set_markup i.region markup)}
       | Directive (Linemarker d) -> Directive (Linemarker {d with region = (set_markup d.region markup)})

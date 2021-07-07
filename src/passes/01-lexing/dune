@@ -18,5 +18,4 @@
      preprocessing_jsligo
      lexing_jsligo)
   (modules
-     Lexing Errors Pascaligo Cameligo Reasonligo jsligo)
-)
+     Lexing Errors Pascaligo Cameligo Reasonligo jsligo))
