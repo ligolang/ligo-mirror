@@ -41,7 +41,7 @@ let project = function
       | Some Pop -> "Some Pop"
       | None -> "None" in
     let value =
-      sprintf "LineMarker (%d, %S, %s)" linenum file_path flag_str
+      sprintf "Linemarker (%d, %S, %s)" linenum file_path flag_str
     in Region.{region; value}
 
 let to_string ~offsets mode directive =

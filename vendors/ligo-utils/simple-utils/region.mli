@@ -76,18 +76,21 @@ type t = <
 
   is_ghost : bool;
 
+  (* Markup *)
+
+  markup : markup list;
+
   (* Conversions to type [string] *)
 
   to_string : ?file:bool -> ?offsets:bool -> [`Byte | `Point] -> string;
   compact   : ?file:bool -> ?offsets:bool -> [`Byte | `Point] -> string;
-  markup    : markup list
 >
 
-and markup = 
+and markup =
   BlockCom of string reg * comment_position
-| LineCom of string reg * comment_position
+| LineCom  of string reg * comment_position
 
-and comment_position = 
+and comment_position =
   Before
 | After
 | Inline

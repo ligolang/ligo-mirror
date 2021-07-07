@@ -1,6 +1,6 @@
 (library
   (name RedBlackTrees)
   (public_name RedBlackTrees)
-  (instrumentation (backend bisect_ppx))
   (wrapped false)
-  (modules PolyMap PolyBiMap PolySet MultiSet RedBlack RedBlackTrees))
+  (modules
+     PolyMap PolyBiMap PolySet MultiSet RedBlack RedBlackTrees))
