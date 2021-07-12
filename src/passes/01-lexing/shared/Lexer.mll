@@ -70,7 +70,7 @@ module Make (Token : Token.S) =
     (* Making tokens *)
 
     let mk_string (thread, state) =
-      let start  = thread#opening#start in
+      let start  = thread#opening.Region.region#start in
       let stop   = state#pos in
       let region = Region.make ~start ~stop in
       let lexeme = thread#to_string in
@@ -78,7 +78,7 @@ module Make (Token : Token.S) =
       in Core.Token token, state
 
     let mk_verbatim (thread, state) =
-      let start  = thread#opening#start in
+      let start  = thread#opening.Region.region#start in
       let stop   = state#pos in
       let region = Region.make ~start ~stop in
       let lexeme = thread#to_string in
@@ -198,23 +198,21 @@ module Make (Token : Token.S) =
 
     let mk_eof state buffer =
       let Core.{region; state; _} = state#sync buffer in
-      let token = Token.eof region
+      let token = Token.mk_eof region
       in Core.Token token, state
+
+    let unexpected state lexbuf =
+      let Core.{region; lexeme; _} = state#sync lexbuf
+      in fail region (Unexpected_character lexeme.[0])
 
     let try_verb scan_verb state lexbuf =
       let lexeme = Lexing.lexeme lexbuf
       and verb_open, verb_close = Token.verbatim_delimiters in
       if lexeme = verb_open then
         let Core.{region; state; _} = state#sync lexbuf in
-        let thread = Core.mk_thread region
+        let thread = Core.mk_thread Region.{region; value=lexeme}
         in scan_verb verb_close thread state lexbuf |> mk_verbatim
-      else
-        let Core.{region; _} = state#sync lexbuf
-        in fail region (Unexpected_character lexeme.[0])
-
-    let unexpected state lexbuf =
-      let Core.{region; lexeme; _} = state#sync lexbuf
-      in fail region (Unexpected_character lexeme.[0])
+      else unexpected state lexbuf (* When? *)
 
 (* END HEADER *)
 }
@@ -306,7 +304,7 @@ and scan_verb close thread state = parse
 | "`" | "|}" {
     let lexeme = Lexing.lexeme lexbuf in
     if lexeme = close then
-      thread, (state#sync lexbuf).Core.state
+      thread#push_string close, (state#sync lexbuf).Core.state
     else
       let Core.{state; _} = state#sync lexbuf in
       scan_verb close (thread#push_string lexeme) state lexbuf
@@ -315,7 +313,7 @@ and scan_verb close thread state = parse
            and nl = Lexing.lexeme lexbuf in
            let state = state#set_pos (state#pos#new_line nl) in
            scan_verb close (thread#push_string nl) state lexbuf }
-| eof    { fail thread#opening Unterminated_verbatim }
+| eof    { fail thread#opening.Region.region Unterminated_verbatim }
 | _ as c { let Core.{state; _} = state#sync lexbuf in
            scan_verb close (thread#push_char c) state lexbuf }
 

@@ -41,7 +41,6 @@ let fail region error =
 let is_int    = function Token.Int    _ -> true | _ -> false
 let is_string = function Token.String _ -> true | _ -> false
 let is_bytes  = function Token.Bytes  _ -> true | _ -> false
-let is_eof    = function Token.EOF    _ -> true | _ -> false
 
 let is_hexa = function
   Token.UIdent
@@ -153,7 +152,7 @@ let rec check orig = function
     let region = Region.make ~start:pos ~stop:pos in
     (match next_token units with
        Some ([], next) ->
-         let open Token in
+         let open! Token in
          if   is_int token || is_string token
          then if   is_sym next || is_eof next
               then check orig units

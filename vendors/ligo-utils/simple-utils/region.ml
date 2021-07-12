@@ -122,9 +122,8 @@ let make ~markup ~(start: Pos.t) ~(stop: Pos.t) =
           and stop_str  = stop#compact ~file:false ~offsets mode in
           if start#file = stop#file then
             if start#line = stop#line then
-              sprintf "%s%s-%i" prefix start_str
-                      (if offsets then stop#offset mode
-                       else stop#column mode)
+              sprintf "%s%s-h%i" prefix start_str
+                      (if offsets then stop#offset mode else stop#column mode)
             else
               sprintf "%s%s-%s" prefix start_str stop_str
           else sprintf "%s:%s-%s:%s"

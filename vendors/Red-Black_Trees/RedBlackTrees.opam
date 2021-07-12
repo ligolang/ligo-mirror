@@ -1,17 +1,18 @@
 opam-version : "2.0"
+name         : "RedBackTrees"
 version      : "1.0"
 synopsis     : "Read-Black trees a la Okasaki and polymorphic sets and maps based on them"
 description  : "This implementation is based on the classic paper by Chris Okasaki, Red-Black Trees in a Functional Setting. J. Funct. Program. 9(4): 471-477 (1999). Note that no removal operation is provided."
-maintainer   : "rinderknecht@free.fr"
-authors      : ["Christian Rinderknecht"]
+maintainer   : "Christian Rinderknecht <rinderknecht@free.fr>
+                Pierre-Emmanuel Wulfman <pierre.emmanuel.wulfman@gmail.com>"
+authors      : ["Christian Rinderknecht" "Pierre-Emmanuel Wulfman"]
 homepage     : "https://gitlab.com/ligolang/ligo/-/tree/dev/vendors/Red-Black_Trees"
 bug-reports  : "https://gitlab.com/ligolang/ligo/-/issues"
+dev-repo     : "git+https://gitlab.com/ligolang/tezos.git"
 license      : "MIT"
 # If you change the dependencies, run `opam lock` in the root
 depends      : ["dune"]
-build        : [
-                ["dune" "build" "-p" name "-j" jobs]
-               ]
+build        : [["dune" "build" "-p" name "-j" jobs]]
 url {
   src: "https://github.com/rinderknecht/Red-Black_Trees/"
 }

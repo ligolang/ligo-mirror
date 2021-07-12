@@ -1,14 +1,15 @@
-name: "ligo"
-opam-version: "2.0"
-maintainer: "Galfour <contact@ligolang.org>"
-authors: [ "Galfour" "Christian Rinderknecht"]
-homepage: "https://gitlab.com/ligolang/tezos"
-bug-reports: "https://gitlab.com/ligolang/tezos/issues"
-synopsis: "A high-level language for smart contracts on Tezos"
-dev-repo: "git+https://gitlab.com/ligolang/tezos.git"
-license: "MIT"
+opam-version : "2.0"
+name         : "ligo"
+synopsis     : "LIGO: A high-level language for smart contracts on Tezos"
+maintainer   : "Galfour <contact@ligolang.org>"
+authors      : [ "Galfour" "Christian Rinderknecht"]
+homepage     : "https://gitlab.com/ligolang/tezos"
+bug-reports  : "https://gitlab.com/ligolang/tezos/issues"
+dev-repo     : "git+https://gitlab.com/ligolang/tezos.git"
+license      : "MIT"
+build        : [["dune" "build" "-p" name "-j" jobs]]
 # If you change the dependencies, run `opam lock` in the root
-depends: [
+depends      : [
   "odoc" { build }
   "ocamlfind" { build }
   "dune" { build & >= "2.7.1" & < "2.9" }
@@ -37,7 +38,4 @@ depends: [
   # work around tezos' failure to constrain
   "lwt" { = "5.3.0" }
   "bisect_ppx" {dev & >= "2.5.0"}
-]
-build: [
-  [ "dune" "build" "-p" name "-j" jobs ]
 ]

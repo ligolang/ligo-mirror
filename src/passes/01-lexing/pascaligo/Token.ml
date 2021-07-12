@@ -217,7 +217,9 @@ module T =
     let project = function
       (* Preprocessing directives *)
 
-      Directive d -> Directive.project d
+      Directive d ->
+        let Region.{region; value} = Directive.project d
+        in region, sprintf "Directive (%S)" value
 
       (* Literals *)
 
