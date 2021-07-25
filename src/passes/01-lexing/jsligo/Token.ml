@@ -62,7 +62,6 @@ module T =
     | COLON    of Region.t  (* ":"    *)
     | DOT      of Region.t  (* "."    *)
     | ELLIPSIS of Region.t  (* "..."  *)
-    | QMARK    of Region.t  (* "?"    *)
 
     | BOOL_OR  of Region.t  (* "||"   *)
     | BOOL_AND of Region.t  (* "&&"   *)
@@ -106,7 +105,6 @@ module T =
     | Const    of Region.t  (* const    *)
     | Default  of Region.t  (* default  *)
     | Else     of Region.t  (* else     *)
-    | Enum     of Region.t  (* enum     *)
     | Export   of Region.t  (* export   *)
     | For      of Region.t  (* for      *)
     | If       of Region.t  (* if       *)
@@ -182,7 +180,6 @@ module T =
     | "COLON"    -> ":"
     | "DOT"      -> "."
     | "ELLIPSIS" -> "..."
-    | "QMARK"    -> "?"
 
     | "BOOL_OR"  -> "||"
     | "BOOL_AND" -> "&&"
@@ -226,7 +223,6 @@ module T =
     | "Const"    -> "const"
     | "Default"  -> "default"
     | "Else"     -> "else"
-    | "Enum"     -> "enum"
     | "Export"   -> "export"
     | "For"      -> "for"
     | "If"       -> "if"
@@ -325,7 +321,6 @@ module T =
     | COLON    region -> region, "COLON"
     | DOT      region -> region, "DOT"
     | ELLIPSIS region -> region, "ELLIPSIS"
-    | QMARK    region -> region, "QMARK"
 
     | BOOL_OR  region -> region, "BOOL_OR"
     | BOOL_AND region -> region, "BOOL_AND"
@@ -369,8 +364,7 @@ module T =
     | Const    region -> region, "Const"
     | Default  region -> region, "Default"
     | Else     region -> region, "Else"
-    | Enum     region -> region, "Enum"
-    | Export   region -> region, "Enum"
+    | Export   region -> region, "Export"
     | For      region -> region, "For"
     | If       region -> region, "If"
     | Import   region -> region, "Import"
@@ -441,7 +435,6 @@ module T =
     | COLON    _ -> ":"
     | DOT      _ -> "."
     | ELLIPSIS _ -> "..."
-    | QMARK    _ -> "?"
 
     | BOOL_OR  _ -> "||"
     | BOOL_AND _ -> "&&"
@@ -486,7 +479,6 @@ module T =
     | Default  _ -> "default"
     | Else     _ -> "else"
     | Export   _ -> "export"
-    | Enum     _ -> "enum"
     | For      _ -> "for"
     | If       _ -> "if"
     | Import   _ -> "import"
@@ -536,7 +528,6 @@ module T =
        (fun reg -> Const   reg);
        (fun reg -> Default reg);
        (fun reg -> Else    reg);
-       (fun reg -> Enum    reg);
        (fun reg -> Export  reg);
        (fun reg -> For     reg);
        (fun reg -> If      reg);
@@ -651,8 +642,6 @@ module T =
       | "--"  -> Ok (MINUS2   region) *)
 
       | "..." -> Ok (ELLIPSIS region)
-      |  "?"  -> Ok (QMARK    region)
-
       | "||"  -> Ok (BOOL_OR  region)
       | "&&"  -> Ok (BOOL_AND region)
       | "!"   -> Ok (BOOL_NOT region)

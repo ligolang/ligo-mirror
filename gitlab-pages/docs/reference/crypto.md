@@ -32,8 +32,6 @@ over the given `bytes` data and returns a `bytes` representing the hash.
 function hasherman_blake (const s: bytes) : bytes is Crypto.blake2b(s)
 ```
 
-> Note that `blake2b` is *deprecated*. Please use `Crypto.blake2b`.
-
 </Syntax>
 <Syntax syntax="cameligo">
 
@@ -83,8 +81,6 @@ Runs the [sha256 hash algorithm](https://en.wikipedia.org/wiki/SHA-2) over the g
 function hasherman (const s : bytes) : bytes is Crypto.sha256(s)
 ```
 
-> Note that `sha_256` is *deprecated*. Please use `Crypto.sha256`.
-
 </Syntax>
 <Syntax syntax="cameligo">
 
@@ -133,8 +129,6 @@ Runs the [sha512 hash algorithm](https://en.wikipedia.org/wiki/SHA-2) over the g
 function hasherman512 (const s: bytes) : bytes is Crypto.sha512(s)
 ```
 
-> Note that `sha_512` is *deprecated*.  Please use `Crypto.sha512`.
-
 </Syntax>
 <Syntax syntax="cameligo">
 
@@ -154,6 +148,97 @@ let hasherman512 = (s: bytes) => Crypto.sha512(s);
 
 ```jsligo
 let hasherman512 = (s: bytes): bytes => Crypto.sha512(s);
+```
+
+</Syntax>
+
+<SyntaxTitle syntax="pascaligo">
+function sha3 : bytes -> bytes
+</SyntaxTitle>
+<SyntaxTitle syntax="cameligo">
+val sha3 : bytes -> bytes
+</SyntaxTitle>
+<SyntaxTitle syntax="reasonligo">
+let sha3: bytes => bytes
+</SyntaxTitle>
+<SyntaxTitle syntax="jsligo">
+let sha3: (b: bytes) => bytes
+</SyntaxTitle>
+
+Runs the [sha3 hash algorithm](https://en.wikipedia.org/wiki/SHA-3) over the given
+`bytes` data and returns a `bytes` representing the hash.
+
+
+
+<Syntax syntax="pascaligo">
+
+```pascaligo
+function hasherman3 (const s: bytes) : bytes is Crypto.sha3(s)
+```
+
+</Syntax>
+<Syntax syntax="cameligo">
+
+```cameligo
+let hasherman3 (s: bytes) : bytes = Crypto.sha3 s
+```
+
+</Syntax>
+<Syntax syntax="reasonligo">
+
+```reasonligo
+let hasherman3 = (s: bytes) => Crypto.sha3(s);
+```
+
+</Syntax>
+<Syntax syntax="jsligo">
+
+```jsligo
+let hasherman3 = (s: bytes): bytes => Crypto.sha3(s);
+```
+
+</Syntax>
+<SyntaxTitle syntax="pascaligo">
+function keccak : bytes -> bytes
+</SyntaxTitle>
+<SyntaxTitle syntax="cameligo">
+val keccak : bytes -> bytes
+</SyntaxTitle>
+<SyntaxTitle syntax="reasonligo">
+let keccak: bytes => bytes
+</SyntaxTitle>
+<SyntaxTitle syntax="jsligo">
+let keccak: (b: bytes) => bytes
+</SyntaxTitle>
+
+Runs the [keccak](https://en.wikipedia.org/wiki/keccak) over the given
+`bytes` data and returns a `bytes` representing the hash.
+
+<Syntax syntax="pascaligo">
+
+```pascaligo
+function hasherman_keccak (const s: bytes) : bytes is Crypto.keccak(s)
+```
+
+</Syntax>
+<Syntax syntax="cameligo">
+
+```cameligo
+let hasherman_keccak (s: bytes) : bytes = Crypto.keccak s
+```
+
+</Syntax>
+<Syntax syntax="reasonligo">
+
+```reasonligo
+let hasherman_keccak = (s: bytes) => Crypto.keccak(s);
+```
+
+</Syntax>
+<Syntax syntax="jsligo">
+
+```jsligo
+let hasherman_keccak = (s: bytes): bytes => Crypto.keccak(s);
 ```
 
 </Syntax>
@@ -184,8 +269,6 @@ function check_hash_key (const kh1 : key_hash; const k2 : key) : bool * key_hash
   if kh1 = kh2 then ret := True else skip; 
 } with (ret, kh2)
 ```
-
-> Note that `hash_key` is *deprecated*. Please use `Crypto.hash_key`.
 
 </Syntax>
 <Syntax syntax="cameligo">
@@ -258,8 +341,6 @@ function check_signature
      const msg: bytes) : bool
   is Crypto.check(pk, signed, msg)
 ```
-
-> Note that `crypto_check` is *deprecated*. Please use `Crypto.check`.
 
 </Syntax>
 <Syntax syntax="cameligo">

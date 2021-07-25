@@ -16,6 +16,7 @@ type 'a result_monad = ('a,Errors.interpreter_error) result
 let ( let>>= ) o f = Trace.bind f o
 
 let corner_case ?(loc = Location.generated) () = Errors.generic_error loc "Corner case, please report to devs."
+let add_warning _ = ()
 
 let wrap_compare compare a b =
   let res = compare a b in
@@ -27,8 +28,9 @@ module Command = struct
   type 'a t =
     | Get_big_map : Location.t * LT.type_expression * LT.type_expression * LT.value * Z.t -> LT.expression t
     | Mem_big_map : Location.t * LT.type_expression * LT.type_expression * LT.value * Z.t -> bool t
-    | Bootstrap_contract : int * LT.value * LT.value  -> unit t
-    | Nth_bootstrap_contract : int  -> Tezos_protocol_008_PtEdo2Zk.Protocol.Alpha_context.Contract.t t
+    | Bootstrap_contract : int * LT.value * LT.value * Ast_typed.type_expression  -> unit t
+    | Nth_bootstrap_contract : int -> Tezos_protocol_008_PtEdo2Zk.Protocol.Alpha_context.Contract.t t
+    | Nth_bootstrap_typed_address : Location.t * int -> (Tezos_protocol_008_PtEdo2Zk.Protocol.Alpha_context.Contract.t * Ast_typed.type_expression * Ast_typed.type_expression) t
     | Reset_state : Location.t * LT.value * LT.value -> unit t
     | External_call : Location.t * LT.contract * (execution_trace, string) Tezos_micheline.Micheline.node * Z.t -> Tezos_state.state_error option t
     | State_error_to_value : Tezos_state.state_error -> LT.value t
@@ -49,6 +51,8 @@ module Command = struct
     | Eval : Location.t * LT.value * Ast_typed.type_expression -> LT.value t
     | Compile_contract : Location.t * LT.value * Ast_typed.type_expression -> LT.value t
     | To_contract : Location.t * LT.value * string option * Ast_typed.type_expression -> LT.value t
+    | Check_storage_address : Location.t * Tezos_protocol_008_PtEdo2Zk.Protocol.Alpha_context.Contract.t * Ast_typed.type_expression -> unit t
+    | Contract_exists : Location.t * LT.value -> bool t
     | Inject_script : Location.t * LT.value * LT.value * Z.t -> LT.value t
     | Set_now : Location.t * Z.t -> unit t
     | Set_source : LT.value -> unit t
@@ -121,10 +125,23 @@ module Command = struct
     | Nth_bootstrap_contract (n) ->
       let* contract = Tezos_state.get_bootstrapped_contract n in
       ok (contract,ctxt)
-    | Bootstrap_contract (mutez, contract, storage) ->
+    | Nth_bootstrap_typed_address (loc, n) ->
+      let* contract = Tezos_state.get_bootstrapped_contract n in
+      let* storage_ty =
+        trace_option (Errors.generic_error loc "Storage type not available" ) @@
+          List.Assoc.find ~equal:(Tezos_state.compare_account) ctxt.storage_tys contract in
+      let* parameter_ty =
+        trace_option (Errors.generic_error loc "Parameter type not available" ) @@
+          List.Assoc.find ~equal:(Tezos_state.compare_account) ctxt.parameter_tys contract in
+      let* contract = Tezos_state.get_bootstrapped_contract n in
+      ok ((contract, parameter_ty, storage_ty),ctxt)
+    | Bootstrap_contract (mutez, contract, storage, contract_ty) ->
       let* contract = trace_option (corner_case ()) @@ LC.get_michelson_contract contract in
+      let* input_ty, _ = trace_option (corner_case ()) @@ Ast_typed.get_t_function contract_ty in
+      let* parameter_ty, _ = trace_option (corner_case ()) @@ Ast_typed.get_t_pair input_ty in
       let* (storage,_,storage_ty) = trace_option (corner_case ()) @@ LC.get_michelson_expr storage in
-      let ctxt = { ctxt with bootstrapped_contracts = (mutez, contract, storage, storage_ty) :: ctxt.bootstrapped_contracts } in
+      let ctxt =
+        { ctxt with next_bootstrapped_contracts = (mutez, contract, storage, parameter_ty, storage_ty) :: ctxt.next_bootstrapped_contracts } in
       ok ((),ctxt)
     | Reset_state (loc,n,amts) ->
       let* amts = trace_option (corner_case ()) @@ LC.get_list amts in
@@ -135,7 +152,7 @@ module Command = struct
         amts
       in
       let* n = trace_option (corner_case ()) @@ LC.get_nat n in
-      let* ctxt = Tezos_state.init_ctxt ~loc ~initial_balances:amts ~n:(Z.to_int n) (List.rev ctxt.bootstrapped_contracts) in
+      let* ctxt = Tezos_state.init_ctxt ~loc ~initial_balances:amts ~n:(Z.to_int n) (List.rev ctxt.next_bootstrapped_contracts) in
       ok ((),ctxt)
     | External_call (loc, { address; entrypoint }, param, amt) -> (
       let* x = Tezos_state.transfer ~loc ctxt address ?entrypoint param amt in
@@ -205,7 +222,7 @@ module Command = struct
         Str.substitute_first (Str.regexp ("\\$"^s)) (fun _ -> Michelson_backend.subst_vname s) exp_str
       in
       let exp_as_string' = List.fold_left ~f:aux ~init:exp_as_string substs in
-      let* (mich_v, mich_ty, object_ty) = Michelson_backend.compile_expression ~loc syntax exp_as_string' file_opt substs in
+      let* (mich_v, mich_ty, object_ty) = Michelson_backend.compile_expression ~loc ~add_warning syntax exp_as_string' file_opt substs in
       ok (LT.V_Michelson (LT.Ty_code (mich_v, mich_ty, object_ty)), ctxt)
     | Compile_meta_value (loc,x,ty) ->
       let* x = Michelson_backend.compile_simple_value ~ctxt ~loc x ty in
@@ -221,7 +238,7 @@ module Command = struct
        end
     | Compile_contract_from_file (source_file, entrypoint) ->
       let* contract_code =
-        Michelson_backend.compile_contract source_file entrypoint in
+        Michelson_backend.compile_contract ~add_warning source_file entrypoint in
       let* size =
         let* s = Ligo_compile.Of_michelson.measure contract_code in
         ok @@ LT.V_Ct (C_int (Z.of_int s))
@@ -240,7 +257,7 @@ module Command = struct
       let* input_ty,_ = Ligo_run.Of_michelson.fetch_lambda_types func_code.expr_ty in
       let* options = Michelson_backend.make_options ~param:input_ty (Some ctxt) in
       let* runres = Ligo_run.Of_michelson.run_function ~options func_code.expr func_code.expr_ty arg_code in
-      let* (expr_ty,expr) = match runres with | Success x -> ok x | Fail _ -> fail @@ Errors.generic_error loc "Running failed" in
+      let* (expr_ty,expr) = match runres with | Success x -> ok x | Fail x -> fail @@ Errors.target_lang_failwith loc x in
       let expr, expr_ty =
         clean_locations expr, clean_locations expr_ty in
       let ret = LT.V_Michelson (Ty_code (expr, expr_ty, f.body.type_expression)) in
@@ -285,6 +302,19 @@ module Command = struct
            fail @@ Errors.generic_error loc
                      "Should be caught by the typer"
       end
+    | Check_storage_address (loc, addr, ty) ->
+      let* ligo_ty =
+        trace_option (Errors.generic_error loc "Not supported (yet) when the provided account has been fetched from Test.get_last_originations" ) @@
+          List.Assoc.find ~equal:(Tezos_state.compare_account) ctxt.storage_tys addr in
+      let* _,ty = trace_option (Errors.generic_error loc "Argument expected to be a typed_address" ) @@
+                    Ast_typed.get_t_typed_address ty in
+      let* () = trace_option (Errors.generic_error loc "Storage type does not match expected type") @@
+          (Ast_typed.assert_type_expression_eq (ligo_ty, ty)) in
+      ok ((), ctxt)
+    | Contract_exists (loc, addr) ->
+      let* addr = trace_option (corner_case ()) @@ LC.get_address addr in
+      let* info = Tezos_state.contract_exists ~loc ctxt addr in
+      ok @@ (info, ctxt)
     | Inject_script (loc, code, storage, amt) -> (
       let* contract_code = trace_option (corner_case ()) @@ LC.get_michelson_contract code in
       let* (storage,_,ligo_ty) = trace_option (corner_case ()) @@ LC.get_michelson_expr storage in
@@ -294,7 +324,7 @@ module Command = struct
         let addr = LT.V_Ct ( C_address contract ) in
         let storage_tys = (contract, ligo_ty) :: (ctxt.storage_tys) in
         ok (addr, {ctxt with storage_tys})
-      | Tezos_state.Fail errs -> raise (Exc.Exc (Object_lang_ex (loc,errs)))
+      | Tezos_state.Fail errs -> fail (Errors.target_lang_error loc errs)
     )
     | Mutate_some_value (_loc, z, v, v_type) ->
       let n = Z.to_int z in
@@ -456,7 +486,7 @@ type 'a t =
   | Call : 'a Command.t -> 'a t
   | Return : 'a -> 'a t
   | Fail_ligo : Errors.interpreter_error -> 'a t
-  | Try_catch : 'a t * (Ligo_interpreter.Types.exception_type -> 'a t) -> 'a t
+  | Try_or : 'a t * 'a t -> 'a t
 
 let rec eval
   : type a.
@@ -472,24 +502,20 @@ let rec eval
   | Call command -> Command.eval command ctxt log
   | Return v -> ok (v, ctxt)
   | Fail_ligo err -> fail err
-  | Try_catch (e', handler) ->
-    match Trace.to_stdlib_result (eval e' ctxt log) with
-    | Ok (r, _) -> ok r
-    | Error (`Main_interpret_target_lang_error (loc, e), _) ->
-       eval (handler (LT.Object_lang_ex (loc, e))) ctxt log
-    | Error (`Main_interpret_meta_lang_eval (loc, s), _) ->
-       eval (handler (LT.Meta_lang_ex {location = loc; reason = Reason s})) ctxt log
-    | Error (`Main_interpret_meta_lang_failwith (loc, v), _) ->
-       eval (handler (LT.Meta_lang_ex {location = loc; reason = Val v})) ctxt log
-    | Error _ ->
-       failwith "Interpreter error not handled"
-    | exception Exc.Exc exc ->
-       eval (handler exc) ctxt log
+  | Try_or (e', handler) ->
+    try_catch (function
+          `Main_interpret_target_lang_error _
+        | `Main_interpret_target_lang_failwith _
+        | `Main_interpret_meta_lang_eval _
+        | `Main_interpret_meta_lang_failwith _ ->
+           eval handler ctxt log
+        | e -> fail e)
+    (eval e' ctxt log)
 
 let fail err : 'a t = Fail_ligo err
 let return (x: 'a) : 'a t = Return x
 let call (command : 'a Command.t) : 'a t = Call command
-let try_catch (c : 'a t) (handler : Ligo_interpreter.Types.exception_type -> 'a t) : 'a t = Try_catch (c, handler)
+let try_or (c : 'a t) (handler : 'a t) : 'a t = Try_or (c, handler)
 let ( let>> ) o f = Bind (call o, f)
 let ( let* ) o f = Bind (o, f)
 
