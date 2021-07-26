@@ -116,11 +116,6 @@ let mk_thread region : thread =
 
 (* STATE *)
 
-type 'token window = <
-  last_token    : 'token option;
-  current_token : 'token           (* Including EOF *)
->
-
 type line_comment  = string (* Opening of a line comment *)
 type block_comment = <opening : string; closing : string>
 
@@ -143,6 +138,11 @@ type 'token lex_unit =
   Token     of 'token
 | Markup    of Markup.t
 | Directive of Directive.t
+
+type 'token window = <
+  last_token    : 'token option;
+  current_token : 'token           (* Including EOF *)
+>
 
 type 'token state = <
   config       : 'token config;
@@ -571,7 +571,7 @@ rule scan client state = parse
 
   (* Strings *)
 | '\''
-| '"' as lexeme {   
+| '"' as lexeme {
   if client#support_string_delimiter lexeme then (
     let {region; state; _} = state#sync lexbuf in
     let thread             = mk_thread region in
@@ -617,7 +617,7 @@ rule scan client state = parse
 
 | eof { client#mk_eof state lexbuf }
 
-| _ { 
+| _ {
   rollback lexbuf;
       client#callback state lexbuf (* May raise exceptions *) }
 
@@ -712,11 +712,11 @@ and scan_string delimiter thread state = parse
 | ['\t' '\r' '\b']
          { let {region; _} = state#sync lexbuf
            in fail region Invalid_character_in_string }
-| '"'    { 
+| '"'    {
   if delimiter = '"' then
     let {state; _} = state#sync lexbuf
         in thread, state
-  else 
+  else
     let {state; _} = state#sync lexbuf in
            scan_string delimiter (thread#push_char '"') state lexbuf
   }
@@ -724,7 +724,7 @@ and scan_string delimiter thread state = parse
   if delimiter = '\'' then
     let {state; _} = state#sync lexbuf
         in thread, state
-  else 
+  else
     let {state; _} = state#sync lexbuf in
            scan_string delimiter (thread#push_char '\'') state lexbuf
 

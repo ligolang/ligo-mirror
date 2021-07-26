@@ -103,11 +103,6 @@ val mk_thread : Region.t -> thread
    recognised by the scanner: that length is used as a positive offset
    to the current column. *)
 
-type 'token window = <
-  last_token    : 'token option;
-  current_token : 'token           (* Including EOF *)
->
-
 type line_comment  = string (* Opening of a line comment *)
 type block_comment = <opening : string; closing : string>
 
@@ -130,6 +125,11 @@ type 'token lex_unit =
   Token     of 'token
 | Markup    of Markup.t
 | Directive of Directive.t
+
+type 'token window = <
+  last_token    : 'token option;
+  current_token : 'token           (* Including EOF *)
+>
 
 type 'token state = <
   config       : 'token config;

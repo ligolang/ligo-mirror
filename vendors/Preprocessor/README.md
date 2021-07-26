@@ -545,20 +545,30 @@ standalone preprocessor, and also export data structures about the
 configuration meant for the library client, for example, the LIGO
 compiler.
 
-The module signature
-[COMMENTS](https://gitlab.com/ligolang/ligo/-/blob/998107d5f0098c8acc86f8950f2a0f9fc5836f5d/vendors/Preprocessor/CLI.mli#L10)
-exports optional values denoting two kinds of comments: one-line
+The module signature `COMMENTS` is
+
+```
+module type COMMENTS =
+  sig
+    type line_comment  = string (* Opening of a line comment *)
+    type block_comment = <opening : string; closing : string>
+
+    val block : block_comment option
+    val line  : line_comment option
+  end
+```
+
+It exports optional values denoting two kinds of comments: one-line
 comments and block comments (that is, multi-line comments). Due to the
 use of metaprogramming by means of `ocamllex` to implement the module
 `API`, where comments are defined as regular expressions, the client
 of `CLI` must make sure to choose line and block comments that are
 actually recognised by `API`.
 
-The module signature
-[CLI.S](https://gitlab.com/ligolang/ligo/-/blob/998107d5f0098c8acc86f8950f2a0f9fc5836f5d/vendors/Preprocessor/CLI.mli#L23)
-gathers data structures parameterising the behaviour of the
-preprocessor. If building the standalone preprocessor, those data will
-come from the command-line. They are as follows:
+The module signature `S` in `CLI` gathers data structures
+parameterising the behaviour of the preprocessor. If building the
+standalone preprocessor, those data will come from the
+command-line. They are as follows:
 
 ```
     val input     : string option (* input file             *)
@@ -610,7 +620,19 @@ The rationale for this structure is to enable the CLI to be augmented
 when composing the preprocessor with another tool that consumes its
 output. For example, the lexing library in `vendors/LexerLib` features
 its own `CLI` module, exporting its own type
-[status](https://gitlab.com/ligolang/ligo/-/blob/d490176ef5dd7e6c825a8a7bd04ab56108889ce0/vendors/LexerLib/CLI.mli#L71),
+`status`:
+
+```
+    type status = [
+      `Done
+    | `Version      of string
+    | `Help         of Buffer.t
+    | `CLI          of Buffer.t
+    | `SyntaxError  of string
+    | `FileNotFound of string
+    ]
+```
+
 which reuses the one in `vendors/Preprocessor/CLI.mli`.
 
 ### API
@@ -621,17 +643,16 @@ The `API` module is the heart of the preprocessor. Perhaps it is best
 to start from its interface. The type of a preprocessor is
 
 ```
-type 'src preprocessor = config -> 'src -> result
+type 'src preprocessor = State.config -> 'src -> result
 ```
 
 Clearly, the type parameter `'src` is the kind of input. The type
-[config](https://gitlab.com/ligolang/ligo/-/blob/d490176ef5dd7e6c825a8a7bd04ab56108889ce0/vendors/Preprocessor/API.mli#L41)
-is an object type gathering information about the input and how the
-preprocessor is parameterised by the user. It could be that this
-information comes from the module `CLI` if building the standalone
-preprocessor, but it could come from the LIGO compiler, which uses the
-preprocessor as a library and has its own command-line interface. The
-type `result` is
+`State.config` is an object type gathering information about the input
+and how the preprocessor is parameterised by the user. See section
+[The State](#the-state). It could be that this information comes from
+the module `CLI` if building the standalone preprocessor, but it could
+come from the LIGO compiler, which uses the preprocessor as a library
+and has its own command-line interface. The type `result` is
 
 ```
 type result = (success, Buffer.t option * message) Stdlib.result
@@ -703,7 +724,7 @@ are skipped, they have to be well formed).
 Already, we have seen two kind of information (modes, conditionals)
 that need to be threaded along the states of the automaton. There is
 actually more that needs threading, all gathered in the
-[state](https://gitlab.com/ligolang/ligo/-/blob/d490176ef5dd7e6c825a8a7bd04ab56108889ce0/vendors/Preprocessor/API.mll#L81):
+type `State.state`:
 
 ```
 type state = {
@@ -734,14 +755,14 @@ but also additional information.
 
   * The field `incl` is isomorphic to the file system path to the
     current input file, and it is changed to that of any included
-    file. More precisely, its a stack on top of which [directories are pushed](https://gitlab.com/ligolang/ligo/-/blob/d490176ef5dd7e6c825a8a7bd04ab56108889ce0/vendors/Preprocessor/API.mll#L94)
-    and from which a [path can be obtained back](https://gitlab.com/ligolang/ligo/-/blob/d490176ef5dd7e6c825a8a7bd04ab56108889ce0/vendors/Preprocessor/API.mll#L97).
+    file. More precisely, its a stack on top of which directories are
+    pushed by means of `API.push_dir`, and from which a path can be
+    obtained back `API.mk_path`.
 
   * The field `import` is the list of modules from their defining
     file, as given by the `#import`
 
-The entry point in the automaton is
-[scan](https://gitlab.com/ligolang/ligo/-/blob/d490176ef5dd7e6c825a8a7bd04ab56108889ce0/vendors/Preprocessor/API.mll#L490):
+The entry point in the automaton is `API.scan`:
 
 ```
 rule scan state = parse
@@ -753,15 +774,23 @@ scanning rules.
 
 #### Copying
 
-There are two functions to copy input characters to the output buffer:
+There are two functions to copy input characters to the output buffer.
+The first is `API.copy`:
 
-  1. [copy](https://gitlab.com/ligolang/ligo/-/blob/dev/vendors/Preprocessor/API.mll#L274)
+```
+let copy state buffer =
+  Buffer.add_string state.out (Lexing.lexeme buffer)
+```
+and the other is `proc_nl` ("process newline character"):
 
-  2. [proc_nl](https://gitlab.com/ligolang/ligo/-/blob/dev/vendors/Preprocessor/API.mll#L279)
+```
+let proc_nl state buffer =
+  Lexing.new_line buffer; copy state buffer
+```
 
-It is necessary to call `proc_nl` when copying newline
-characters. Remember too that newline characters are always copied,
-independent of the mode.
+**It is necessary to call `proc_nl` when copying newline characters.**
+Remember too that newline characters are always copied, independent of
+the mode.
 
 #### Scanning Conditional Directives
 
@@ -779,31 +808,37 @@ the trace with the current directive --- that mode may be later
 restored (see below for some examples). Moreover, the directive would
 be deemed invalid if its current position within the line (that is,
 its offset) were not preceded by blanks or nothing, otherwise the
-function
-[expr](https://gitlab.com/ligolang/ligo/-/blob/d490176ef5dd7e6c825a8a7bd04ab56108889ce0/vendors/Preprocessor/API.mll#L297)
-is called to scan the Boolean expression associated with the `#if`: if
-it evaluates to `true`, then the resulting mode is `Copy`, meaning
-that we may copy what follows, otherwise we skip it --- the actual
-decision depending on the current mode. That new mode is used if we
-were in copy mode, and the offset is reset to the start of a new line
-(as we read a new line in `expr`); otherwise we were in skipping mode
-and the value of the conditional expression must be ignored (but not
-its syntax), and we continue skipping the input.
+function `API.expr` is called to scan the Boolean expression
+associated with the `#if`: if it evaluates to `true`, then the
+resulting mode is `Copy`, meaning that we may copy what follows,
+otherwise we skip it --- the actual decision depending on the current
+mode. That new mode is used if we were in copy mode, and the offset is
+reset to the start of a new line (as we read a new line in `expr`);
+otherwise we were in skipping mode and the value of the conditional
+expression must be ignored (but not its syntax), and we continue
+skipping the input.
 
-When an `#else` is matched,
-[the trace is extended](https://gitlab.com/ligolang/ligo/-/blob/d490176ef5dd7e6c825a8a7bd04ab56108889ce0/vendors/Preprocessor/API.mll#L233)
-with `Else`:
+When an `#else` is matched, the trace is extended by calling
+`API.extend` with `Else` as an argument:
 
 ```
 extend Else state region
 ```
 
 and then the rest of the line is scanned and discarded by means of
-[skip_line](https://gitlab.com/ligolang/ligo/-/blob/d490176ef5dd7e6c825a8a7bd04ab56108889ce0/vendors/Preprocessor/API.mll#L669). (Keep
-in mind that newline characters are always copied.) If we were in copy
-mode, the new mode toggles to skipping mode; otherwise, the trace is
-searched for the last encountered `#if` of `#elif` and the associated
-mode is restored.
+the rule `skip_line`:
+
+```
+and skip_line state = parse
+  nl     { proc_nl state lexbuf   }
+| eof    { rollback lexbuf        }
+| _      { skip_line state lexbuf }
+```
+
+(Keep in mind that newline characters are always copied.) If we were
+in copy mode, the new mode toggles to skipping mode; otherwise, the
+trace is searched for the last encountered `#if` of `#elif` and the
+associated mode is restored.
 
 The case of `#elif` is the result of the fusion (in the technical
 sense of functional programming) of the code for dealing with an
@@ -908,23 +943,38 @@ buffer that was matched by the corresponding regular expression.
 As we saw in the section about
 [preprocessing strings and comments](#preprocessing-strings-and-comments),
 several combinations of block and line comments are possible. We also
-saw above how the type
-[config](https://gitlab.com/ligolang/ligo/-/blob/d490176ef5dd7e6c825a8a7bd04ab56108889ce0/vendors/Preprocessor/API.mli#L41),
-in the section [The Interface](#the-interface), gathers parametric
-information about the behaviour of the preprocessor. In particular, we
-saw the
-[COMMENTS](https://gitlab.com/ligolang/ligo/-/blob/998107d5f0098c8acc86f8950f2a0f9fc5836f5d/vendors/Preprocessor/CLI.mli#L10)
-in the section [CLI](#cli) signature that gathers the comment opening
-and closing markers from the client's perspective. It is therefore
-important that what the client request is actually possible according
-to the regular expressions.
+saw above how the type `API.config`, in the section
+[The Interface](#the-interface), gathers parametric information about
+the behaviour of the preprocessor. In particular, we saw the signature
+`COMMENTS` in the section [CLI](#cli) signature that gathers the
+comment opening and closing markers from the client's perspective. It
+is therefore important that what the client request is actually
+possible according to the regular expressions.
 
-The regular expression
-[block_comment_openings](https://gitlab.com/ligolang/ligo/-/blob/ec968c65dbcef7e0da9561aa0b2fdcd341200b28/vendors/Preprocessor/API.mll#L354)
+The regular expression `block_comment_openings` in `API.mll`:
+
+```
+let block_comment_openings =
+  pascaligo_block_comment_opening
+| cameligo_block_comment_opening
+| reasonligo_block_comment_opening
+| michelson_block_comment_opening
+```
+
 matches all the statically possible opening markers for block
-comments. The regular expression
-[line_comments](https://gitlab.com/ligolang/ligo/-/blob/ec968c65dbcef7e0da9561aa0b2fdcd341200b28/vendors/Preprocessor/API.mll#L366)
-gather the valid opening markers for line comments.
+comments.
+
+The regular expression `line_comments`:
+
+```
+let line_comments =
+  pascaligo_line_comment
+| cameligo_line_comment
+| reasonligo_line_comment
+| michelson_line_comment
+```
+
+gathers the valid opening markers for line comments.
 
 After matching all possible block comment openings
 (*block_comments_openings*), we need to check whether the matched
@@ -953,39 +1003,31 @@ then resume scanning with `scan`:
 For example, if the client specifies that block comments start with
 the sequence `(*` and we matched `/*`, we cannot consider the string
 `/*` as a whole (a comment opening), but, instead as a normal
-input. It has length `2`, so
-[scan_n_char 2](https://gitlab.com/ligolang/ligo/-/blob/dev/vendors/Preprocessor/API.mll#L653)
-will scan `2` characters without trying to match a comment opening.
+input. It has length `2`, so `scan_n_char 2` will scan `2` characters
+without trying to match a comment opening.
 
 If the matched comment opening is the one expected by the client,
 then, if in copy mode, the opening is copied and a scanning rule is
-called, depending on the kind of comment:
-[in_block](https://gitlab.com/ligolang/ligo/-/blob/dev/vendors/Preprocessor/API.mll#L618)
-for block comments,
-or
-[in_line](https://gitlab.com/ligolang/ligo/-/blob/dev/vendors/Preprocessor/API.mll#L637)
-for line comments.
+called, depending on the kind of comment: `in_block` for block
+comments, or `in_line` for line comments.
 
-If we consider the definition of
-[in_block](https://gitlab.com/ligolang/ligo/-/blob/dev/vendors/Preprocessor/API.mll#L692),
-we see that it tries to match three regular expressions on the lexing
-buffer:
+If we consider the definition of `in_block`, we see that it tries to
+match three regular expressions on the lexing buffer:
 
   1. a string delimiter (it is an opening, but opening and closing are
      expected to be the same);
 
   2. a block comment opening;
 
-  3. [a block comment closing](https://gitlab.com/ligolang/ligo/-/blob/dev/vendors/Preprocessor/API.mll#L708).
+  3. a block comment closing.
 
-Actually, string delimiters and block comment opening share
-[the same semantic action](https://gitlab.com/ligolang/ligo/-/blob/dev/vendors/Preprocessor/API.mll#L693)
-because comments can contain strings and strings comments. The idea
-here is to scan a string or a sub-comment, or to treat the matched
-string as regular comment contents. Since comments can be nested, we
-need, in case of error, like an open comment, to refer the user to the
-opening of the comment. This is the purpose of the `opening`
-parameter:
+Actually, string delimiters and block comment opening share the same
+semantic action because comments can contain strings and strings
+comments. The idea here is to scan a string or a sub-comment, or to
+treat the matched string as regular comment contents. Since comments
+can be nested, we need, in case of error, like an open comment, to
+refer the user to the opening of the comment. This is the purpose of
+the `opening` parameter:
 
 ```
 and in_block block opening state = parse
@@ -995,9 +1037,7 @@ and in_block block opening state = parse
 ## PreprocMainGen
 
 The module `PreprocMainGen` exports a functor which consumes a module
-of signature
-[CLI.S](https://gitlab.com/ligolang/ligo/-/blob/ec968c65dbcef7e0da9561aa0b2fdcd341200b28/vendors/Preprocessor/CLI.mli#L23)
-and returns a signature
+of signature `S` in `CLI` and returns a signature
 
 ```
     val check_cli  : unit -> unit
