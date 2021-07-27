@@ -209,6 +209,11 @@ let mk_state ~config ~window ~pos ~decoder ~supply : 'token state =
 
     method set_pos pos = {< pos = pos >}
 
+    (* The call [state#slide_window token] pushes the token [token] in
+       the buffer [lexbuf]. If the buffer is full, that is, it is [Two
+       (t1,t2)], then the token [t2] is discarded to make room for
+       [token]. *)
+
     method slide_window new_token =
       let new_window =
         match self#window with
@@ -464,25 +469,7 @@ let scan_utf8_wrap scan_utf8 callback thread state lexbuf =
       let region = Region.make ~start:state#pos ~stop
       in fail region error
 
-(* An input program may contain preprocessing directives, and the
-   entry modules (named *Main.ml) run the preprocessor on them, as if
-   using the GNU C preprocessor in traditional mode:
-
-   https://gcc.gnu.org/onlinedocs/cpp/Traditional-Mode.html
-
-     The main interest in using a preprocessor is that it can stand
-   for a poor man's (flat) module system thanks to #include
-   directives, and the equivalent of the traditional mode leaves the
-   markup undisturbed.
-
-     Linemarkers (that is, line directives) may carry some additional
-   flags:
-
-   https://gcc.gnu.org/onlinedocs/cpp/Preprocessor-Output.html
-
-   of which we will retain in our context 1 and 2 (either 1 or 2),
-   indicating, respectively, the start of a new file and the return
-   from a file (after its inclusion has been processed). *)
+(* Updating the state after recognising a linemarker *)
 
 let linemarker prefix ~line ~file ?flag state lexbuf =
   let {state; region; _} = state#sync lexbuf in

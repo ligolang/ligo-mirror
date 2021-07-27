@@ -52,7 +52,7 @@ module Make (Token : Token.S) =
         "Unsupported nat syntax. Please use annotations instead."
     | Unsupported_mutez_syntax ->
         "Unsupported (mu)tez syntax. Please use annotations instead."
-    | Unsupported_lang_syntax -> 
+    | Unsupported_lang_syntax ->
         "Unsupported code injection syntax."
     | Unterminated_verbatim ->
        "Unterminated verbatim.\n\
@@ -191,8 +191,8 @@ module Make (Token : Token.S) =
       let stop               = region#stop in
       let lang_reg           = Region.make ~start ~stop in
       let lang               = Region.{value=lang; region=lang_reg} in
-      match Token.mk_lang lang region with 
-        Ok token -> 
+      match Token.mk_lang lang region with
+        Ok token ->
           Core.Token token, state
       | Error Token.Unsupported_lang_syntax ->
           fail region Unsupported_lang_syntax
@@ -305,15 +305,15 @@ and scan_verbatim verbatim_end thread state = parse
              and state = state#set_pos (state#pos#new_line nl) in
              scan_verbatim verbatim_end (thread#push_string nl) state lexbuf }
 | eof      { fail thread#opening Unterminated_verbatim }
-| "`" 
-| "|}" as lexeme  { 
-  if verbatim_end = lexeme then  
-    Core.(thread, (state#sync lexbuf).state) 
-  else 
+| "`"
+| "|}" as lexeme  {
+  if verbatim_end = lexeme then
+    Core.(thread, (state#sync lexbuf).state)
+  else
     let Core.{state; _} = state#sync lexbuf in
     scan_verbatim verbatim_end (thread#push_string lexeme) state lexbuf
-  
-} 
+
+}
 | _ as c   { let Core.{state; _} = state#sync lexbuf in
              scan_verbatim verbatim_end (thread#push_char c) state lexbuf }
 
