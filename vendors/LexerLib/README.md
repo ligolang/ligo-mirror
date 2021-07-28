@@ -8,7 +8,9 @@ library's client define the tokens as a callback. In other words, the
 client is a lexer that recognises tokens and the present library takes
 care of the markup (strings and comments), and calls back the client's
 lexer for the tokens. In the case of LIGO, this enables to share the
-boilerplate between the different concrete syntaxes.
+boilerplate between the different concrete syntaxes. This lexer
+library also offer a one or two-token window for the parser in case of
+a parse error, so better error messages can be printed.
 
 This lexer library can also be used to support tools other than
 parsers, like pretty-printers and style checkers, as done in the LIGO
@@ -714,13 +716,122 @@ This is the function that makes a lexer `instance`. It is only used in
       Core.open_stream config ~scan:Lexer.scan (Core.File path)
 ```
 
-We therefore see that it gathers the configuration `config`, the
-client's lexer `Lexer.scan`, and the source `Core.File path` in order
-to call `open_stream` and produce a lexer instance.
+We therefore see that `API.from_file` gathers the configuration
+`config`, the client's lexer `Lexer.scan`, and the source `Core.File
+path` in order to call `open_stream` and produce a lexer instance.
 
 ## Implementations
 
+We now cover the implementations.
+
 ### The CLI Implementation
+
+It is important to compare the files `CLI.ml` from
+`vendors/Preprocessor` and `vendors/LexerLib`, as the exercise will
+reveal the rationale for their design. We already went through
+[the interface](#the-cli-interface), so let us wlak through now the
+functor `Make`.
+
+  * In the `Preprocessor` library, the functor `Make` takes as
+    argument a module of signature `COMMENTS`.
+
+  * In the `LexerLib` library, the functor `Make` takes as argument a
+    module of signature `PREPROCESSOR_CLI`, which is equal to the
+    return signature `S` of `Make` in the preprocessor library.
+
+This means that we can compose a call to `Make` from the preprocessor
+library with a call to `Make` from `LexerLib`. We already saw that the
+return signature `S` of `Make` in `LexerLib` includes a module of
+signature `PREPROCESSOR_CLI`, that is to say, the CLI of `LexerLib`
+relies on the CLI of the preprocessor to read its relevant
+command-line options, then reads its own, and everything is exported
+in a module of signature `S` (but not in a flat way: the CLI of the
+preprocessor is a submodule). Let us look at the details now, starting
+with the function `make_help`:
+
+In the `Preprocessor` library, it starts like so:
+
+```
+    let make_help () : Buffer.t =
+      let file   = Filename.basename Sys.argv.(0) in
+      let buffer = Buffer.create 203 in
+      let header =
+        sprintf "Usage: %s [<option> ...] -- [<input>]\n\
+                 where <input> is the source file (default: stdin),\n\
+                 and each <option> (if any) is one of the following:\n"
+                file
+      and options = [
+        "  -I <paths>       Inclusion paths (colon-separated)";
+        "  -h, --help       This help";
+        "  -v, --version    Commit hash on stdout";
+        "      --cli        Print given options (debug)";
+        "      --columns    Columns for source locations";
+        "      --show-pp    Print result of preprocessing"
+      ] in
+```
+
+whereas in the `LexerLib`:
+
+```
+    let make_help buffer : Buffer.t =
+      let options = [
+        "  -t, --tokens     Print tokens";
+        "  -u, --units      Print lexical units";
+        "  -c, --copy       Print lexemes and markup";
+        "      --bytes      Bytes for source locations";
+        "      --preprocess Run the preprocessor"
+      ] in
+```
+
+We see that the latter indeed adds to the former only the options that
+are specific to lexing. Let us compare now the type and value
+`status`.
+
+In the `Preprocessor` library, we have:
+
+```
+    type status = [
+      `Done
+    | `Version      of string
+    | `Help         of Buffer.t
+    | `CLI          of Buffer.t
+    | `SyntaxError  of string
+    | `FileNotFound of string
+    ]
+
+    let status =
+      try
+        Getopt.parse_cmdline specs anonymous;
+        `Done (* Default. Other values assigned below. *)
+      with Getopt.Error msg -> `SyntaxError msg
+```
+
+and in `LexerLib`:
+
+```
+    type status = [
+      Preprocessor_CLI.status
+    | `Conflict of string * string
+    ]
+
+    let status = (Preprocessor_CLI.status :> status)
+
+    let status =
+      try
+        Getopt.parse_cmdline specs anonymous; status
+      with Getopt.Error msg -> `SyntaxError msg
+
+    (* Checking combinations of options *)
+
+    let status, command =
+      match copy, units, tokens with
+        ...
+      | true, true, _ -> `Conflict ("--copy", "--units"), None
+      | true, _, true -> `Conflict ("--copy", "--tokens"), None
+      | _, true, true -> `Conflict ("--units", "--tokens"), None
+
+```
+
 
 ### The API Implementation
 
