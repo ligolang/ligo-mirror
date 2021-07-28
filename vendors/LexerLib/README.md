@@ -4,13 +4,18 @@ A lexer is a tool that reads a text file expected to be made of
 _lexemes_, and returns abtract versions of them, called _tokens_, for
 a parser to consume. The current lexer library supports the making of
 UT8-aware lexers for programming languages, like LIGO, by having the
-library's client define the tokens as a callback.
+library's client define the tokens as a callback. In other words, the
+client is a lexer that recognises tokens and the present library takes
+care of the markup (strings and comments), and calls back the client's
+lexer for the tokens. In the case of LIGO, this enables to share the
+boilerplate between the different concrete syntaxes.
 
 This lexer library can also be used to support tools other than
 parsers, like pretty-printers and style checkers, as done in the LIGO
-compiler suite.
+compiler suite, because it recognises the markup and the tokens, that
+is, all lexical units.
 
-It is designed so it can be used easily with the preprocessor library
+It is designed so it can be easily used with the preprocessor library
 also shipped with LIGO.
 
 ## Contents

@@ -354,6 +354,21 @@ This IS copied to the output.
 #endif
 ```
 
+The result is
+
+```
+# 1 "Tests/undef.txt"
+
+
+
+
+
+
+This IS copied to the output.
+
+
+```
+
 Note: If you wish to redefine a symbol, you must undefine it first.
 
 When we want to write a cascade of conditionals, the preprocessor
@@ -400,7 +415,7 @@ of a string containing a path to the file to be textually included,
 like so:
 
 ```
-#include "path/to/standard_1.ligo`
+#include "path/to/standard_1.ligo"
 ```
 
 and the preprocessor replaces the directive with the contents of the
@@ -948,7 +963,7 @@ saw above how the type `API.config`, in the section
 the behaviour of the preprocessor. In particular, we saw the signature
 `COMMENTS` in the section [CLI](#cli) signature that gathers the
 comment opening and closing markers from the client's perspective. It
-is therefore important that what the client request is actually
+is therefore important that what the client requests is actually
 possible according to the regular expressions.
 
 The regular expression `block_comment_openings` in `API.mll`:
@@ -1057,9 +1072,9 @@ respectively.
 
 The module `PreprocMain` is only used as the entry point of the
 standalone preprocessor, that is, `PreprocMain.exe`, if using `dune`,
-or `PreprocMain.byte`, if using the Makefile. A such, it assumes there
-are no comments and no strings, so it may be run on all texts that are
-not programming languages, to be tested.
+or `PreprocMain.byte`, if using the Makefile. As such, it assumes that
+there are no comments and no strings, so it may be run on all texts
+that are not programming languages, to be tested.
 
 ## Maintaining the Preprocessor
 
@@ -1104,7 +1119,7 @@ adding a string to the value `options`:
 ```
 
 If the new option could cause new errors to occur, then the type
-`status` may had to be extended with another variant. Those variants
+`status` may have to be extended with another variant. Those variants
 are polymorphic because they enable such an extension.
 
 ### Adding a Preprocessing Directive and/or Errors
@@ -1135,7 +1150,7 @@ and `#import` features a call to `scan_import`, like so:
 ```
 
 In those rules, always have a catch-all clause and, if the argument is
-the last, a clause matching `eof`, lile so:
+the last, a clause matching `eof`, like so:
 
 ```
 and new_rule state = parse
