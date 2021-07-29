@@ -1,6 +1,6 @@
 (* Vendor dependencies *)
 
-module Core   = LexerLib.Core
+module State  = LexerLib.State
 module Region = Simple_utils.Region
 
 (* Signature *)
@@ -8,7 +8,7 @@ module Region = Simple_utils.Region
 module type S =
   sig
     type token
-    type lex_unit = token Core.lex_unit
+    type lex_unit = token State.lex_unit
 
     type message = string Region.reg
 

@@ -4,13 +4,41 @@
 
 module Region = Simple_utils.Region
 
+(* CLIENT-SIDE (see README.md) *)
+
+(* These types and values are re-exported from [Core] *)
+
+type message = string Region.reg
+
+type 'token scanner =
+  'token State.t ->
+  Lexing.lexbuf ->
+  ('token State.lex_unit * 'token State.t, message) Stdlib.result
+
+type 'token cut =
+  Thread.t * 'token State.t -> 'token State.lex_unit * 'token State.t
+
+(* The type [client] gathers the arguments to the lexer in this
+    module. *)
+
+type 'token client = <
+  mk_string                : 'token cut;
+  mk_eof                   : 'token scanner;
+  callback                 : 'token scanner;
+  support_string_delimiter : char -> bool
+>
+
+val mk_scan : 'token client -> 'token scanner
+
+(* FUNCTOR *)
+
 (* Generic signature of input lexers *)
 
 module type LEXER =
   sig
     type token
 
-    val scan : token Core.scanner
+    val scan : token scanner
   end
 
 (* The functor itself *)
@@ -26,7 +54,7 @@ module type S =
     type message   = string Region.reg
 
     type ('src,'dst) lexer =
-      token Core.config ->
+      token State.config ->
       'src ->
       ('dst, message) Stdlib.result
 
@@ -51,7 +79,7 @@ module type S =
 
     module LexUnits :
       sig
-        type nonrec 'src lexer = ('src, token Core.lex_unit list) lexer
+        type nonrec 'src lexer = ('src, token State.lex_unit list) lexer
 
         val from_lexbuf  : Lexing.lexbuf lexer
         val from_channel : in_channel    lexer
@@ -62,3 +90,20 @@ module type S =
   end
 
 module Make (Lexer : LEXER) : S with type token = Lexer.token
+
+(* LEXER ENGINE *)
+
+(* Resetting file name and/or line number and/or offset in a lexing
+   buffer. This function is useful when lexing a file that has been
+   previously preprocessed, in which case the argument [file] is the
+   name of the file that was preprocessed, _not_ the preprocessed file
+   (of which the user is not normally aware). *)
+
+type file_path = string
+
+val reset :
+  ?file:file_path ->
+  ?line:int ->
+  ?offset:int ->
+  Lexing.lexbuf ->
+  unit

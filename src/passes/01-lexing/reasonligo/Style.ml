@@ -2,17 +2,17 @@
 
 (* Vendor dependencies *)
 
-module Core = LexerLib.Core
+module State = LexerLib.State
 module Region = Simple_utils.Region
 
 (* Finding the next token in a list of lexical units *)
 
 let rec next_token markup = function
-  Core.Token token :: _ ->
+  State.Token token :: _ ->
     Some (List.rev markup, token)
-| Core.Markup m :: units ->
+| State.Markup m :: units ->
     next_token (m::markup) units
-| Core.Directive _ :: units ->
+| State.Directive _ :: units ->
     next_token markup units
 | [] -> None
 
@@ -84,12 +84,12 @@ let is_sym =
 
 (* Checking the style *)
 
-type lex_units = Token.t Core.lex_unit list
+type lex_units = Token.t State.lex_unit list
 
 type message = string Region.reg
 
 let rec check orig = function
-  Core.Token token :: units ->
+  State.Token token :: units ->
     let pos    = (Token.to_region token)#stop in
     let region = Region.make ~start:pos ~stop:pos in
     (match next_token units with
@@ -109,7 +109,7 @@ let rec check orig = function
                   else fail region Missing_break
            else check orig units
      | _ -> check orig units)
-| (Core.Markup _ | Core.Directive _) :: units ->
+| (State.Markup _ | State.Directive _) :: units ->
      check orig units
 | [] -> Ok orig
 

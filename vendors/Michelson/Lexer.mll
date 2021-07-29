@@ -74,7 +74,9 @@ module Make (Token : TOKEN) =
   struct
     module Token = Token
     type token = Token.t
-    module Core = LexerLib.Core
+
+    module Core  = LexerLib.Core
+    module State = LexerLib.State
 
     (* ERRORS *)
 
@@ -183,17 +185,17 @@ module Make (Token : TOKEN) =
       let region = Region.make ~start ~stop in
       let lexeme = thread#to_string in
       let token  = Token.mk_string lexeme region
-      in Core.Token token, state
+      in State.Token token, state
 
     let mk_bytes bytes state buffer =
-      let Core.{region; state; _} = state#sync buffer in
+      let State.{region; state; _} = state#sync buffer in
       let token = Token.mk_bytes bytes region
-      in Core.Token token, state
+      in State.Token token, state
 
     let mk_int state buffer =
-      let Core.{region; lexeme; state} = state#sync buffer in
+      let State.{region; lexeme; state} = state#sync buffer in
       match Token.mk_int lexeme region with
-        Ok token -> Core.Token token, state
+        Ok token -> State.Token token, state
       | Error Token.Non_canonical_zero ->
           fail region Non_canonical_zero
 
@@ -203,9 +205,9 @@ module Make (Token : TOKEN) =
         let stop  = start#shift_bytes 1
         in Region.make ~start ~stop
       and start = state#pos in
-      let Core.{region; lexeme; state} = state#sync buffer in
+      let State.{region; lexeme; state} = state#sync buffer in
       match Token.mk_ident lexeme region with
-        Ok token -> Core.Token token, state
+        Ok token -> State.Token token, state
       | Error Token.Valid_prefix (index, tree) ->
           let region = mk_region index start in
           fail region (Valid_prefix tree)
@@ -223,21 +225,21 @@ module Make (Token : TOKEN) =
           in fail region Missing_break
 
     let mk_annot state buffer =
-      let Core.{region; lexeme; state} = state#sync buffer
+      let State.{region; lexeme; state} = state#sync buffer
       in match Token.mk_annot lexeme region with
-           Ok token -> Core.Token token, state
+           Ok token -> State.Token token, state
          | Error Token.Annotation_length max ->
              fail region (Annotation_length max)
 
     let mk_sym state buffer =
-      let Core.{region; lexeme; state} = state#sync buffer in
+      let State.{region; lexeme; state} = state#sync buffer in
       let token = Token.mk_sym lexeme region
-      in Core.Token token, state
+      in State.Token token, state
 
     let mk_eof state buffer =
-      let Core.{region; state; _} = state#sync buffer in
+      let State.{region; state; _} = state#sync buffer in
       let token = Token.eof region
-      in Core.Token token, state
+      in State.Token token, state
 
 (* END HEADER *)
 }
@@ -282,7 +284,7 @@ rule scan state = parse
 | annotation { mk_annot     state lexbuf }
 | symbol     { mk_sym       state lexbuf }
 | eof        { mk_eof       state lexbuf }
-| _ as c     { let Core.{region; _} = state#sync lexbuf
+| _ as c     { let State.{region; _} = state#sync lexbuf
                in fail region (Unexpected_character c) }
 
 (* END LEXER DEFINITION *)

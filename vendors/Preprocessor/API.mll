@@ -179,13 +179,13 @@ let line_comments =
    copy and skip mode, as GNU GCC does. *)
 
 rule scan state = parse
-  eof   { if state.trace = [] then state
-          else stop state lexbuf Error.Missing_endif }
-| nl    { proc_nl state lexbuf; scan state lexbuf }
-| blank { if state.mode = Copy then copy state lexbuf;
-          scan state lexbuf }
-| '"'   { if state.mode = Copy then copy state lexbuf;
-          scan (in_string (mk_reg lexbuf) state lexbuf) lexbuf }
+  nl? eof { if state.trace = [] then state
+            else stop state lexbuf Error.Missing_endif }
+| nl      { proc_nl state lexbuf; scan state lexbuf }
+| blank   { if state.mode = Copy then copy state lexbuf;
+            scan state lexbuf }
+| '"'     { if state.mode = Copy then copy state lexbuf;
+            scan (in_string (mk_reg lexbuf) state lexbuf) lexbuf }
 
 | directive {
     let  region = mk_reg lexbuf in

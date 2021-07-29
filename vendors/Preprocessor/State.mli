@@ -54,7 +54,7 @@ type config = <
   dirs    : file_path list (* Directories to search for #include files *)
 >
 
-type state = {
+type t = {
   config : config;
   env    : E_AST.Env.t;
   mode   : mode;
@@ -65,7 +65,7 @@ type state = {
   import : (file_path * module_name) list
 }
 
-type t = state
+type state = t
 
 (* MODE *)
 

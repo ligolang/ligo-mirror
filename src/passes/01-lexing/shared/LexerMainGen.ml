@@ -6,7 +6,6 @@
 module Region = Simple_utils.Region
 module FQueue = Simple_utils.FQueue
 module Markup = LexerLib.Markup
-module Core   = LexerLib.Core
 
 (* LIGO dependencies *)
 

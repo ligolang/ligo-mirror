@@ -140,7 +140,7 @@ module MakeParser
         if CLI.Preprocessor_CLI.show_pp then
           Printf.printf "%s\n%!" string;
         let lexbuf = Lexing.from_string string in
-        let     () = LexerLib.Core.reset ~file:file_path lexbuf in
+        let     () = LexerLib.API.reset ~file:file_path lexbuf in
         let     () = MainLexer.clear () in
         let parser = MainParser.incr_from_lexbuf in
         parser (module ParErr: PAR_ERR) lexbuf

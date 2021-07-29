@@ -366,7 +366,6 @@ The result is
 
 This IS copied to the output.
 
-
 ```
 
 Note: If you wish to redefine a symbol, you must undefine it first.
@@ -560,6 +559,8 @@ standalone preprocessor, and also export data structures about the
 configuration meant for the library client, for example, the LIGO
 compiler.
 
+#### The Interface
+
 The module signature `COMMENTS` is
 
 ```
@@ -650,6 +651,51 @@ its own `CLI` module, exporting its own type
 
 which reuses the one in `vendors/Preprocessor/CLI.mli`.
 
+#### The Implementation
+
+On word on the implementation `CLI.ml`. We designed the CLI of the
+preprocessor library so it can be composed with other tools, like a
+lexer based on the lexer library in `vendors/LexerLib`. In order to
+achieve this goal, we do not want the exception `Getopt.Error` to be
+raised when finding an unknown option, one that is destined to another
+tool, like the lexer. Therefore, we designed a module `Argv` in
+`vendors/ligo-utils/simple-utils` that filters out unknown options but
+leaves correct ones, even if their syntax is invalid and will result
+in an exception `Getopt.Error` raised by
+`Getopt.parse_cmdline`. Importantly, we assume that there are no
+concatenated short options (here, the only possible combinations are
+`-hv` and `-vh`) and that anonymous arguments (here, a unique text
+file) is given after `--`.
+
+```
+    let opt_wo_arg =
+      let open SSet in
+      empty
+      |> add "--show-pp"
+      |> add "--columns"
+
+      (* The following options are present in all CLI *)
+      |> add "--cli"                  (* For debugging *)
+      |> add "--help" |> add "-h"
+      |> add "--version" |> add "-v"
+
+    let opt_with_arg =
+      let open SSet in
+      empty
+      |> add "-I"
+
+    let argv_copy = Array.copy Sys.argv
+
+    let () = Argv.filter ~opt_wo_arg ~opt_with_arg
+```
+
+First, we make a backup copy of `Sys.argv`. Second, we filter it in a
+list by calling `Argv.filter`. That function performs a side effect on
+`Sys.argv`: unknown options are removed and compacted. That is why
+`Sys.argv` has to be restored from the backup after parsing the
+command-line: another parse is now possible by another client.
+
+
 ### API
 
 #### The Interface
@@ -739,10 +785,10 @@ are skipped, they have to be well formed).
 Already, we have seen two kind of information (modes, conditionals)
 that need to be threaded along the states of the automaton. There is
 actually more that needs threading, all gathered in the
-type `State.state`:
+type `State.t`:
 
 ```
-type state = {
+type t = {
   config : config;
   env    : E_AST.Env.t;
   mode   : mode;

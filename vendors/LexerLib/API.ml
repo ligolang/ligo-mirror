@@ -2,13 +2,39 @@
 
 module Region = Simple_utils.Region
 
+(* CLIENT-SIDE *)
+
+type message = string Region.reg
+
+type 'token scanner =
+  'token State.t ->
+  Lexing.lexbuf ->
+  ('token State.lex_unit * 'token State.t, message) Stdlib.result
+
+type 'token cut =
+  Thread.t * 'token State.t -> 'token State.lex_unit * 'token State.t
+
+(* The type [client] gathers the arguments to the lexer in this
+    module. *)
+
+type 'token client = <
+  mk_string                : 'token cut;
+  mk_eof                   : 'token scanner;
+  callback                 : 'token scanner;
+  support_string_delimiter : char -> bool
+>
+
+let mk_scan = Core.mk_scan
+
+(* FUNCTOR *)
+
 (* Generic signature of input lexers *)
 
 module type LEXER =
   sig
     type token
 
-    val scan : token Core.scanner
+    val scan : token scanner
   end
 
 (* The functor itself *)
@@ -20,7 +46,7 @@ module type S =
     type message   = string Region.reg
 
     type ('src,'dst) lexer =
-      token Core.config ->
+      token State.config ->
       'src ->
       ('dst, message) Stdlib.result
 
@@ -41,7 +67,7 @@ module type S =
 
     module LexUnits :
       sig
-        type nonrec 'src lexer = ('src, token Core.lex_unit list) lexer
+        type nonrec 'src lexer = ('src, token State.lex_unit list) lexer
 
         val from_lexbuf  : Lexing.lexbuf lexer
         val from_channel : in_channel    lexer
@@ -59,7 +85,7 @@ module Make (Lexer: LEXER) =
     type message   = string Region.reg
 
     type ('src,'dst) lexer =
-      token Core.config ->
+      token State.config ->
       'src ->
       ('dst, message) Stdlib.result
 
@@ -85,7 +111,7 @@ module Make (Lexer: LEXER) =
 
     module Tokens =
       struct
-        let scan_all_tokens (config: 'token Core.config) = function
+        let scan_all_tokens (config: 'token State.config) = function
           Stdlib.Error _ as err -> flush_all (); err
         | Ok Core.{read_token; lexbuf; close; _} ->
             let close_all () = flush_all (); close () in
@@ -117,13 +143,13 @@ module Make (Lexer: LEXER) =
 
     module LexUnits =
       struct
-        let scan_all_units (config: 'token Core.config) = function
+        let scan_all_units (config: 'token State.config) = function
           Stdlib.Error _ as err -> flush_all (); err
         | Ok Core.{read_unit; lexbuf; close; _} ->
             let close_all () = flush_all (); close () in
             let rec read_units units =
               match read_unit lexbuf with
-                Stdlib.Ok (Core.Token token as unit) ->
+                Stdlib.Ok (State.Token token as unit) ->
                   if   config#is_eof token
                   then Stdlib.Ok (List.rev units)
                   else read_units (unit::units)
@@ -132,7 +158,7 @@ module Make (Lexer: LEXER) =
             let result = read_units []
             in close_all (); result
 
-        type nonrec 'src lexer = ('src, token Core.lex_unit list) lexer
+        type nonrec 'src lexer = ('src, token State.lex_unit list) lexer
 
         let from_lexbuf config lexbuf =
           from_lexbuf config lexbuf |> scan_all_units config
@@ -150,3 +176,39 @@ module Make (Lexer: LEXER) =
           from_file config src |> scan_all_units config
       end
   end
+
+(* LEXER ENGINE *)
+
+(* Resetting file name and line number in the lexing buffer
+
+   The call [reset ~file ~line lexbuf] modifies in-place the lexing
+   buffer [lexbuf] so the lexing engine records that the file
+   associated with [lexbuf] is named [file], and the current line is
+   [line]. *)
+
+type file_path = string
+
+let reset_file file lexbuf =
+  let open Lexing in
+  lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_fname = file}
+
+let reset_line line lexbuf =
+  assert (line >= 0);
+  let open Lexing in
+  lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_lnum = line}
+
+let reset_offset offset lexbuf =
+  assert (offset >= 0);
+  let open Lexing in
+  let bol = lexbuf.lex_curr_p.pos_bol in
+  lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_cnum = bol + offset }
+
+let reset ?file ?(line=1) ?offset lexbuf =
+  let () =
+    match file with
+      Some file -> reset_file file lexbuf
+    |      None -> () in
+  let () = reset_line line lexbuf in
+  match offset with
+    Some offset -> reset_offset offset lexbuf
+  |        None -> ()

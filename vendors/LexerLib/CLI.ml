@@ -284,5 +284,4 @@ module Make (Preprocessor_CLI: PREPROCESSOR_CLI) : S =
       | `CLI buffer   -> `CLI (make_cli buffer)
       | `Version _    -> `Version Version.version
       | _             -> status
-
   end

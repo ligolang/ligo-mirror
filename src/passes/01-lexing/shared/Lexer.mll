@@ -16,7 +16,9 @@ module type S = LexerLib.API.LEXER
 module Make (Token : Token.S) =
   struct
     type token = Token.t
-    module Core = LexerLib.Core
+
+    module State  = LexerLib.State
+    module Thread = LexerLib.Thread
 
     (* ERRORS *)
 
@@ -81,7 +83,7 @@ module Make (Token : Token.S) =
       let region = Region.make ~start ~stop in
       let lexeme = thread#to_string in
       let token  = Token.mk_string lexeme region
-      in Core.Token token, state
+      in State.Token token, state
 
     let mk_verbatim (thread, state) =
       let start  = thread#opening#start in
@@ -89,26 +91,26 @@ module Make (Token : Token.S) =
       let region = Region.make ~start ~stop in
       let lexeme = thread#to_string in
       let token  = Token.mk_verbatim lexeme region
-      in Core.Token token, state
+      in State.Token token, state
 
     let mk_bytes bytes state buffer =
-      let Core.{region; state; _} = state#sync buffer in
+      let State.{region; state; _} = state#sync buffer in
       let token = Token.mk_bytes bytes region
-      in Core.Token token, state
+      in State.Token token, state
 
     let mk_int state buffer =
-      let Core.{region; lexeme; state} = state#sync buffer in
+      let State.{region; lexeme; state} = state#sync buffer in
       match Token.mk_int lexeme region with
         Ok token ->
-          Core.Token token, state
+          State.Token token, state
       | Error Token.Non_canonical_zero ->
           fail region Non_canonical_zero
 
     let mk_nat state buffer =
-      let Core.{region; lexeme; state} = state#sync buffer in
+      let State.{region; lexeme; state} = state#sync buffer in
       match Token.mk_nat lexeme region with
         Ok token ->
-          Core.Token token, state
+          State.Token token, state
       | Error Token.Non_canonical_zero_nat ->
           fail region Non_canonical_zero
       | Error Token.Invalid_natural ->
@@ -117,22 +119,22 @@ module Make (Token : Token.S) =
           fail region Unsupported_nat_syntax
 
     let mk_mutez state buffer =
-      let Core.{region; lexeme; state} = state#sync buffer in
+      let State.{region; lexeme; state} = state#sync buffer in
       match Token.mk_mutez lexeme region with
         Ok token ->
-          Core.Token token, state
+          State.Token token, state
       | Error Token.Non_canonical_zero_tez ->
           fail region Non_canonical_zero
       | Error Token.Unsupported_mutez_syntax ->
           fail region Unsupported_mutez_syntax
 
     let mk_tez state buffer =
-      let Core.{region; lexeme; state} = state#sync buffer in
+      let State.{region; lexeme; state} = state#sync buffer in
       let lexeme = Str.string_before lexeme (String.index lexeme 't') in
       let lexeme = Z.mul (Z.of_int 1_000_000) (Z.of_string lexeme) in
       match Token.mk_mutez (Z.to_string lexeme ^ "mutez") region with
         Ok token ->
-          Core.Token token, state
+          State.Token token, state
       | Error Token.Non_canonical_zero_tez ->
           fail region Non_canonical_zero
       | Error Token.Unsupported_mutez_syntax ->
@@ -153,7 +155,7 @@ module Make (Token : Token.S) =
       | exception Not_found -> assert false
 
     let mk_tez_decimal state buffer =
-      let Core.{region; lexeme; state} = state#sync buffer in
+      let State.{region; lexeme; state} = state#sync buffer in
       let lexeme = Str.(global_replace (regexp "_") "" lexeme) in
       let lexeme = Str.string_before lexeme (String.index lexeme 't') in
       match format_tez lexeme with
@@ -161,54 +163,54 @@ module Make (Token : Token.S) =
       | Some tz ->
           match Token.mk_mutez (Z.to_string tz ^ "mutez") region with
             Ok token ->
-              Core.Token token, state
+              State.Token token, state
           | Error Token.Non_canonical_zero_tez ->
               fail region Non_canonical_zero
           | Error Token.Unsupported_mutez_syntax ->
               fail region Unsupported_mutez_syntax
 
     let mk_ident state buffer =
-      let Core.{region; lexeme; state} = state#sync buffer in
+      let State.{region; lexeme; state} = state#sync buffer in
       match Token.mk_ident lexeme region with
         Ok token ->
-          Core.Token token, state
+          State.Token token, state
       | Error Token.Reserved_name ->
           fail region (Reserved_name lexeme)
 
     let mk_attr attr state buffer =
-      let Core.{region; state; _} = state#sync buffer in
+      let State.{region; state; _} = state#sync buffer in
       let token = Token.mk_attr attr region
-      in Core.Token token, state
+      in State.Token token, state
 
     let mk_constr state buffer =
-      let Core.{region; lexeme; state} = state#sync buffer in
+      let State.{region; lexeme; state} = state#sync buffer in
       let token = Token.mk_constr lexeme region
-      in Core.Token token, state
+      in State.Token token, state
 
     let mk_lang lang state buffer =
-      let Core.{region; state; _} = state#sync buffer in
+      let State.{region; state; _} = state#sync buffer in
       let start              = region#start#shift_bytes 1 in
       let stop               = region#stop in
       let lang_reg           = Region.make ~start ~stop in
       let lang               = Region.{value=lang; region=lang_reg} in
       match Token.mk_lang lang region with
         Ok token ->
-          Core.Token token, state
+          State.Token token, state
       | Error Token.Unsupported_lang_syntax ->
           fail region Unsupported_lang_syntax
 
     let mk_sym state buffer =
-      let Core.{region; lexeme; state} = state#sync buffer in
+      let State.{region; lexeme; state} = state#sync buffer in
       match Token.mk_sym lexeme region with
         Ok token ->
-          Core.Token token, state
+          State.Token token, state
       | Error Token.Invalid_symbol s ->
           fail region (Invalid_symbol  s)
 
     let mk_eof state buffer =
-      let Core.{region; state; _} = state#sync buffer in
+      let State.{region; state; _} = state#sync buffer in
       let token = Token.eof region
-      in Core.Token token, state
+      in State.Token token, state
 
 (* END HEADER *)
 }
@@ -279,17 +281,17 @@ rule scan state = parse
 | "`"
 | "{|" as lexeme {
     if lexeme = fst Token.verbatim_delimiters then (
-      let Core.{region; state; _} = state#sync lexbuf in
-      let thread = Core.mk_thread region
+      let State.{region; state; _} = state#sync lexbuf in
+      let thread = Thread.make region
       in scan_verbatim (snd Token.verbatim_delimiters) thread state lexbuf |> mk_verbatim
     )
     else (
-      let Core.{region; _} = state#sync lexbuf
+      let State.{region; _} = state#sync lexbuf
       in fail region (Unexpected_character lexeme.[0])
     )
   }
 
-| _ as c { let Core.{region; _} = state#sync lexbuf
+| _ as c { let State.{region; _} = state#sync lexbuf
            in fail region (Unexpected_character c) }
 
 (* Scanning verbatim strings *)
@@ -298,7 +300,7 @@ and scan_verbatim verbatim_end thread state = parse
   (* Inclusion of Michelson code *)
   '#' blank* (natural as line) blank+ '"' (string as file) '"'
   (blank+ (('1' | '2') as flag))? blank* {
-    let Core.{state; region; _} = state#sync lexbuf
+    let State.{state; region; _} = state#sync lexbuf
     in eol verbatim_end region line file flag thread state lexbuf
   }
 | nl as nl { let ()    = Lexing.new_line lexbuf
@@ -308,20 +310,20 @@ and scan_verbatim verbatim_end thread state = parse
 | "`"
 | "|}" as lexeme  {
   if verbatim_end = lexeme then
-    Core.(thread, (state#sync lexbuf).state)
+    State.(thread, (state#sync lexbuf).state)
   else
-    let Core.{state; _} = state#sync lexbuf in
+    let State.{state; _} = state#sync lexbuf in
     scan_verbatim verbatim_end (thread#push_string lexeme) state lexbuf
 
 }
-| _ as c   { let Core.{state; _} = state#sync lexbuf in
+| _ as c   { let State.{state; _} = state#sync lexbuf in
              scan_verbatim verbatim_end (thread#push_char c) state lexbuf }
 
 and eol verbatim_end region_prefix line file flag thread state = parse
   nl | eof { let _, state =
-               Core.linemarker region_prefix ~line ~file ?flag state lexbuf
+               State.linemarker region_prefix ~line ~file ?flag state lexbuf
              in scan_verbatim verbatim_end thread state lexbuf }
-| _        { let Core.{region; _} = state#sync lexbuf
+| _        { let State.{region; _} = state#sync lexbuf
              in fail region Invalid_linemarker_argument }
 
 (* END LEXER DEFINITION *)
@@ -338,7 +340,7 @@ and eol verbatim_end region_prefix line file flag thread state = parse
 
     (* Function [scan] is the main exported function *)
 
-    let client : token Core.client =
+    let client : token LexerLib.API.client =
       let open Simple_utils.Utils in
       object
         method mk_string = mk_string
@@ -347,7 +349,7 @@ and eol verbatim_end region_prefix line file flag thread state = parse
         method support_string_delimiter = support_string_delimiter
       end
 
-    let scan = Core.mk_scan client
+    let scan = LexerLib.API.mk_scan client
 
   end (* of functor [Make] in HEADER *)
 (* END TRAILER *)

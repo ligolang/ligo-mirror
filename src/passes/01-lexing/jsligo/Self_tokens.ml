@@ -3,7 +3,7 @@
 
 (* Vendor dependencies *)
 
-module Core   = LexerLib.Core
+module State  = LexerLib.State
 module Region = Simple_utils.Region
 module Utils  = Simple_utils.Utils
 
@@ -12,7 +12,7 @@ module Utils  = Simple_utils.Utils
 module type S =
   sig
     type token
-    type lex_unit = token Core.lex_unit
+    type lex_unit = token State.lex_unit
 
     type message = string Region.reg
 
@@ -28,23 +28,23 @@ type message = string Region.reg
 
 type token = Token.t
 
-type lex_unit = token Core.lex_unit
+type lex_unit = token State.lex_unit
 
 (* Filtering out the markup *)
 
 let tokens_of = function
   Stdlib.Ok lex_units ->
     let apply tokens = function
-      Core.Token token -> token::tokens
-    | Core.Markup (BlockCom c) -> Token.BlockCom c :: tokens
-    | Core.Markup (LineCom c) -> Token.LineCom c :: tokens
-    | Core.Markup _ -> tokens
-    | Core.Directive d -> Token.Directive d :: tokens
+      State.Token token -> token::tokens
+    | State.Markup (BlockCom c) -> Token.BlockCom c :: tokens
+    | State.Markup (LineCom c) -> Token.LineCom c :: tokens
+    | State.Markup _ -> tokens
+    | State.Directive d -> Token.Directive d :: tokens
     in List.fold_left apply [] lex_units |> List.rev |> ok
 | Error _ as err -> err
 
 
-let automatic_semicolon_insertion tokens = 
+let automatic_semicolon_insertion tokens =
   let open Token in
   let rec inner result = function
     (Directive _ as t) :: rest ->
@@ -62,7 +62,7 @@ let automatic_semicolon_insertion tokens =
   | (LBRACE _ as semi) :: (Let _ as t)  :: rest
   | (LBRACE _ as semi) :: (Const _ as t)  :: rest
   | (LBRACE _ as semi) :: (Type _ as t)  :: rest
-  | (LBRACE _ as semi) :: (Return _ as t)  :: rest -> 
+  | (LBRACE _ as semi) :: (Return _ as t)  :: rest ->
     inner (t:: semi :: result) rest
   | token :: (Const _ as t) :: rest
   | token :: (Type _ as t) :: rest
@@ -71,18 +71,18 @@ let automatic_semicolon_insertion tokens =
     let (r, _) = Token.proj_token token in
     let (r2, _) = Token.proj_token t in
     if r#stop#line < r2#start#line  then (
-      inner (t :: SEMI Region.ghost :: token :: result) rest 
+      inner (t :: SEMI Region.ghost :: token :: result) rest
     )
     else (
-      match token with 
-        RBRACE _ as t -> 
-        inner (t :: SEMI Region.ghost :: token :: result) rest 
+      match token with
+        RBRACE _ as t ->
+        inner (t :: SEMI Region.ghost :: token :: result) rest
       | _ ->
-        inner (t :: token :: result) rest 
+        inner (t :: token :: result) rest
     )
   | hd :: tl -> inner (hd :: result) tl
   | [] -> List.rev result
-  in 
+  in
   inner [] tokens
 
 let automatic_semicolon_insertion = function
@@ -92,25 +92,25 @@ let automatic_semicolon_insertion = function
 let attribute_regexp = Str.regexp "@\\([a-zA-Z:0-9_]+\\)"
 
 let collect_attributes str =
-  let x = Str.full_split attribute_regexp str in 
+  let x = Str.full_split attribute_regexp str in
   List.rev (List.fold_left (fun all x ->
-    match x with 
+    match x with
       Str.Text _ -> all
     | Delim s -> s :: all
   ) [] x)
 
-let attributes tokens = 
+let attributes tokens =
   let open Token in
   let rec inner result = function
     LineCom c :: tl
   | BlockCom c :: tl ->
       let attributes = collect_attributes c.value in
-      let attributes = List.map (fun e -> 
+      let attributes = List.map (fun e ->
         Attr {value = e; region = c.region}) attributes in
       inner (attributes @ result) tl
   | hd :: tl -> inner (hd :: result) tl
   | [] -> List.rev result
-  in 
+  in
   inner [] tokens
 
 let attributes = function
@@ -120,4 +120,3 @@ let attributes = function
 (* Exported *)
 
 let filter = Utils.(attributes <@ automatic_semicolon_insertion <@ tokens_of <@ Style.check)
-

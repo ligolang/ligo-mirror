@@ -3,17 +3,17 @@
 
 (* Vendor dependencies *)
 
-module Core   = LexerLib.Core
 module Region = Simple_utils.Region
-module Pos = Simple_utils.Pos
+module Pos    = Simple_utils.Pos
 module Utils  = Simple_utils.Utils
+module State  = LexerLib.State
 
 (* Signature *)
 
 module type S =
   sig
     type token
-    type lex_unit = token Core.lex_unit
+    type lex_unit = token State.lex_unit
 
     type message = string Region.reg
 
@@ -28,7 +28,7 @@ let ok x = Stdlib.Ok x
 type message = string Region.reg
 
 type token = Token.t
-type lex_unit = token Core.lex_unit
+type lex_unit = token State.lex_unit
 
 
 (* Exported *)

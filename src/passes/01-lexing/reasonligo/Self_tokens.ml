@@ -3,7 +3,7 @@
 
 (* Vendor dependencies *)
 
-module Core   = LexerLib.Core
+module State  = LexerLib.State
 module Region = Simple_utils.Region
 module Utils  = Simple_utils.Utils
 
@@ -12,7 +12,7 @@ module Utils  = Simple_utils.Utils
 module type S =
   sig
     type token
-    type lex_unit = token Core.lex_unit
+    type lex_unit = token State.lex_unit
 
     type message = string Region.reg
 
@@ -27,7 +27,7 @@ let ok x = Stdlib.Ok x
 type message = string Region.reg
 
 type token = Token.t
-type lex_unit = token Core.lex_unit
+type lex_unit = token State.lex_unit
 
 (* Virtual token *)
 
@@ -84,7 +84,7 @@ let insert_es6fun_token tokens =
       (* When the arrow '=>' is not part of a function: *)
     | (RBRACKET _ as hd) :: rest
     | (C_Some _ as hd) :: rest
-    | (C_None _ as hd) :: rest 
+    | (C_None _ as hd) :: rest
     | (VBAR _ as hd) :: rest ->
         List.rev_append (hd :: result) rest
 
@@ -122,9 +122,9 @@ let insert_es6fun = function
 let tokens_of = function
   Stdlib.Ok lex_units ->
     let apply tokens = function
-      Core.Token token -> token::tokens
-    | Core.Markup _ -> tokens
-    | Core.Directive d -> Token.Directive d :: tokens
+      State.Token token -> token::tokens
+    | State.Markup _ -> tokens
+    | State.Directive d -> Token.Directive d :: tokens
     in List.fold_left apply [] lex_units |> List.rev |> ok
 | Error _ as err -> err
 
