@@ -1,30 +1,7 @@
 (* Vendor dependencies *)
 
 module Region = Simple_utils.Region
-
-(* CLIENT-SIDE *)
-
-type message = string Region.reg
-
-type 'token scanner =
-  'token State.t ->
-  Lexing.lexbuf ->
-  ('token State.lex_unit * 'token State.t, message) Stdlib.result
-
-type 'token cut =
-  Thread.t * 'token State.t -> 'token State.lex_unit * 'token State.t
-
-(* The type [client] gathers the arguments to the lexer in this
-    module. *)
-
-type 'token client = <
-  mk_string                : 'token cut;
-  mk_eof                   : 'token scanner;
-  callback                 : 'token scanner;
-  support_string_delimiter : char -> bool
->
-
-let mk_scan = Core.mk_scan
+module Utils  = Simple_utils.Utils
 
 (* FUNCTOR *)
 
@@ -34,7 +11,7 @@ module type LEXER =
   sig
     type token
 
-    val scan : token scanner
+    val client : token Client.t
   end
 
 (* The functor itself *)
@@ -42,6 +19,7 @@ module type LEXER =
 module type S =
   sig
     type token
+
     type file_path = string
     type message   = string Region.reg
 
@@ -92,8 +70,8 @@ module Make (Lexer: LEXER) =
     (* Generic lexer for all kinds of inputs *)
 
     let generic lexbuf_of config source =
-      let buffer = Core.Buffer (lexbuf_of source) in
-      Core.open_stream config ~scan:Lexer.scan buffer
+      let buffer = Core.Buffer (lexbuf_of source)
+      in Core.open_stream Lexer.client config buffer
 
     (* Lexing the input to recognise one token *)
 
@@ -103,9 +81,9 @@ module Make (Lexer: LEXER) =
 
     let from_buffer config buffer =
       from_string config @@ Buffer.contents buffer
-
-    let from_file config path =
-      Core.open_stream config ~scan:Lexer.scan (Core.File path)
+   
+ let from_file config path =
+      Core.open_stream Lexer.client config (Core.File path)
 
     (* Lexing the entire input *)
 

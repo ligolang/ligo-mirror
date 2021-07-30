@@ -8,6 +8,7 @@
 (* VENDOR DEPENDENCIES *)
 
 module Region = Simple_utils.Region
+module Client = LexerLib.Client
 
 (* TOKENS *)
 
@@ -153,20 +154,6 @@ module Make (Token : TOKEN) =
 
     exception Error of message (* NOT EXPORTED *)
 
-    (* Encoding a function call in exception-raising style (ERS) to
-       error-passing style (EPS) *)
-
-    let lift scanner lexbuf =
-      try Stdlib.Ok (scanner lexbuf) with
-        Error msg -> Stdlib.Error msg
-
-    (* Decoding a function call in EPS to ERS *)
-(*
-    let drop scanner lexbuf =
-      match scanner lexbuf with
-        Stdlib.Ok state -> state
-      | Stdlib.Error msg -> raise (Error msg)
- *)
     (* Raising an error *)
 
     let fail region error =
@@ -292,38 +279,24 @@ rule scan state = parse
 {
 (* START TRAILER *)
 
-let client =
-  let open Simple_utils.Utils in
-  object
-    method mk_string = mk_string
-    method mk_eof    = lift <@ mk_eof
-    method callback  = lift <@ scan
-    method support_string_delimiter = support_string_delimiter
-  end
+  (* Encoding a function call in exception-raising style (ERS) to
+     error-passing style (EPS) *)
 
-let scan = Core.mk_scan client
+  let lift scanner lexbuf =
+    try Stdlib.Ok (scanner lexbuf) with
+      Error msg -> Stdlib.Error msg
 
-(* Style checking *)
-(*
-let check_right_context config token next_token lexbuf =
-  let pos    = (config#to_region token)#stop in
-  let region = Region.make ~start:pos ~stop:pos in
-  let next lexbuf =
-    match next_token lexbuf with
-      None -> ()
-    | Some (markup, next) ->
-        let open Token in
-        match markup with
-          [] ->
-            if   is_int token || is_string token || is_bytes token
-            then if   is_sym next || is_eof next
-                 then ()
-                 else fail region Missing_break
-            else ()
-        | _::_ -> ()
-  in lift next lexbuf
-     *)
-end (* of functor [Make] in HEADER *)
+  (* Function [scan] is the main exported function *)
 
+  let client : token Client.t =
+    let open Simple_utils.Utils in
+    object
+      method mk_string = mk_string
+      method mk_eof    = lift <@ mk_eof
+      method callback  = lift <@ scan
+      method support_string_delimiter = support_string_delimiter
+    end
+
+  end (* of functor [Make] in HEADER *)
 (* END TRAILER *)
 }

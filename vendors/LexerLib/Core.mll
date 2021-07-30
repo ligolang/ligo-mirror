@@ -7,7 +7,6 @@
 
 module Region = Simple_utils.Region
 module Pos    = Simple_utils.Pos
-module FQueue = Simple_utils.FQueue
 module Utils  = Simple_utils.Utils
 
 (* LEXER ENGINE *)
@@ -153,7 +152,7 @@ let fail region error =
 
 (* The main function *)
 
-let open_stream config ~scan input =
+let open_stream scan config input =
   let log       = output_unit config stdout
   and scan      = Utils.(drop <@ scan)
   and file_path = match config#input with
@@ -454,27 +453,10 @@ and init client state = parse
 {
 (* START TRAILER *)
 
-type 'token scanner =
-  'token State.t ->
-  Lexing.lexbuf ->
-  ('token State.lex_unit * 'token State.t, message) Stdlib.result
+open Utils
 
-type 'token cut =
-  Thread.t * 'token State.t -> 'token State.lex_unit * 'token State.t
-
-(* The type [client] gathers the arguments to the lexer in this
-    module. *)
-
-type 'token client = <
-  mk_string                : 'token cut;
-  mk_eof                   : 'token scanner;
-  callback                 : 'token scanner;
-  support_string_delimiter : char -> bool
->
-
-let mk_scan (client: 'token client) =
+let mk_scan (client: 'token Client.t) : 'token Client.scanner =
   let internal_client =
-    let open Utils in
     object
       method mk_string                = client#mk_string
       method mk_eof                   = drop <@ client#mk_eof
@@ -486,6 +468,8 @@ let mk_scan (client: 'token client) =
     let scanner =
       if !first_call then (first_call := false; init) else scan
     in lift (scanner internal_client state)
+
+let open_stream client = open_stream @@ mk_scan client
 
 (* END TRAILER *)
 }

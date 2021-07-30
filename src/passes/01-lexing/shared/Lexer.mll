@@ -8,6 +8,9 @@
 (* VENDOR DEPENDENCIES *)
 
 module Region = Simple_utils.Region
+module Client = LexerLib.Client
+module State  = LexerLib.State
+module Thread = LexerLib.Thread
 
 (* The functorised interface *)
 
@@ -16,9 +19,6 @@ module type S = LexerLib.API.LEXER
 module Make (Token : Token.S) =
   struct
     type token = Token.t
-
-    module State  = LexerLib.State
-    module Thread = LexerLib.Thread
 
     (* ERRORS *)
 
@@ -331,25 +331,23 @@ and eol verbatim_end region_prefix line file flag thread state = parse
 {
 (* START TRAILER *)
 
-    (* Encoding a function call in exception-raising style (ERS) to
-       error-passing style (EPS) *)
+  (* Encoding a function call in exception-raising style (ERS) to
+     error-passing style (EPS) *)
 
-    let lift scanner lexbuf =
-      try Stdlib.Ok (scanner lexbuf) with
-        Error msg -> Stdlib.Error msg
+  let lift scanner lexbuf =
+    try Stdlib.Ok (scanner lexbuf) with
+      Error msg -> Stdlib.Error msg
 
-    (* Function [scan] is the main exported function *)
+  (* Function [scan] is the main exported function *)
 
-    let client : token LexerLib.API.client =
-      let open Simple_utils.Utils in
-      object
-        method mk_string = mk_string
-        method mk_eof    = lift <@ mk_eof
-        method callback  = lift <@ scan
-        method support_string_delimiter = support_string_delimiter
-      end
-
-    let scan = LexerLib.API.mk_scan client
+  let client : token Client.t =
+    let open Simple_utils.Utils in
+    object
+      method mk_string = mk_string
+      method mk_eof    = lift <@ mk_eof
+      method callback  = lift <@ scan
+      method support_string_delimiter = support_string_delimiter
+    end
 
   end (* of functor [Make] in HEADER *)
 (* END TRAILER *)

@@ -4,41 +4,15 @@
 
 module Region = Simple_utils.Region
 
-(* CLIENT-SIDE (see README.md) *)
-
-(* These types and values are re-exported from [Core] *)
-
-type message = string Region.reg
-
-type 'token scanner =
-  'token State.t ->
-  Lexing.lexbuf ->
-  ('token State.lex_unit * 'token State.t, message) Stdlib.result
-
-type 'token cut =
-  Thread.t * 'token State.t -> 'token State.lex_unit * 'token State.t
-
-(* The type [client] gathers the arguments to the lexer in this
-    module. *)
-
-type 'token client = <
-  mk_string                : 'token cut;
-  mk_eof                   : 'token scanner;
-  callback                 : 'token scanner;
-  support_string_delimiter : char -> bool
->
-
-val mk_scan : 'token client -> 'token scanner
-
 (* FUNCTOR *)
 
-(* Generic signature of input lexers *)
+(* Generic signature of client lexer *)
 
 module type LEXER =
   sig
     type token
 
-    val scan : token scanner
+    val client : token Client.t
   end
 
 (* The functor itself *)
