@@ -45,7 +45,7 @@ module type S =
 
     module LexUnits :
       sig
-        type nonrec 'src lexer = ('src, token State.lex_unit list) lexer
+        type nonrec 'src lexer = ('src, token Unit.t list) lexer
 
         val from_lexbuf  : Lexing.lexbuf lexer
         val from_channel : in_channel    lexer
@@ -81,7 +81,7 @@ module Make (Lexer: LEXER) =
 
     let from_buffer config buffer =
       from_string config @@ Buffer.contents buffer
-   
+
  let from_file config path =
       Core.open_stream Lexer.client config (Core.File path)
 
@@ -121,13 +121,15 @@ module Make (Lexer: LEXER) =
 
     module LexUnits =
       struct
+        type nonrec 'src lexer = ('src, token Unit.t list) lexer
+
         let scan_all_units (config: 'token State.config) = function
           Stdlib.Error _ as err -> flush_all (); err
         | Ok Core.{read_unit; lexbuf; close; _} ->
             let close_all () = flush_all (); close () in
             let rec read_units units =
               match read_unit lexbuf with
-                Stdlib.Ok (State.Token token as unit) ->
+                Stdlib.Ok (`Token token as unit) ->
                   if   config#is_eof token
                   then Stdlib.Ok (List.rev units)
                   else read_units (unit::units)
@@ -135,8 +137,6 @@ module Make (Lexer: LEXER) =
               | Error _ as err -> err in
             let result = read_units []
             in close_all (); result
-
-        type nonrec 'src lexer = ('src, token State.lex_unit list) lexer
 
         let from_lexbuf config lexbuf =
           from_lexbuf config lexbuf |> scan_all_units config

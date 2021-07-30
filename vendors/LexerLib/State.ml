@@ -26,31 +26,32 @@ type 'token config = <
   to_string : offsets:bool -> [`Byte | `Point] -> 'token -> string
 >
 
-type 'token lex_unit =
-  Token     of 'token
-| Markup    of Markup.t
-| Directive of Directive.t
-
 type 'token window = <
   last_token    : 'token option;
   current_token : 'token           (* Including EOF *)
 >
 
 type 'token t = <
-  config       : 'token config;
-  window       : 'token window option;
-  pos          : Pos.t;
-  set_pos      : Pos.t -> 'token t;
-  slide_window : 'token -> 'token t;
-  sync         : Lexing.lexbuf -> 'token sync;
-  decoder      : Uutf.decoder;
-  supply       : Bytes.t -> int -> int -> unit;
-  mk_line      :      Thread.t -> 'token lex_unit * 'token t;
-  mk_block     :      Thread.t -> 'token lex_unit * 'token t;
-  mk_newline   : Lexing.lexbuf -> 'token lex_unit * 'token t;
-  mk_space     : Lexing.lexbuf -> 'token lex_unit * 'token t;
-  mk_tabs      : Lexing.lexbuf -> 'token lex_unit * 'token t;
-  mk_bom       : Lexing.lexbuf -> 'token lex_unit * 'token t
+  config        : 'token config;
+  window        : 'token window option;
+  pos           : Pos.t;
+  set_pos       : Pos.t -> 'token t;
+  slide_window  : 'token -> 'token t;
+  sync          : Lexing.lexbuf -> 'token sync;
+  decoder       : Uutf.decoder;
+  supply        : Bytes.t -> int -> int -> unit;
+  mk_line       :      Thread.t -> Markup.t * 'token t;
+  mk_block      :      Thread.t -> Markup.t * 'token t;
+  mk_newline    : Lexing.lexbuf -> Markup.t * 'token t;
+  mk_space      : Lexing.lexbuf -> Markup.t * 'token t;
+  mk_tabs       : Lexing.lexbuf -> Markup.t * 'token t;
+  mk_bom        : Lexing.lexbuf -> Markup.t * 'token t;
+  mk_linemarker : Region.t ->
+                  line:string ->
+                  file:string ->
+                  ?flag:char ->
+                  Lexing.lexbuf ->
+                  Directive.t * 'token t
 >
 
 and 'token sync = {
@@ -113,53 +114,51 @@ let make ~config ~window ~pos ~decoder ~supply : 'token state =
       let stop   = start#new_line value in
       let region = Region.make ~start ~stop in
       let markup = Markup.Newline Region.{region; value}
-      in Markup markup, self#set_pos stop
+      in markup, self#set_pos stop
 
     method mk_line thread =
       let start  = thread#opening#start in
       let region = Region.make ~start ~stop:self#pos
       and value  = thread#to_string in
       let markup = Markup.LineCom Region.{region; value}
-      in Markup markup, self
+      in markup, self
 
     method mk_block thread =
       let start  = thread#opening#start in
       let region = Region.make ~start ~stop:self#pos
       and value  = thread#to_string in
       let markup = Markup.BlockCom Region.{region; value}
-      in Markup markup, self
+      in markup, self
 
     method mk_space lexbuf =
       let {region; lexeme; state} = self#sync lexbuf in
       let value  = String.length lexeme in
       let markup = Markup.Space Region.{region; value}
-      in Markup markup, state
+      in markup, state
 
     method mk_tabs lexbuf =
       let {region; lexeme; state} = self#sync lexbuf in
       let value  = String.length lexeme in
       let markup = Markup.Tabs Region.{region; value}
-      in Markup markup, state
+      in markup, state
 
     method mk_bom lexbuf =
       let {region; lexeme; state} = self#sync lexbuf in
       let value  = lexeme in
       let markup = Markup.BOM Region.{region; value}
-      in Markup markup, state
+      in markup, state
+
+    method mk_linemarker prefix ~line ~file ?flag lexbuf =
+      let {state; region; _} = self#sync lexbuf in
+      let flag      = match flag with
+                        Some '1' -> Some Directive.Push
+                      | Some '2' -> Some Directive.Pop
+                      | _        -> None in
+      let linenum   = int_of_string line in
+      let value     = linenum, file, flag in
+      let region    = Region.cover prefix region in
+      let directive = Directive.Linemarker Region.{value; region} in
+      let pos       = region#start#add_nl in
+      let pos       = (pos#set_file file)#set_line linenum
+      in directive, state#set_pos pos
   end
-
-(* Updating the state after recognising a linemarker *)
-
-let linemarker prefix ~line ~file ?flag state lexbuf =
-  let {state; region; _} = state#sync lexbuf in
-  let flag      = match flag with
-                    Some '1' -> Some Directive.Push
-                  | Some '2' -> Some Directive.Pop
-                  | _        -> None in
-  let linenum   = int_of_string line in
-  let value     = linenum, file, flag in
-  let region    = Region.cover prefix region in
-  let directive = Directive.Linemarker Region.{value; region} in
-  let pos       = region#start#add_nl in
-  let pos       = (pos#set_file file)#set_line linenum
-  in Directive directive, state#set_pos pos

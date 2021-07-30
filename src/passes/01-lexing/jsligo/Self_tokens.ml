@@ -3,8 +3,9 @@
 
 (* Vendor dependencies *)
 
-module State  = LexerLib.State
 module Region = Simple_utils.Region
+module Unit   = LexerLib.Unit
+module Markup = LexerLib.Markup
 module Utils  = Simple_utils.Utils
 
 (* Signature *)
@@ -12,12 +13,11 @@ module Utils  = Simple_utils.Utils
 module type S =
   sig
     type token
-    type lex_unit = token State.lex_unit
 
     type message = string Region.reg
 
     val filter :
-      (lex_unit list, message) result -> (token list, message) result
+      (token Unit.t list, message) result -> (token list, message) result
   end
 
 (* Filters *)
@@ -28,18 +28,16 @@ type message = string Region.reg
 
 type token = Token.t
 
-type lex_unit = token State.lex_unit
-
 (* Filtering out the markup *)
 
 let tokens_of = function
   Stdlib.Ok lex_units ->
     let apply tokens = function
-      State.Token token -> token::tokens
-    | State.Markup (BlockCom c) -> Token.BlockCom c :: tokens
-    | State.Markup (LineCom c) -> Token.LineCom c :: tokens
-    | State.Markup _ -> tokens
-    | State.Directive d -> Token.Directive d :: tokens
+      `Token token -> token::tokens
+    | `Markup (Markup.BlockCom c) -> Token.BlockCom c :: tokens
+    | `Markup (Markup.LineCom c) -> Token.LineCom c :: tokens
+    | `Markup _ -> tokens
+    | `Directive d -> Token.Directive d :: tokens
     in List.fold_left apply [] lex_units |> List.rev |> ok
 | Error _ as err -> err
 

@@ -9,6 +9,14 @@ module Region = Simple_utils.Region
 module Pos    = Simple_utils.Pos
 module Utils  = Simple_utils.Utils
 
+let (<@) = Utils.(<@)
+
+(* Wrapping tokens, markup and directives *)
+
+let mk_token     (token,     state) = `Token  token,        state
+let mk_markup    (markup,    state) = `Markup markup,       state
+let mk_directive (directive, state) = `Directive directive, state
+
 (* LEXER ENGINE *)
 
 (* Rolling back one lexeme _within the current semantic action_ *)
@@ -64,22 +72,22 @@ let output_unit config out_channel lex_unit =
   match config#command with
     Some `Tokens ->
       (match lex_unit with
-         State.Token token ->
+         `Token token ->
            config#to_string ~offsets mode token |> output_nl
-       | Markup _ | Directive _ -> ()) (* Only tokens *)
+       | `Markup _ | `Directive _ -> ()) (* Only tokens *)
   | Some `Copy ->
      let lexeme =
        match lex_unit with
-         State.Token token -> config#to_lexeme token
-       | Markup m    -> Markup.to_lexeme m
-       | Directive d -> Directive.to_lexeme d
+         `Token token -> config#to_lexeme token
+       | `Markup m    -> Markup.to_lexeme m
+       | `Directive d -> Directive.to_lexeme d
      in output lexeme
   | Some `Units ->
       let string =
         match lex_unit with
-          State.Token token -> config#to_string ~offsets mode token
-        | Markup m    -> Markup.to_string ~offsets mode m
-        | Directive d -> Directive.to_string ~offsets mode d
+          `Token token -> config#to_string ~offsets mode token
+        | `Markup m    -> Markup.to_string ~offsets mode m
+        | `Directive d -> Directive.to_string ~offsets mode d
       in output_nl string
   | None -> ()
 
@@ -97,7 +105,7 @@ type input =
 type 'token instance = {
   input      : input;
   read_token : Lexing.lexbuf -> ('token, message) result;
-  read_unit  : Lexing.lexbuf -> ('token State.lex_unit, message) result;
+  read_unit  : Lexing.lexbuf -> ('token Unit.t, message) result;
   lexbuf     : Lexing.lexbuf;
   close      : unit -> unit;
   window     : unit -> 'token State.window option
@@ -152,9 +160,19 @@ let fail region error =
 
 (* The main function *)
 
-let open_stream scan config input =
+type 'token scanner =
+  'token State.t ->
+  Lexing.lexbuf ->
+  ('token Unit.t * 'token State.t, message) Stdlib.result
+
+let open_stream :
+  'token scanner ->
+  'token State.config ->
+  input ->
+  ('token instance, message) Stdlib.result =
+  fun scan config input ->
   let log       = output_unit config stdout
-  and scan      = Utils.(drop <@ scan)
+  and scan      = drop <@ scan
   and file_path = match config#input with
                     Some path -> path
                   | _ -> ""
@@ -174,14 +192,14 @@ let open_stream scan config input =
     let () = state := state' in
     let () =
       match unit with
-        Token token -> state := !state#slide_window token
-      | Markup _ | Directive _ -> ()
+        `Token token -> state := !state#slide_window token
+      | `Markup _ | `Directive _ -> ()
     in unit in
 
   let rec read_token lexbuf =
     match read_unit lexbuf with
-                 Token token -> token
-    | Markup _ | Directive _ -> read_token lexbuf in
+                 `Token token -> token
+    | `Markup _ | `Directive _ -> read_token lexbuf in
 
   match lexbuf_from_input config input with
     Stdlib.Ok (lexbuf, close) ->
@@ -271,22 +289,19 @@ let line_comments =
 rule scan client state = parse
   (* Markup *)
 
-  nl    { state#mk_newline lexbuf }
-| ' '+  { state#mk_space   lexbuf }
-| '\t'+ { state#mk_tabs    lexbuf }
+  nl    { state#mk_newline lexbuf |> mk_markup }
+| ' '+  { state#mk_space   lexbuf |> mk_markup }
+| '\t'+ { state#mk_tabs    lexbuf |> mk_markup }
 
   (* Strings *)
 | '\''
 | '"' as lexeme {
-  if client#support_string_delimiter lexeme then (
-    let State.{region; state; _} = state#sync lexbuf in
-    let thread             = Thread.make region in
-    scan_string lexeme thread state lexbuf |> client#mk_string
-  )
-  else (
-    rollback lexbuf; client#callback state lexbuf
-  )
-}
+    if client#support_string_delimiter lexeme then
+      let State.{region; state; _} = state#sync lexbuf in
+      let thread             = Thread.make region in
+      scan_string lexeme thread state lexbuf |> client#mk_string
+    else (rollback lexbuf; client#callback state lexbuf)
+  }
 
   (* Comment *)
 
@@ -297,7 +312,7 @@ rule scan client state = parse
         let thread             = Thread.make region in
         let thread             = thread#push_string lexeme in
         let thread, state      = scan_block block thread state lexbuf
-        in state#mk_block thread
+        in state#mk_block thread |> mk_markup
     | Some _ | None -> (* Not a comment for this syntax *)
         rollback lexbuf; client#callback state lexbuf }
 
@@ -308,7 +323,7 @@ rule scan client state = parse
         let thread             = Thread.make region in
         let thread             = thread#push_string lexeme in
         let thread, state      = scan_line thread state lexbuf
-        in state#mk_line thread
+        in state#mk_line thread |> mk_markup
     | Some _ | None -> (* Not a comment for this syntax *)
         rollback lexbuf; client#callback state lexbuf }
 
@@ -320,16 +335,17 @@ rule scan client state = parse
     in eol region line file flag state lexbuf }
 
   (* Other tokens *)
-
-| eof { client#mk_eof state lexbuf }
-
+(*
+| eof { client#mk_eof state lexbuf |> mk_token }
+ *)
 | _ { rollback lexbuf;
       client#callback state lexbuf (* May raise exceptions *) }
 
 (* Finishing a linemarker *)
 
 and eol region line file flag state = parse
-  nl | eof { State.linemarker region ~line ~file ?flag state lexbuf }
+  nl | eof { state#mk_linemarker region ~line ~file ?flag lexbuf
+             |> mk_directive }
 | _        { let State.{region; _} = state#sync lexbuf
              in fail region Error.Invalid_linemarker_argument }
 
@@ -445,7 +461,7 @@ and scan_string delimiter thread state = parse
   (* Scanner called first *)
 
 and init client state = parse
-  utf8_bom { state#mk_bom lexbuf                       }
+  utf8_bom { state#mk_bom lexbuf |> mk_markup           }
 | _        { rollback lexbuf; scan client state lexbuf }
 
 (* END LEXER DEFINITION *)
@@ -453,14 +469,12 @@ and init client state = parse
 {
 (* START TRAILER *)
 
-open Utils
-
-let mk_scan (client: 'token Client.t) : 'token Client.scanner =
+let mk_scan (client: 'token Client.t) : 'token scanner =
   let internal_client =
     object
-      method mk_string                = client#mk_string
-      method mk_eof                   = drop <@ client#mk_eof
-      method callback                 = drop <@ client#callback
+      method mk_string = mk_token <@ client#mk_string
+      method callback state lexbuf =
+        mk_token (drop (client#callback state) lexbuf)
       method support_string_delimiter = client#support_string_delimiter
     end
   and first_call = ref true in

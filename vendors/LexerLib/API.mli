@@ -53,7 +53,7 @@ module type S =
 
     module LexUnits :
       sig
-        type nonrec 'src lexer = ('src, token State.lex_unit list) lexer
+        type nonrec 'src lexer = ('src, token Unit.t list) lexer
 
         val from_lexbuf  : Lexing.lexbuf lexer
         val from_channel : in_channel    lexer

@@ -3,11 +3,11 @@
 (* Vendor depedencies *)
 
 module Region = Simple_utils.Region
-module State  = LexerLib.State
+module Unit   = LexerLib.Unit
 
 (* Style checking function (filter-out) *)
 
-type lex_units = Token.t State.lex_unit list
+type lex_units = Token.t Unit.t list
 
 type message = string Region.reg
 

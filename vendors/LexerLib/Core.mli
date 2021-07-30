@@ -21,7 +21,7 @@ type input =
 type 'token instance = {
   input      : input;
   read_token : Lexing.lexbuf -> ('token, message) result;
-  read_unit  : Lexing.lexbuf -> ('token State.lex_unit, message) result;
+  read_unit  : Lexing.lexbuf -> ('token Unit.t, message) result;
   lexbuf     : Lexing.lexbuf;
   close      : unit -> unit;
   window     : unit -> 'token State.window option
@@ -31,7 +31,7 @@ val open_stream :
   'token Client.t ->
   'token State.config ->
   input ->
-   ('token instance, message) Stdlib.result
+  ('token instance, message) Stdlib.result
 
 (* LEXER ENGINE *)
 

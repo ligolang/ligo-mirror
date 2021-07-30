@@ -28,10 +28,10 @@ compiler which uses it as a library. The directory
 `ligo/vendors/LexerLib` should list the following files:
 
 ```
-$ tree LexerLib
 LexerLib
 ├── API.ml
 ├── API.mli
+├── Client.mli
 ├── CLI.ml
 ├── CLI.mli
 ├── Core.mli

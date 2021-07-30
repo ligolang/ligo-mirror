@@ -1,5 +1,6 @@
-module State  = LexerLib.State
-module Region = Simple_utils.Region
+module Region    = Simple_utils.Region
+module Markup    = LexerLib.Markup
+module Directive = LexerLib.Directive
 
 let ok x = Stdlib.Ok x
 
@@ -84,19 +85,19 @@ let set_markup markup tokens =
   )
 
 let rec lex_unit_to_closest_token_region = function
-  State.Token t :: _ -> Token.to_region t
-| Markup (Tabs {region; _} | Space {region; _} | Newline {region;_}
+  `Token t :: _ -> Token.to_region t
+| `Markup (Markup.Tabs {region; _} | Space {region; _} | Newline {region;_}
          | LineCom {region;_} | BlockCom {region; _} | BOM {region; _} ) :: [] -> region
-| Markup _ :: rest -> lex_unit_to_closest_token_region rest
-| Directive (Linemarker {region;_}) :: [] -> region
-| Directive _ :: rest -> lex_unit_to_closest_token_region rest
+| `Markup _ :: rest -> lex_unit_to_closest_token_region rest
+| `Directive (Directive.Linemarker {region;_}) :: [] -> region
+| `Directive _ :: rest -> lex_unit_to_closest_token_region rest
 | [] -> Region.ghost
 
 let rec lex_unit_to_closest_token_region2 = function
-  State.Token t :: _ -> Token.to_region t
-| Markup (LineCom {region;_} | BlockCom {region; _}) :: _ -> region
-| Markup _ :: rest -> lex_unit_to_closest_token_region2 rest
-| Directive (Linemarker {region;_}) :: _ -> region
+  `Token t :: _ -> Token.to_region t
+| `Markup (Markup.LineCom {region;_} | BlockCom {region; _}) :: _ -> region
+| `Markup _ :: rest -> lex_unit_to_closest_token_region2 rest
+| `Directive (Directive.Linemarker {region;_}) :: _ -> region
 | [] -> Region.ghost
 
 let attach = function
@@ -105,7 +106,7 @@ let attach = function
       (match result, rest with
         _, [] ->
           apply (set_markup (create_comment (({region; value}: _ Region.reg), Region.Before) :: markup_queue) result) rest []
-      | [], State.Token hd :: rest ->
+      | [], `Token hd :: rest ->
         apply (hd :: result) rest []
       | [], _ -> apply (set_markup (create_comment ({region; value}, Region.After) :: markup_queue) result) rest []
       | next_token :: _, (prev_token :: prev_rest) ->
@@ -130,7 +131,7 @@ let attach = function
             After (* after previous token *)
           in
           match prev_token with
-            State.Token token ->
+            `Token token ->
               apply (set_markup (create_comment ({region; value}, pos) :: markup_queue) (token :: result)) prev_rest []
           | _ ->
             apply result prev_rest ((create_comment ({region; value}, pos)) :: markup_queue)
@@ -138,17 +139,16 @@ let attach = function
       )
     and apply result tokens markup_queue =
       match tokens with
-        State.Token token :: rest ->
+        `Token token :: rest ->
           apply (set_markup markup_queue (token::result)) rest []
-      | State.Markup (BlockCom c) :: rest ->
+      | `Markup (Markup.BlockCom c) :: rest ->
         let value = String.sub c.value 2 (String.length c.value - 4) in
         apply_comment (fun (a, b) -> Region.BlockCom (a, b)) c.region value result rest markup_queue
-      | State.Markup (LineCom c) :: rest ->
+      | `Markup (Markup.LineCom c) :: rest ->
         let value = String.sub c.value 2 (String.length c.value - 2) in
         apply_comment (fun (a, b) -> Region.LineCom (a, b)) c.region value result rest markup_queue
-      | State.Markup _  :: rest -> apply result rest markup_queue
-      | State.Directive d  :: rest -> apply (Token.Directive d :: result) rest markup_queue
+      | `Markup _  :: rest -> apply result rest markup_queue
+      | `Directive d  :: rest -> apply (Token.Directive d :: result) rest markup_queue
       | [] -> result
-    in
-    ok @@ apply [] (List.rev lex_units) []
+    in ok @@ apply [] (List.rev lex_units) []
   | Error _ as err -> err

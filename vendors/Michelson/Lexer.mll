@@ -172,17 +172,17 @@ module Make (Token : TOKEN) =
       let region = Region.make ~start ~stop in
       let lexeme = thread#to_string in
       let token  = Token.mk_string lexeme region
-      in State.Token token, state
+      in token, state
 
     let mk_bytes bytes state buffer =
       let State.{region; state; _} = state#sync buffer in
       let token = Token.mk_bytes bytes region
-      in State.Token token, state
+      in token, state
 
     let mk_int state buffer =
       let State.{region; lexeme; state} = state#sync buffer in
       match Token.mk_int lexeme region with
-        Ok token -> State.Token token, state
+        Ok token -> token, state
       | Error Token.Non_canonical_zero ->
           fail region Non_canonical_zero
 
@@ -194,7 +194,7 @@ module Make (Token : TOKEN) =
       and start = state#pos in
       let State.{region; lexeme; state} = state#sync buffer in
       match Token.mk_ident lexeme region with
-        Ok token -> State.Token token, state
+        Ok token -> token, state
       | Error Token.Valid_prefix (index, tree) ->
           let region = mk_region index start in
           fail region (Valid_prefix tree)
@@ -214,19 +214,19 @@ module Make (Token : TOKEN) =
     let mk_annot state buffer =
       let State.{region; lexeme; state} = state#sync buffer
       in match Token.mk_annot lexeme region with
-           Ok token -> State.Token token, state
+           Ok token -> token, state
          | Error Token.Annotation_length max ->
              fail region (Annotation_length max)
 
     let mk_sym state buffer =
       let State.{region; lexeme; state} = state#sync buffer in
       let token = Token.mk_sym lexeme region
-      in State.Token token, state
+      in token, state
 
     let mk_eof state buffer =
       let State.{region; state; _} = state#sync buffer in
       let token = Token.eof region
-      in State.Token token, state
+      in token, state
 
 (* END HEADER *)
 }
@@ -292,7 +292,6 @@ rule scan state = parse
     let open Simple_utils.Utils in
     object
       method mk_string = mk_string
-      method mk_eof    = lift <@ mk_eof
       method callback  = lift <@ scan
       method support_string_delimiter = support_string_delimiter
     end
