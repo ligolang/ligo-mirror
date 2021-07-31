@@ -7,7 +7,6 @@ type t =
 | Broken_string
 | Invalid_character_in_string
 | Undefined_escape_sequence
-| Invalid_linemarker_argument
 
 type error = t
 

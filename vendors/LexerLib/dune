@@ -5,10 +5,10 @@
 (library
   (name LexerLib)
   (public_name LexerLib)
-  (wrapped true)
   (modules CLI API Core Unit Client Error
            Thread State Markup Directive Version)
   (modules_without_implementation Client Unit)
+  (private_modules Core Error Version)
   (libraries
     ;; Vendor
     simple-utils

@@ -46,8 +46,7 @@ type 'token t = <
   mk_space      : Lexing.lexbuf -> Markup.t * 'token t;
   mk_tabs       : Lexing.lexbuf -> Markup.t * 'token t;
   mk_bom        : Lexing.lexbuf -> Markup.t * 'token t;
-  mk_linemarker : Region.t ->
-                  line:string ->
+  mk_linemarker : line:string ->
                   file:string ->
                   ?flag:char ->
                   Lexing.lexbuf ->
@@ -148,7 +147,7 @@ let make ~config ~window ~pos ~decoder ~supply : 'token state =
       let markup = Markup.BOM Region.{region; value}
       in markup, state
 
-    method mk_linemarker prefix ~line ~file ?flag lexbuf =
+    method mk_linemarker ~line ~file ?flag lexbuf =
       let {state; region; _} = self#sync lexbuf in
       let flag      = match flag with
                         Some '1' -> Some Directive.Push
@@ -156,7 +155,6 @@ let make ~config ~window ~pos ~decoder ~supply : 'token state =
                       | _        -> None in
       let linenum   = int_of_string line in
       let value     = linenum, file, flag in
-      let region    = Region.cover prefix region in
       let directive = Directive.Linemarker Region.{value; region} in
       let pos       = region#start#add_nl in
       let pos       = (pos#set_file file)#set_line linenum

@@ -3,12 +3,11 @@
 (* Vendor dependencies *)
 
 module Region = Simple_utils.Region
-module Pos    = Simple_utils.Pos
 
 (* Utility types *)
 
 type file_path = string
-type message = string Region.reg
+type message   = string Region.reg
 
 (* LEXER INSTANCE (see README.md) *)
 

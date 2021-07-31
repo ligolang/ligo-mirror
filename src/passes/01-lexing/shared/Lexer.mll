@@ -32,7 +32,6 @@ module Make (Token : Token.S) =
     | Unsupported_lang_syntax
     | Invalid_natural
     | Unterminated_verbatim
-    | Invalid_linemarker_argument
 
     let sprintf = Printf.sprintf
 
@@ -44,7 +43,7 @@ module Make (Token : Token.S) =
          Hint: Use 0."
     | Reserved_name s ->
         sprintf "Reserved name: \"%s\".\n\
-         Hint: Change the name." s
+                 Hint: Change the name." s
     | Invalid_symbol s ->
         sprintf "Invalid symbol: %S.\n\
                  Hint: Check the LIGO syntax you use." s
@@ -57,11 +56,8 @@ module Make (Token : Token.S) =
     | Unsupported_lang_syntax ->
         "Unsupported code injection syntax."
     | Unterminated_verbatim ->
-       "Unterminated verbatim.\n\
-        Hint: Close with \"|}\"."
-    | Invalid_linemarker_argument ->
-       "Unexpected or invalid linemarker argument.\n\
-        Hint: The optional argument is either 1 or 2."
+        "Unterminated verbatim.\n\
+         Hint: Close with \"|}\"."
 
     type message = string Region.reg
 
@@ -278,18 +274,15 @@ rule scan state = parse
 | "[@" (attr as a) "]"   { mk_attr       a state lexbuf }
 | "[%" (attr as l)       { mk_lang       l state lexbuf }
 
-| "`"
-| "{|" as lexeme {
-    if lexeme = fst Token.verbatim_delimiters then (
+| "`" | "{|" as lexeme {
+    if lexeme = fst Token.verbatim_delimiters then
       let State.{region; state; _} = state#sync lexbuf in
       let thread = Thread.make region
-      in scan_verbatim (snd Token.verbatim_delimiters) thread state lexbuf |> mk_verbatim
-    )
-    else (
+      in scan_verbatim (snd Token.verbatim_delimiters)
+                       thread state lexbuf |> mk_verbatim
+    else
       let State.{region; _} = state#sync lexbuf
-      in fail region (Unexpected_character lexeme.[0])
-    )
-  }
+      in fail region (Unexpected_character lexeme.[0]) }
 
 | _ as c { let State.{region; _} = state#sync lexbuf
            in fail region (Unexpected_character c) }
@@ -299,9 +292,10 @@ rule scan state = parse
 and scan_verbatim verbatim_end thread state = parse
   (* Inclusion of Michelson code *)
   '#' blank* (natural as line) blank+ '"' (string as file) '"'
-  blank+ ('1' | '2')? blank* {
-    let State.{state; region; _} = state#sync lexbuf
-    in eol verbatim_end region line file thread state lexbuf
+  (blank+ ('1' | '2'))? blank* (nl | eof) {
+    let _, state =
+      state#mk_linemarker ~line ~file lexbuf
+    in scan_verbatim verbatim_end thread state lexbuf
   }
 | nl as nl { let ()    = Lexing.new_line lexbuf
              and state = state#set_pos (state#pos#new_line nl) in
@@ -317,13 +311,6 @@ and scan_verbatim verbatim_end thread state = parse
   }
 | _ as c { let State.{state; _} = state#sync lexbuf in
            scan_verbatim verbatim_end (thread#push_char c) state lexbuf }
-
-and eol verbatim_end prefix line file thread state = parse
-  nl | eof { let _, state =
-               state#mk_linemarker prefix ~line ~file lexbuf
-             in scan_verbatim verbatim_end thread state lexbuf }
-| _        { let State.{region; _} = state#sync lexbuf
-             in fail region Invalid_linemarker_argument }
 
 (* END LEXER DEFINITION *)
 

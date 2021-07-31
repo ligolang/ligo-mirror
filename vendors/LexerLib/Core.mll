@@ -294,14 +294,14 @@ rule scan client state = parse
 | '\t'+ { state#mk_tabs    lexbuf |> mk_markup }
 
   (* Strings *)
+
 | '\''
 | '"' as lexeme {
     if client#support_string_delimiter lexeme then
       let State.{region; state; _} = state#sync lexbuf in
       let thread             = Thread.make region in
       scan_string lexeme thread state lexbuf |> client#mk_string
-    else (rollback lexbuf; client#callback state lexbuf)
-  }
+    else (rollback lexbuf; client#callback state lexbuf) }
 
   (* Comment *)
 
@@ -330,24 +330,14 @@ rule scan client state = parse
   (* Linemarkers preprocessing directives (from #include) *)
 
 | '#' blank* (natural as line) blank+ '"' (string as file) '"'
-  (blank+ (('1' | '2') as flag))? blank* {
-    let State.{state; region; _} = state#sync lexbuf
-    in eol region line file flag state lexbuf }
+  (blank+ (('1' | '2') as flag))? blank* (nl | eof) {
+    state#mk_linemarker ~line ~file ?flag lexbuf
+    |> mk_directive }
 
   (* Other tokens *)
-(*
-| eof { client#mk_eof state lexbuf |> mk_token }
- *)
-| _ { rollback lexbuf;
-      client#callback state lexbuf (* May raise exceptions *) }
 
-(* Finishing a linemarker *)
-
-and eol region line file flag state = parse
-  nl | eof { state#mk_linemarker region ~line ~file ?flag lexbuf
-             |> mk_directive }
-| _        { let State.{region; _} = state#sync lexbuf
-             in fail region Error.Invalid_linemarker_argument }
+| eof | _ { rollback lexbuf;
+            client#callback state lexbuf (* May raise exceptions *) }
 
 (* Block comments
 
@@ -473,11 +463,15 @@ let mk_scan (client: 'token Client.t) : 'token scanner =
   let internal_client =
     object
       method mk_string = mk_token <@ client#mk_string
+
       method callback state lexbuf =
         mk_token (drop (client#callback state) lexbuf)
+
       method support_string_delimiter = client#support_string_delimiter
     end
+
   and first_call = ref true in
+
   fun state ->
     let scanner =
       if !first_call then (first_call := false; init) else scan

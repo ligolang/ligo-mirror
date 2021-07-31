@@ -50,8 +50,7 @@ type 'token t = <
   mk_space      : Lexing.lexbuf -> Markup.t * 'token t;
   mk_tabs       : Lexing.lexbuf -> Markup.t * 'token t;
   mk_bom        : Lexing.lexbuf -> Markup.t * 'token t;
-  mk_linemarker : Region.t ->
-                  line:string ->
+  mk_linemarker : line:string ->
                   file:string ->
                   ?flag:char ->
                   Lexing.lexbuf ->

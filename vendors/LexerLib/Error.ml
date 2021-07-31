@@ -7,7 +7,6 @@ type t =
 | Broken_string
 | Invalid_character_in_string
 | Undefined_escape_sequence
-| Invalid_linemarker_argument
 
 type error = t
 
@@ -32,6 +31,3 @@ let to_string = function
 | Invalid_character_in_string ->
     "Invalid character in string.\n\
      Hint: Remove or replace the character."
-| Invalid_linemarker_argument ->
-    "Unexpected or invalid linemarker argument.\n\
-     Hint: The optional argument is either 1 or 2."
