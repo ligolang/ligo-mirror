@@ -788,7 +788,7 @@ actually more that needs threading, all gathered in the
 type `State.t`:
 
 ```
-type t = {
+type state = {
   config : config;
   env    : E_AST.Env.t;
   mode   : mode;

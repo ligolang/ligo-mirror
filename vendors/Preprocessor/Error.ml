@@ -1,6 +1,6 @@
 (* Preprocessing errors *)
 
-type t =
+type error =
   Directive_inside_line
 | Missing_endif
 | Newline_in_string
@@ -22,7 +22,7 @@ type t =
 | Missing_filename                    (* #include *)
 | Unexpected_argument                 (* #include and #import *)
 
-type error = t
+type t = error
 
 let sprintf = Printf.sprintf
 

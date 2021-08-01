@@ -1,15 +1,17 @@
 (* This module defines and exports the type [t] of conditional
    expressions of preprocessing directives. *)
 
-type t =
-  Or    of t * t
-| And   of t * t
-| Eq    of t * t
-| Neq   of t * t
-| Not   of t
+type ast =
+  Or    of ast * ast
+| And   of ast * ast
+| Eq    of ast * ast
+| Neq   of ast * ast
+| Not   of ast
 | True
 | False
 | Ident of string
+
+type t = ast
 
 (* Environments *)
 
