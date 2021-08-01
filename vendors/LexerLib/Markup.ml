@@ -8,7 +8,7 @@ module Region = Simple_utils.Region
 
 type lexeme = string
 
-type t =
+type markup =
   Tabs      of int    Region.reg
 | Space     of int    Region.reg
 | Newline   of lexeme Region.reg
@@ -16,7 +16,7 @@ type t =
 | BlockCom  of lexeme Region.reg
 | BOM       of lexeme Region.reg
 
-type markup = t
+type t = markup
 
 (* Pretty-printing *)
 
@@ -54,10 +54,3 @@ let to_string ~offsets mode markup =
 type basic_comment =
   Line  of lexeme Region.reg
 | Block of lexeme Region.reg
-
-(*
-type contextual_comment =
-  Title   of basic_comment
-| Header  of basic_comment
-| Trailer of basic_comment
- *)

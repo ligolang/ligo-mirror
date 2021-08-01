@@ -21,10 +21,10 @@ type file_path  = string
 type flag       = Push | Pop
 type linemarker = linenum * file_path * flag option
 
-type t =
+type directive =
   Linemarker of linemarker Region.reg
 
-type directive = t
+type t = directive
 
 (* Printing *)
 

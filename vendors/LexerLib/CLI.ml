@@ -4,46 +4,13 @@
 
 module Argv = Simple_utils.Argv
 
-(* Preprocessor CLI *)
-
-module type COMMENTS =
-  sig
-    type line_comment  = string (* Opening of a line comment *)
-    type block_comment = <opening : string; closing : string>
-
-    val block : block_comment option
-    val line  : line_comment option
-  end
-
-module type PREPROCESSOR_CLI =
-  sig
-    include COMMENTS
-
-    val input     : string option (* input file             *)
-    val extension : string option (* file extension         *)
-    val dirs      : string list   (* -I                     *)
-    val show_pp   : bool          (* --show-pp              *)
-    val offsets   : bool          (* negation of --columns  *)
-
-    type status = [
-      `Done
-    | `Version      of string
-    | `Help         of Buffer.t
-    | `CLI          of Buffer.t
-    | `SyntaxError  of string
-    | `FileNotFound of string
-    ]
-
-    val status : status
-  end
-
 (* The signature [S] (command-line interface) gathers the options
    given to the tool, following the GNu convention, and exports then
    as module fields. *)
 
 module type S =
   sig
-    module Preprocessor_CLI : PREPROCESSOR_CLI
+    module Preprocessor_CLI : Preprocessor.CLI.S
 
     val preprocess : bool
     val mode       : [`Byte | `Point]
@@ -59,7 +26,7 @@ module type S =
 
 (* Parsing the command line options *)
 
-module Make (Preprocessor_CLI: PREPROCESSOR_CLI) : S =
+module Make (Preprocessor_CLI: Preprocessor.CLI.S) : S =
   struct
     module Preprocessor_CLI = Preprocessor_CLI
 

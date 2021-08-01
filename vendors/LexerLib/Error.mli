@@ -1,6 +1,6 @@
 (* Lexing errors *)
 
-type t =
+type error =
   Invalid_utf8_sequence
 | Unterminated_comment of string
 | Unterminated_string
@@ -8,6 +8,6 @@ type t =
 | Invalid_character_in_string
 | Undefined_escape_sequence
 
-type error = t
+type t = error
 
 val to_string : t -> string

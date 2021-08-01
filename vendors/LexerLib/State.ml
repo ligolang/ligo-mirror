@@ -31,35 +31,35 @@ type 'token window = <
   current_token : 'token           (* Including EOF *)
 >
 
-type 'token t = <
+type 'token state = <
   config        : 'token config;
   window        : 'token window option;
   pos           : Pos.t;
-  set_pos       : Pos.t -> 'token t;
-  slide_window  : 'token -> 'token t;
+  set_pos       : Pos.t -> 'token state;
+  slide_window  : 'token -> 'token state;
   sync          : Lexing.lexbuf -> 'token sync;
   decoder       : Uutf.decoder;
   supply        : Bytes.t -> int -> int -> unit;
-  mk_line       :      Thread.t -> Markup.t * 'token t;
-  mk_block      :      Thread.t -> Markup.t * 'token t;
-  mk_newline    : Lexing.lexbuf -> Markup.t * 'token t;
-  mk_space      : Lexing.lexbuf -> Markup.t * 'token t;
-  mk_tabs       : Lexing.lexbuf -> Markup.t * 'token t;
-  mk_bom        : Lexing.lexbuf -> Markup.t * 'token t;
+  mk_line       :      Thread.t -> Markup.t * 'token state;
+  mk_block      :      Thread.t -> Markup.t * 'token state;
+  mk_newline    : Lexing.lexbuf -> Markup.t * 'token state;
+  mk_space      : Lexing.lexbuf -> Markup.t * 'token state;
+  mk_tabs       : Lexing.lexbuf -> Markup.t * 'token state;
+  mk_bom        : Lexing.lexbuf -> Markup.t * 'token state;
   mk_linemarker : line:string ->
                   file:string ->
                   ?flag:char ->
                   Lexing.lexbuf ->
-                  Directive.t * 'token t
+                  Directive.t * 'token state
 >
 
 and 'token sync = {
   region : Region.t;
   lexeme : lexeme;
-  state  : 'token t
+  state  : 'token state
 }
 
-type 'token state = 'token t
+type 'token t = 'token state
 
 let make ~config ~window ~pos ~decoder ~supply : 'token state =
   object (self)

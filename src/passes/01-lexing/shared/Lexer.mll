@@ -236,9 +236,9 @@ let directive  = '#' (blank* as space) (small+ as id) (* For #include *)
 
 (* Symbols *)
 
-let common_sym     =   ';' | ',' | '(' | ')'  | '[' | ']'  | '{' | '}'
+let common_sym     =   ';' | ',' | '(' | ')' | '[' | ']'  | '{' | '}'
                      | '=' | ':' | '|' | '.' | '_' | '^'
-                     | '+' | '-' | '*' | '/'  | '<' | "<=" | '>' | ">="
+                     | '+' | '-' | '*' | '/' | '<' | "<=" | '>' | ">="
 let pascaligo_sym  = "->" | "=/=" | '#' | ":="
 let cameligo_sym   = "->" | "<>" | "::" | "||" | "&&"
 let reasonligo_sym = '!' | "=>" | "!=" | "==" | "++" | "..." | "||" | "&&"
@@ -297,12 +297,13 @@ and scan_verbatim verbatim_end thread state = parse
       state#mk_linemarker ~line ~file lexbuf
     in scan_verbatim verbatim_end thread state lexbuf
   }
+
 | nl as nl { let ()    = Lexing.new_line lexbuf
              and state = state#set_pos (state#pos#new_line nl) in
              scan_verbatim verbatim_end (thread#push_string nl) state lexbuf }
 | eof      { fail thread#opening Unterminated_verbatim }
-| "`"
-| "|}" as lexeme  {
+
+| "`" | "|}" as lexeme  {
     if verbatim_end = lexeme then
       State.(thread, (state#sync lexbuf).state)
     else

@@ -12,10 +12,10 @@ type 'token scanner =
 type 'token cut =
   Thread.t * 'token State.t -> 'token * 'token State.t
 
-type 'token t = <
+type 'token client = <
   mk_string                : 'token cut;
   callback                 : 'token scanner;
   support_string_delimiter : char -> bool
 >
 
-type 'token client = 'token t
+type 'token t = 'token client

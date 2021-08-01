@@ -10,7 +10,7 @@ module Region = Simple_utils.Region
 
 type lexeme = string
 
-type t =
+type markup =
   Tabs      of int    Region.reg  (* Tabulations *)
 | Space     of int    Region.reg  (* Space *)
 | Newline   of lexeme Region.reg  (* "\n" or "\c\r" escape characters *)
@@ -18,7 +18,7 @@ type t =
 | BlockCom  of lexeme Region.reg  (* Block comments *)
 | BOM       of lexeme Region.reg  (* Byte-Order Mark for UTF-8 *)
 
-type markup = t
+type t = markup
 
 (* Pretty-printing of markup
 

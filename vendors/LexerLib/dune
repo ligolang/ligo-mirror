@@ -12,6 +12,7 @@
   (libraries
     ;; Vendor
     simple-utils
+    Preprocessor
     ;; Third party
     getopt
     uutf))

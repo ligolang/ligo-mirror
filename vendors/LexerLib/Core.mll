@@ -13,8 +13,8 @@ let (<@) = Utils.(<@)
 
 (* Wrapping tokens, markup and directives *)
 
-let mk_token     (token,     state) = `Token  token,        state
-let mk_markup    (markup,    state) = `Markup markup,       state
+let mk_token     (token,     state) = `Token     token,     state
+let mk_markup    (markup,    state) = `Markup    markup,    state
 let mk_directive (directive, state) = `Directive directive, state
 
 (* LEXER ENGINE *)

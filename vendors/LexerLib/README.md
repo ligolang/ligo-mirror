@@ -2,15 +2,17 @@
 
 A lexer is a tool that reads a text file expected to be made of
 _lexemes_, and returns abtract versions of them, called _tokens_, for
-a parser to consume. The current lexer library supports the making of
-UT8-aware lexers for programming languages, like LIGO, by having the
-library's client define the tokens as a callback. In other words, the
-client is a lexer that recognises tokens and the present library takes
-care of the markup (strings and comments), and calls back the client's
+a parser to consume.
+
+The current lexer library supports the making of UT8-aware lexers for
+programming languages, like LIGO, by having the library's client
+provide a lexer for the tokens as a callback: the library takes care
+of the markup (strings and comments), and calls back the client's
 lexer for the tokens. In the case of LIGO, this enables to share the
-boilerplate between the different concrete syntaxes. This lexer
-library also offer a one or two-token window for the parser in case of
-a parse error, so better error messages can be printed.
+boilerplate between the different concrete syntaxes.
+
+This lexer library also offer a one or two-token window for the parser
+in case of a parse error, so better error messages can be printed.
 
 This lexer library can also be used to support tools other than
 parsers, like pretty-printers and style checkers, as done in the LIGO
@@ -50,90 +52,71 @@ LexerLib
 ├── State.ml
 ├── State.mli
 ├── Thread.ml
-└── Thread.mli
+├── Thread.mli
+└── Unit.mli
 ```
 
-Here is a short description of those files and OCaml modules:
+Here is a short description of some of those files and OCaml modules:
 
   * The OCaml module `Core` is the heart of the lexer library. It can
     be considered as the low-level lexer engine, with lots of bells
-    and whistles.
+    and whistles. It is a private module, as far as `dune` is
+    concerned, that is, not to be exported by the library.
 
   * The module `API` packages types, functions and modules for the
     client, based on `Core`. It is, in a way, a simplified view of
-    `Core`, with some specific uses in mind. The LIGO compiler only
-    uses `API`, but some other user would use `Core` through the more
-    advanced functions.
+    `Core`, with some specific uses in mind. This is a public module.
 
   * The module `CLI` deals with command-line options for building a
     standalone lexer, and also export data structures about the
     configuration meant for the library client, for example, the LIGO
-    compiler.
+    compiler. This is a public module.
 
   * The module `Error` defines the errors that the lexer library can
-    emit.
+    emit. It is a private module.
 
   * The module `State` defines types and related functions used for
     lexing. In particular, the state is a data structure threaded
     along the calls to scanning rules and which hold a high-level view
-    of the process, including the source and the lexing buffer.
-
-  * The `LICENSE` file must contain the MIT license.
-
-  * The file `README.md` is the present file.
+    of the process, including the source and the lexing buffer. It is
+    a public module.
 
   * The module `Directive` defines the abstract representation and
     printers for the preprocessing directives. Indeed, the lexer is
     designed so it can be used with the preprocessor library, in which
     case,
     [linemarkers](https://gcc.gnu.org/onlinedocs/cpp/Preprocessor-Output.html)
-    can be found in the input of the lexer.
+    can be found in the input of the lexer. It is a public module.
 
   * The module `Markup` defines abtract representations for the sorts
     of markup recognised by the lexer: tabulations, blanks, newline
-    characters, comments etc.
+    characters, comments etc. It is a public module.
+
+  * The interface `Unit` defines a type for lexical units. It is public.
+
+  * The interface `Client` defines the signature expected from the
+    client of the library to use the `API`. It is of course public.
+
+  * The `LICENSE` file must contain the MIT license.
+
+  * The file `README.md` is the present file.
 
 ## Interfaces
 
 ### The CLI Interface
 
 The file `CLI.mli` shines a light on the design of `CLI.mli` in the
-preprocessor library, in the directory `vendors/Preprocessor`.
+preprocessor library, in the directory `vendors/Preprocessor`. The
+present module `CLI` is meant to be composed with the one of the
+preprocessor library.
 
-First of all, we find the same signature `COMMENTS`:
-
-```
-module type COMMENTS =
-  sig
-    type line_comment  = string (* Opening of a line comment *)
-    type block_comment = <opening : string; closing : string>
-
-    val block : block_comment option
-    val line  : line_comment option
-  end
-```
-
-It exports optional values denoting two kinds of comments: one-line
-comments and block comments (that is, multi-line comments). Due to the
-use of metaprogramming by means of `ocamllex` to implement the module
-`API`, where comments are defined as regular expressions, the client
-of `CLI` must make sure to choose line and block comments that are
-actually recognised by `API`.
-
-Next, we found a signature `PREPROCESSOR_CLI` that is equal to `S` in
-`CLI.mli` located in `vendors/Preprocessor`. The reason why that
-signature is duplicated is because we wanted to avoid as much as
-possible dependencies between vendored libraries. Since signature
-equality is structural, we can simply duplicate `COMMENTS` and `S`
-from the preprocessor library, because the same structural equality
-holds fo object types, like `block_comment`. The `CLI` of the lexer
-library re-exports the CLI of the preprocessor as module
-`Preprocessor_CLI`:
+The `CLI` of the lexer library re-exports the CLI of the preprocessor
+as module `Preprocessor_CLI`:
 
 ```
 module type S =
   sig
-    module Preprocessor_CLI : PREPROCESSOR_CLI
+    module Preprocessor_CLI : Preprocessor.CLI.S
 
     val preprocess : bool
 
@@ -187,87 +170,77 @@ compiler. The constructors are
 
 The interface `API.mli` is the best place to start to understand the
 architecture and client-side features offered by the lexer
-library. It is made of three parts:
+library. It is made of the following sections.
 
-  1. A section on how to obtain a _core lexer_, using the function
-     `mk_scan`.
-
-  2. A functor `Make` that takes a core lexer and returns a module
-     declining many kinds of lexers, including specialisation from
-     different sources to different results.
+  1. A functor `Make` that takes a client lexer (that is, scanning
+     tokens) and returns a module declining many kinds of lexers,
+     including specialisation from different sources to different
+     results.
 
   2. A function `reset` that sets different components of a lexing
      buffer.
 
-The first two sections are meant to be composed by the client of the
-library: first obtain a core lexer, and then use it to obtain a an
-array of lexers specific to certain kinds of inputs or output, but the
-core lexer is re-exported as well, but specialised for tokens only
-(not the more general lexical units), and for advanced users.
-
-Let us start with the making of the core lexer, also known here as the
-"client-side".
+Let us start with the client lexer.
 
 #### The Client-Side
 
 The first section of the interface of module `API` deals with what the
-client of the library needs to do to obtain a. First, the type `scanner`, which is
-used in the signature `LEXER` of `API`:
-
-```
-type 'token scanner =
-  'token State.t ->
-  Lexing.lexbuf ->
-  ('token State.lex_unit * 'token State.t, message) Stdlib.result
-```
-
-A scanner is a bit like a generic `ocamllex` parse rule:
-
-```
-rule scanner state = parse
-...
-```
-
-It takes the current state and lexing buffer. In case of success, a
-lexical unit is returned, together with a new state which we can feed
-back to the scanner (the lexical buffer is updated effectfully, so
-there is no need to return it). Here is again how the type `scanner`
-is used by the `API` (see [The Functor Make](#the-functor-make)):
+client of the library needs to do to obtain a: the signature `LEXER`:
 
 ```
 module type LEXER =
   sig
     type token
 
-    val scan : token Core.scanner
+    val client : token Client.t
   end
 ```
 
-The value `scan` is the fundamental scanner (lexer) from which all
-those exported by the signature `S` of `API.Make` are made, that is,
-either lexers that return lexical units or tokens one by one, or a
-list of them, and this from a variety of sources.
+A look at `Client.mli` shows:
 
-We now move to the client-side of the library by considering the data
-structure that the client (that is, the lexer of your programming
-language) is expected to provide:
+```
+type 'token scanner =
+  'token State.t ->
+  Lexing.lexbuf ->
+  ('token * 'token State.t, message) Stdlib.result
+```
+
+A scanner of type `'token scanner` is a bit like a generic `ocamllex`
+parse rule:`
+
+```
+rule scanner state = parse
+...
+```
+
+It takes the current state and lexing buffer and returns either an
+error message or a token and a new state (the lexing buffer is updated
+effectfully, so there is no need to return it). The tell-tale that
+this about the client is that a `'token` is returned. The value
+`client` of the signature `LEXER` is the fundamental scanner (lexer)
+from which all those exported by the signature `S` of `API.Make` are
+made, that is, either lexers that return the full list of lexical
+units or tokens, and this from a variety of sources. See below
+[the functor Make](#the-functor-make).
+
+Continuing with the client-side, we further read in `Client.mli`:
 
 ```
 type 'token cut =
-  thread * 'token state -> 'token lex_unit * 'token state
+  Thread.t * 'token State.t -> 'token * 'token State.t
 
 type 'token client = <
   mk_string                : 'token cut;
-  mk_eof                   : 'token scanner;
   callback                 : 'token scanner;
   support_string_delimiter : char -> bool
 >
 ```
 
 The type `cut` is the type of a function that takes a
-[thread](#type-thread) and returns the corresponding lexical unit,
-that is, either a string or a comment. The state is updated in the
-process, so it is given as an argument and the new version is
+[thread](#type-thread) and returns the corresponding token, which can
+only be a string (a comment is markup, therefore can only be made by
+the library, not the client lexer). The state is updated in the
+process, so it is given as an argument and its new version is
 returned.
 
 The type `client` gathers all the information the client lexer needs
@@ -275,15 +248,12 @@ to provide:
 
   * A method `mk_string` that makes a string from a thread (it must be
     provided by the client because only the client knows the
-    implementation of tokens: they are parametric in `Core`).
-
-  * A method `mk_eof` that makes a token for the end-of-file
-    characters. Again, only the client lexer knows the implementation
-    of the corresponding token.
+    implementation of tokens, and that can be ascertained by
+    considering that they are type parameters in `Core`.).
 
   * A method `callback` which is a lexer/scanner (both words are
     equivalent in this documentation) for tokens other than strings
-    and end-of-file.
+    (as `mk_string` takes care of those).
 
   * A method `support_string_delimiter` which is a predicate telling
     whether the character it is given delimits a string. This enables
@@ -293,47 +263,32 @@ to provide:
 
 The functor `Make` is one of three tightly coupled components:
 
-  1. a signature `LEXER`,
+  1. a signature `LEXER`, which we just explained above in the
+     section about [the client-side](#the-client-side);
 
-  2. a signature `S`,
+  2. a signature `S`;
 
   3. a functor `Make` from `LEXER` to `S`.
 
-First of all:
-
-```
-module type LEXER =
-  sig
-    type token
-
-    val scan : token Core.scanner
-  end
-```
-
-This means the following.
-
-  1. Tokens, abstract here, need to be defined by a client module of
-     signature `LEXER`. That client is expected to be the client of
-     the library itself.
-
-  2. The scanner is defined by the client by means of the module
-     `Core`.
-
-In other words, the client defines the tokens and instanciates a
-`Core.scanner` (in other words: the client's lexer), then call
-`API.Make` for specific uses.
-
 The signature `S` is best construed as a simplification and
-specialisation of the interface of `Core`, but `Core` can be accessed
-directly for some uses. We shall explain `Core` in section about
-[the Core interface](#the-core-interface), and simply assume here that
-`Core.scanner` is a low-level lexer returning tokens.
+specialisation of the interface of `Core`, which is a private module,
+therefore cannot be accessed by the clients of this library. We shall
+explain `Core` in section about
+[the Core interface](#the-core-interface).
 
 The purpose of the functor `Make` is to take that low-level
-representation of a lexer from `LEXER` and produce a high-level module
-that enables the library's client to build a standalone lexer or to
-integrate it in the LIGO compiler. Otherwise, any client lexer would
-use this library through `Core` directly.
+representation of a lexer by instanciating `Core` with a module of
+signature `LEXER`, and produce a high-level module that enables the
+library's client to build a standalone lexer or to integrate it in the
+LIGO compiler. It would be overly complicated for casual users to use
+`Core` directly, but not exporting `Core` has a consequence: _the
+lexers actually exported by `API` return all the tokens or lexical
+units in their input_. This is not what is expected by parser
+generators like `menhir`. The LIGO compiler uses `menhir`, and we
+encourage you to see how the present lexer library is interfaced with
+the parsers. (Basically, a buffer is used to store all the tokens that
+the parser is likely to request, and the new lexer provides them one
+by one.)
 
 Usual lexers are only expected to produce tokens, that is, words in
 the input that are relevant to a parser, but this library also
@@ -349,9 +304,7 @@ Let us consider the type of lexers, as found in the signature `S` in
 
 ```
     type ('src,'dst) lexer =
-      token State.config ->
-      'src ->
-      ('dst, message) Stdlib.result
+      token State.config -> 'src -> ('dst, message) Stdlib.result
 ```
 
 The first parameter of this functional type is `token State.config`,
@@ -361,38 +314,7 @@ the input was a file or `stdin`, etc. The second parameter is the
 source read by the lexer, and the successful result is the type
 parameter `'dst`.
 
-Then follow a series of lexers of type `lexer`, from various inputs to
-`token Core.instance`:
-
-```
-    val from_lexbuf  : (Lexing.lexbuf, token Core.instance) lexer
-    val from_channel : (in_channel,    token Core.instance) lexer
-    val from_string  : (string,        token Core.instance) lexer
-    val from_buffer  : (Buffer.t,      token Core.instance) lexer
-    val from_file    : (file_path,     token Core.instance) lexer
-```
-
-The type `Core.instance` will be described in a later section. Suffice
-it to say here that it represents a lexer engine, with many
-functionalities, rather complex and low-level. In other words, this
-part of the signature `S` is for discriminating clients who know what
-they are doing. For example, parser generators like `menhir` or
-`ocamlyacc` generate a parser type of the form
-
-```
-Lexing.lexbuf -> (Lexing.lexbuf -> token) -> tree
-```
-
-In other words, it expects a lexer to have type `Lexing.lexbuf ->
-token`, because the parser has the control and requests tokens on
-demand from the lexer. The functions above can be used to obtain a
-lexer of that type. The more casual client will best benefit from the
-following modules.
-
-The module `Token` in `S` exports the same set of lexers as above, but
-the destination type is `token list`. In other words, the lexer
-completes a full run on its input and, if no error occurred, returns
-the list of all tokens.
+The module `Tokens` in `S` exports the following set of lexers:
 
 ```
     module Tokens :
@@ -405,8 +327,9 @@ the list of all tokens.
       end
 ```
 
-This is useful when building standalone lexers, for testing purposes
-for instance.
+They have in common the production of all the tokens of the input, if
+there are no errors, of course. This is useful when building
+standalone lexers, for testing purposes for instance.
 
 Finally, the module `LexUnits` in `S` is more general than `Tokens`,
 in the sense that its lexers return _lexical units_ rather than only
@@ -449,7 +372,7 @@ val reset :
   unit
 ```
 
-### The Module Thread
+### The Thread Interface
 
 When scanning structured constructs, like strings and comments, we
 need to keep the region of the opening symbol, like a double quote for
@@ -462,7 +385,7 @@ for this goal is called here a _thread_ (because it is threaded along
 calls) and is defined in module `Thread` as follows:
 
 ```
-type t = <
+type thread = <
   opening     : Region.t;
   length      : int;
   acc         : char list;
@@ -498,7 +421,24 @@ The fields are explained as follows:
 
 Threads are used in the module `State`.
 
-### The Module State
+### The Unit Interface
+
+Lexical units are produced by the module `LexUnits` exported by
+`API.S`, but they are defined in their own module, like so:
+
+We mentioned several times that this lexer library can supply lexical
+units, tokens and preprocessing directives (e.g. linemarkers). More
+precisely, this means:
+
+```
+type 'token lex_unit = [
+  `Token     of 'token
+| `Markup    of Markup.t
+| `Directive of Directive.t
+]
+```
+
+### The State Interface
 
 Beyond producing lexical units (including tokens), the result of
 lexing is a _state_. The type `State.t` represents the abstract
@@ -513,9 +453,10 @@ Tokens are the smallest units used by the parser to build the abstract
 syntax tree. Lexical units include tokens, but also markup
 (whitespace, comments) and preprocessing directives that were
 generated by the preprocessor, like linemarkers after file
-inclusions. (Other directives passing through the preprocessor would
-mean they are invalid, as the preprocessor does not raise an error in
-that case.)
+inclusions. See the section on
+[the Unit interface](#the-unit-interface). (Other directives coming into the
+preprocessor would mean they are invalid, as the preprocessor does not
+raise an error in that case.)
 
 Type `State.config` gathers information about the input, about what to
 do, about how to display error messages, and how to print tokens:
@@ -574,17 +515,6 @@ Let go through all the fields:
   * The remaining fields are functions extracting information from
     tokens or converting them, mostly for printing purposes.
 
-We mentioned several times that this lexer library can supply lexical
-units, tokens and preprocessing directives (e.g. linemarkers). More
-precisely, this means:
-
-```
-type 'token lex_unit =
-  Token     of 'token
-| Markup    of Markup.t
-| Directive of Directive.t
-```
-
 The type of the tokens is a parameter, because it is defined by the
 client of the library.
 
@@ -605,27 +535,32 @@ precise.
 We can now look at the mouthful
 
 ```
-type 'token t = <
-  config       : 'token config;
-  window       : 'token window option;
-  pos          : Pos.t;
-  set_pos      : Pos.t -> 'token t;
-  slide_window : 'token -> 'token t;
-  sync         : Lexing.lexbuf -> 'token sync;
-  decoder      : Uutf.decoder;
-  supply       : Bytes.t -> int -> int -> unit;
-  mk_line      :      Thread.t -> 'token lex_unit * 'token t;
-  mk_block     :      Thread.t -> 'token lex_unit * 'token t;
-  mk_newline   : Lexing.lexbuf -> 'token lex_unit * 'token t;
-  mk_space     : Lexing.lexbuf -> 'token lex_unit * 'token t;
-  mk_tabs      : Lexing.lexbuf -> 'token lex_unit * 'token t;
-  mk_bom       : Lexing.lexbuf -> 'token lex_unit * 'token t
+type 'token state = <
+  config        : 'token config;
+  window        : 'token window option;
+  pos           : Pos.t;
+  set_pos       : Pos.t -> 'token state;
+  slide_window  : 'token -> 'token state;
+  sync          : Lexing.lexbuf -> 'token sync;
+  decoder       : Uutf.decoder;
+  supply        : Bytes.t -> int -> int -> unit;
+  mk_line       :      Thread.t -> Markup.t * 'token state;
+  mk_block      :      Thread.t -> Markup.t * 'token state;
+  mk_newline    : Lexing.lexbuf -> Markup.t * 'token state;
+  mk_space      : Lexing.lexbuf -> Markup.t * 'token state;
+  mk_tabs       : Lexing.lexbuf -> Markup.t * 'token state;
+  mk_bom        : Lexing.lexbuf -> Markup.t * 'token state;
+  mk_linemarker : line:string ->
+                  file:string ->
+                  ?flag:char ->
+                  Lexing.lexbuf ->
+                  Directive.t * 'token state
 >
 
 and 'token sync = {
   region : Region.t;
   lexeme : lexeme;
-  state  : 'token t
+  state  : 'token state
 }
 ```
 
@@ -676,22 +611,18 @@ The fields and methods are as follows.
     [Byte-Ordered Mark](https://en.wikipedia.org/wiki/Byte_order_mark). Note
     how they all return a new state, besides the lexical unit.
 
-The function `linemarker` could arguably be part of the type `state`,
-but simply belongs to the module `State`:
+A few words about the method `mk_linemarker`:
 
 ```
-val linemarker :
-  Region.t ->
-  line:string ->
-  file:string ->
-  ?flag:char ->
-  'token state ->
-  Lexing.lexbuf ->
-  'token lex_unit * 'token state
+  mk_linemarker : line:string ->
+                  file:string ->
+                  ?flag:char ->
+                  Lexing.lexbuf ->
+                  Directive.t * 'token state
 ```
 
-Just as the methods of `state` whose name start with `mk_`, the
-function `linemarker` updates the state after a linemarker has been
+Just as the methods of `state` whose name start with `mk_`, the method
+`mk_linemarker` updates the state after a linemarker has been
 recognised, and thus returns a new state. Before describing the
 parameters, let us recall that the form of a line marker is:
 
@@ -699,21 +630,23 @@ parameters, let us recall that the form of a line marker is:
 # <line> "<file name>" [<optional 1 or 2>]
 ```
 
-So, the first parameter of the function `linemarker` is the region of
-the entire directive; the second is the `line` specified by the
-marker; the third is the `file name` specified by the marker; the
-fourth is the optional flag `1` or `2` of the marker; the fifth is the
-current state; the last and sixth is the current lexing buffer. The
-lexical unit returned is constructed using `Directive`.
-
+So, the first parameter of `mk_linemarker` is the `<line>` specified
+by the marker; the second is the `<file name>` specified by the
+marker; the third is the optional flag `1` or `2` of the marker; the
+last and fourth is the current lexing buffer. The lexical unit
+returned is constructed using `Directive`.
 
 ### The Core Interface
 
-The module `Core` is the heart of the library. Let us walk through the
-interface file `Core.mli` and explain some of its values and types,
-starting with the types that we saw in the section about
-[the API interface](#the-api-interface), that is, `Core.lex_unit`,
-`Core.config` and `Core.instance`.
+The module `Core` is the heart of the library and it is specified as
+private in the file `dune`, meaning that it cannot be used directly by
+the clients of the library. Instead, the clients must use the aptly
+named module `API`. The following is therefore intended for
+maintainers of the library.
+
+Let us walk through the interface file `Core.mli` and explain some of
+its values and types, starting with the types that we saw in the
+section about [the API interface](#the-api-interface).
 
 Let us move now to the data structure which represents the
 feature-rich, parameterised lexer of `Core`:
@@ -735,12 +668,10 @@ type 'token instance = {
 }
 ```
 
-A look back at `API.mli` is useful here. The functions in the functor
-signature `S` are lexers whose destination is a value of type `token
-Core.instance`. They are meant to be the most versatile lexers,
-whereas the ones made available in the modules `Tokens` and `LexUnits`
-are specialised versions, returning lists of tokens or lists of
-lexical units, respectively.
+A look back at `API.mli` is useful here. The functions in the modules
+`Tokens` and `LexUnits` are specialised lexers based on `read_token`
+and `read_unit`, respectively, as we will see in the section about the
+implementation of `Core`.
 
 The type `input` is straightforward: it informs about the kind of
 input. The type `instance` is worth explaining in more details.
@@ -755,8 +686,8 @@ input. The type `instance` is worth explaining in more details.
 
   * The field `lexbuf` is the current lexing buffer.
 
-  * The method `close` closes the input channel, if any (depends on
-    the field `input`), to avoid memory leaks.
+  * The method `close` closes the input channel, if any (this depends
+    on the field `input`), to avoid memory leaks.
 
   * The method `window` returns an option window of the last and maybe
     penultimate token (for error messages).
@@ -765,23 +696,19 @@ Finally, the consider the function `open_stream`:
 
 ```
 val open_stream :
-  'token config ->
-  scan:('token scanner) ->
+  'token Client.t ->
+  'token State.config ->
   input ->
   ('token instance, message) Stdlib.result
 ```
 
 This is the function that makes a lexer `instance`. It is only used in
-`API`:
+the implementation of `API`, for example:
 
 ```
     let from_file config path =
-      Core.open_stream config ~scan:Lexer.scan (Core.File path)
+      Core.open_stream Lexer.client config (Core.File path)
 ```
-
-We therefore see that `API.from_file` gathers the configuration
-`config`, the client's lexer `Lexer.scan`, and the source `Core.File
-path` in order to call `open_stream` and produce a lexer instance.
 
 ## Implementations
 
@@ -883,7 +810,7 @@ and in `LexerLib`:
     let status = (Preprocessor_CLI.status :> status)
 ```
 
-Therfore, we use explicit structural subtyping on polymorphic variant
+Therefore, we use explicit structural subtyping on polymorphic variant
 types to initialise our `status` with that made by the CLI of the
 preprocessor. Next:
 
@@ -894,8 +821,8 @@ preprocessor. Next:
       with Getopt.Error msg -> `SyntaxError msg
 ```
 
-We parse the command-line for options relevant to the lexer (this is
-the second parse: the first was performed by the preprocessor
+That is, we parse the command-line for options relevant to the lexer
+(this is the second parse: the first was performed by the preprocessor
 CLI). Next, we check that the new options do not conflict with each
 other, making use now of the `` `Conflict`` polymorphic variant added
 to `Preprocessor_CLI.status` (see above):
@@ -928,11 +855,12 @@ options and the version hash:
 
 ### The API Implementation
 
-We explain here salient points of the implementation of the module
-`API`, whose interface was presented
-[above](#the-api-interface). Perhaps the only point worth mentioning
-is that all functions that are exported are defined by means of the
-following:
+Perhaps surprinsingly, the API implementation is relatively simple, at
+least simpler than the CLI implementation. We explain here salient
+points of the implementation of the module `API`, whose interface was
+presented [above](#the-api-interface). Perhaps the only point worth
+mentioning is that almost all functions that are exported are defined
+by means of the following:
 
 ```
     (* Generic lexer for all kinds of inputs *)
@@ -942,17 +870,20 @@ following:
       Core.open_stream config ~scan:Lexer.scan buffer
 ```
 
-or its result (a lexer instance of type `token Core.instance`).
+or its result (a lexer instance of type `token Core.instance`),
+the exception being
 
-### The Core Implementation
+```
+    let from_file config path =
+      Core.open_stream Lexer.client config (Core.File path)
+```
 
-The heart of the lexer library resides in the file `Core.mll`.
 
-#### The Function mk_state
+### The State Implementation
 
-The function `mk_state` creates the state threaded along the lexer
-engine. It contains all but one (`linemarker`) methods that update the
-state. The most commonly called is `sync`:
+The function `State.make` creates the state threaded along the lexer
+engine. It contains all methods to update the state. The most commonly
+called is `sync`:
 
 ```
     method sync lexbuf : 'token sync =
@@ -966,9 +897,11 @@ state. The most commonly called is `sync`:
 ```
 
 As it names indicates, it is called early in the semantic actions when
-it is clear that we do not want a rollback. The prefix of the lexing
-buffer that has been matched by the corresponding regular expression
-is committed to the state.
+it is clear that we do not want a rollback, therefore we "synchronise"
+the logical state of `state` with that of the lexing buffer
+`lexbuf`. In other words, the prefix of the lexing buffer that has
+been matched by the corresponding regular expression is committed to
+the state, as well as the current position in the source.
 
 Another method worth mentioning perhaps is `mk_newline`:
 
@@ -985,5 +918,18 @@ Another method worth mentioning perhaps is `mk_newline`:
 
 Note how we call `Lexing.new_line` and `start#new_line`. Indeed, it is
 of the utmost importance to call those two functions after recognising
-an end-of-line character. See the scanning rule `scan_block` for an
-example, and, of course, `scan` itself.
+an end-of-line character, so both the logical state and lexing buffer
+register the change of lines in the input. See the scanning rule
+`scan_block` for an example, and, of course, `scan` itself, as
+examples.
+
+### The Thread Implementation
+
+The implementation of the module `Thread` is straightforward.
+
+### The Core Implementation
+
+The heart of the lexer library resides in the file `Core.mll` and how,
+from a lexer for tokens, provided by the client, a lexer for the
+tokens _and the other lexical units_ is made. Actually, how several
+lexers are made, depending on the kind of input.

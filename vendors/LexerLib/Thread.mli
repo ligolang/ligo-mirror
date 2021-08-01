@@ -3,16 +3,16 @@
 
 module Region = Simple_utils.Region
 
-type t = <
+type thread = <
   opening     : Region.t;
   length      : int;
   acc         : char list;
   to_string   : string;
-  push_char   : char -> t;
-  push_string : string -> t;
-  set_opening : Region.t -> t
+  push_char   : char -> thread;
+  push_string : string -> thread;
+  set_opening : Region.t -> thread
 >
 
-type thread = t
+type t = thread
 
 val make : Region.t -> t

@@ -28,12 +28,6 @@ module type S =
       'src ->
       ('dst, message) Stdlib.result
 
-    val from_lexbuf  : (Lexing.lexbuf, token Core.instance) lexer
-    val from_channel : (in_channel,    token Core.instance) lexer
-    val from_string  : (string,        token Core.instance) lexer
-    val from_buffer  : (Buffer.t,      token Core.instance) lexer
-    val from_file    : (file_path,     token Core.instance) lexer
-
     module Tokens :
       sig
         val from_lexbuf  : (Lexing.lexbuf, token list) lexer
@@ -81,8 +75,7 @@ module Make (Lexer: LEXER) =
 
     let from_buffer config buffer =
       from_string config @@ Buffer.contents buffer
-
- let from_file config path =
+    let from_file config path =
       Core.open_stream Lexer.client config (Core.File path)
 
     (* Lexing the entire input *)
