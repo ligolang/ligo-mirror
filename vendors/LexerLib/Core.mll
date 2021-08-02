@@ -160,19 +160,8 @@ let fail region error =
 
 (* The main function *)
 
-type 'token scanner =
-  'token State.t ->
-  Lexing.lexbuf ->
-  ('token Unit.t * 'token State.t, message) Stdlib.result
-
-let open_stream :
-  'token scanner ->
-  'token State.config ->
-  input ->
-  ('token instance, message) Stdlib.result =
-  fun scan config input ->
+let open_stream scan config input =
   let log       = output_unit config stdout
-  and scan      = drop <@ scan
   and file_path = match config#input with
                     Some path -> path
                   | _ -> ""
@@ -448,7 +437,7 @@ and scan_string delimiter thread state = parse
 | _ as c { let State.{state; _} = state#sync lexbuf in
            scan_string delimiter (thread#push_char c) state lexbuf }
 
-  (* Scanner called first *)
+(* Scanner called first *)
 
 and init client state = parse
   utf8_bom { state#mk_bom lexbuf |> mk_markup           }
@@ -459,23 +448,21 @@ and init client state = parse
 {
 (* START TRAILER *)
 
-let mk_scan (client: 'token Client.t) : 'token scanner =
+let mk_scan (client: 'token Client.t) =
   let internal_client =
     object
       method mk_string = mk_token <@ client#mk_string
 
       method callback state lexbuf =
-        mk_token (drop (client#callback state) lexbuf)
+        mk_token @@ drop (client#callback state) lexbuf
 
       method support_string_delimiter = client#support_string_delimiter
     end
-
   and first_call = ref true in
-
   fun state ->
     let scanner =
       if !first_call then (first_call := false; init) else scan
-    in lift (scanner internal_client state)
+    in scanner internal_client state
 
 let open_stream client = open_stream @@ mk_scan client
 

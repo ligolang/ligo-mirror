@@ -1,0 +1,6 @@
+---
+  title: "Removed error Invalid_linemarker_argument, which cannot happen with our preprocessor."
+  merge_request: "1220"
+  author: "Christian Rinderknecht"
+  type: "internal"
+

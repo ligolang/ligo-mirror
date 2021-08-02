@@ -1,0 +1,6 @@
+---
+  title: "Simplified the client interfacing with LexerLib."
+  merge_request: "1220"
+  author: "Christian Rinderknecht"
+  type: "internal"
+

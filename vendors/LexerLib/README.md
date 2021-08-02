@@ -1,7 +1,7 @@
 # The Lexer Library
 
 A lexer is a tool that reads a text file expected to be made of
-_lexemes_, and returns abtract versions of them, called _tokens_, for
+_lexemes_, and returns abstract versions of them, called _tokens_, for
 a parser to consume.
 
 The current lexer library supports the making of UT8-aware lexers for
@@ -88,7 +88,7 @@ Here is a short description of some of those files and OCaml modules:
     [linemarkers](https://gcc.gnu.org/onlinedocs/cpp/Preprocessor-Output.html)
     can be found in the input of the lexer. It is a public module.
 
-  * The module `Markup` defines abtract representations for the sorts
+  * The module `Markup` defines abstract representations for the sorts
     of markup recognised by the lexer: tabulations, blanks, newline
     characters, comments etc. It is a public module.
 
@@ -166,37 +166,11 @@ compiler. The constructors are
 
   * `` `Tokens``: the tokens only will be printed.
 
-### The API Interface
+### The Client Interface
 
-The interface `API.mli` is the best place to start to understand the
-architecture and client-side features offered by the lexer
-library. It is made of the following sections.
-
-  1. A functor `Make` that takes a client lexer (that is, scanning
-     tokens) and returns a module declining many kinds of lexers,
-     including specialisation from different sources to different
-     results.
-
-  2. A function `reset` that sets different components of a lexing
-     buffer.
-
-Let us start with the client lexer.
-
-#### The Client-Side
-
-The first section of the interface of module `API` deals with what the
-client of the library needs to do to obtain a: the signature `LEXER`:
-
-```
-module type LEXER =
-  sig
-    type token
-
-    val client : token Client.t
-  end
-```
-
-A look at `Client.mli` shows:
+The module `Client` has no implementation because it only specifies
+types that the client of the lexer library needs to satisfy. The main
+requirement is specified by the type `scanner` in `Client.mli`:
 
 ```
 type 'token scanner =
@@ -215,13 +189,13 @@ rule scanner state = parse
 
 It takes the current state and lexing buffer and returns either an
 error message or a token and a new state (the lexing buffer is updated
-effectfully, so there is no need to return it). The tell-tale that
+imperatively, so there is no need to return it). The tell-tale that
 this about the client is that a `'token` is returned. The value
 `client` of the signature `LEXER` is the fundamental scanner (lexer)
 from which all those exported by the signature `S` of `API.Make` are
 made, that is, either lexers that return the full list of lexical
 units or tokens, and this from a variety of sources. See below
-[the functor Make](#the-functor-make).
+[the functor Make](#the-api-interface).
 
 Continuing with the client-side, we further read in `Client.mli`:
 
@@ -259,7 +233,35 @@ to provide:
     whether the character it is given delimits a string. This enables
     to have different string delimiters for different client lexers.
 
-#### The Functor Make
+### The API Interface
+
+The interface `API.mli` is the best place to start to understand the
+architecture and client-side features offered by the lexer
+library. It is made of the following sections.
+
+  1. A functor `Make` that takes a client lexer (that is, scanning
+     tokens) and returns a module declining many kinds of lexers,
+     including specialisation from different sources to different
+     results.
+
+  2. A function `reset` that sets different components of a lexing
+     buffer.
+
+Let us start with the client lexer.
+
+The first section of the interface of module `API` deals with what the
+client of the library needs to do to obtain a: the signature `LEXER`:
+
+```
+module type LEXER =
+  sig
+    type token
+
+    val client : token Client.t
+  end
+```
+
+See the section about [the Client Interface](#the-client-interface).
 
 The functor `Make` is one of three tightly coupled components:
 
@@ -277,7 +279,7 @@ explain `Core` in section about
 [the Core interface](#the-core-interface).
 
 The purpose of the functor `Make` is to take that low-level
-representation of a lexer by instanciating `Core` with a module of
+representation of a lexer by instantiating `Core` with a module of
 signature `LEXER`, and produce a high-level module that enables the
 library's client to build a standalone lexer or to integrate it in the
 LIGO compiler. It would be overly complicated for casual users to use
@@ -349,9 +351,8 @@ tokens. Lexical units consists in tokens and markup.
   end
 ```
 
-#### The Lexing Buffer Reset
-
-The function `API.reset` resets either the file name, the current line
+Finally, the last section of the API interface exports the function
+`API.reset`, which resets either the file name, the current line
 number, or the horizontal offset in a lexing buffer. This function is
 useful when lexing a file that has been previously preprocessed, in
 which case the argument labelled `file` is the name of the file that
@@ -496,7 +497,7 @@ Let go through all the fields:
     `stdin`. Otherwise, it holds a filesystem path to the input file.
 
   * The value for the field `offsets` is `true` to have any error
-    message report the location in the inpur source in terms of
+    message report the location in the input source in terms of
     horizontal offset, à la Emacs, instead of column number (`false`,
     like Vim).
 
@@ -722,7 +723,7 @@ reveal the rationale for their design. Please read the section `CLI`
 of `vendors/Preprocessor/README.md`.
 
 We already went through [the interface](#the-cli-interface), so let us
-wlak through now the functor `Make`.
+walk through now the functor `Make`.
 
   * In the `Preprocessor` library, the functor `Make` takes as
     argument a module of signature `COMMENTS`.
@@ -854,7 +855,7 @@ options and the version hash:
 
 ### The API Implementation
 
-Perhaps surprinsingly, the API implementation is relatively simple, at
+Perhaps surprisingly, the API implementation is relatively simple, at
 least simpler than the CLI implementation. We explain here salient
 points of the implementation of the module `API`, whose interface was
 presented [above](#the-api-interface). Perhaps the only point worth
@@ -936,3 +937,219 @@ function `output_unit`. Its purpose is to print tokens, or all lexical
 units, or lexemes onto an output channel, for debugging purposes. This
 enables to see up to what lexical unit the lexing went before it
 failed, either due to an internal error or an error in the input file.
+
+The function `lexbuf_from_input` creates a lexing buffer from the
+variety of possible inputs modelled by the type `input`. See
+[the Core Interface](#the-core-interface). Two points of note:
+
+  1. In the case of `Buffer` as an input, we check whether the input
+     configuration `config` registers a file name: if so, the lexing
+     buffer is patched with that name. (This has to be done manually.)
+
+  2. In the case of `File` as an input, we call `reset ~file:path
+     lexbuf` for the same reason.
+
+#### Error Handling
+
+The next section is about lexing errors and is worth detailing here.
+As we saw in the description of
+[the Core Interface](#the-core-interface), we do not export
+exceptions. Nevertheless, it is convenient to use one exception in
+case of error in the semantic actions of the implementation. That is:
+
+```
+(* Errors (NOT EXPORTED) *)
+
+exception Error of string Region.reg
+```
+
+The client of the library provides a lexer for the tokens that is not
+expected to raise exceptions. Instead, it returns a value of type
+`Stdlib.result`. See the section about
+[the Client Interface](#the-client-interface). We call the former
+style "exception-raising style" and the latter "error-passing
+style". We needs to convert lexers from one style to the other,
+depending whether we are receiving a lexer from the client, or
+exporting a lexer to the client. Internally, exception-raising style
+is used, and, externally, error-passing style. Here are the two
+converters:
+
+```
+(* Encoding a function call in exception-raising style (ERS) to
+   error-passing style (EPS) *)
+
+let lift scanner lexbuf =
+  try Stdlib.Ok (scanner lexbuf) with
+    Error msg -> Stdlib.Error msg
+
+(* Decoding a function call in EPS to ERS *)
+
+let drop scanner lexbuf =
+  match scanner lexbuf with
+    Stdlib.Ok state -> state
+  | Error msg -> raise (Error msg)
+```
+
+The function `drop` is therefore called once, namely, in `mk_scan`:
+
+```
+let mk_scan (client: 'token Client.t) =
+  let internal_client =
+    object
+      method mk_string = mk_token <@ client#mk_string
+
+      method callback state lexbuf =
+        mk_token @@ drop (client#callback state) lexbuf
+
+      method support_string_delimiter = client#support_string_delimiter
+    end
+  and first_call = ref true in
+  fun state ->
+    let scanner =
+      if !first_call then (first_call := false; init) else scan
+    in scanner internal_client state
+```
+
+That function converts the client lexer `client#callback` from
+error-passing style to exception-raising style by calling
+
+```
+drop (client#callback state) lexbuf
+```
+
+The additional composition with `mk_token` is due to the client only
+scanning for tokens, but `Core` uses `Unit.lex_unit`, so the
+constructor `` `Token`` needs to wrap the tokens found by the client,
+and this is exactly what `mk_token` does.
+
+The converter from exception-raising style to error-passing style is
+done at the end of the function `open_stream`, as expected:
+
+```
+  match lexbuf_from_input config input with
+    Stdlib.Ok (lexbuf, close) ->
+      let read_unit  = lift read_unit
+      and read_token = lift read_token in
+      Ok {read_unit; read_token; input; lexbuf; close; window}
+  | Error _ as e -> e
+```
+
+Indeed, the type `instance` contains _two_ lexers: one for lexical
+units, `read_unit`, and one for tokens only, `read_token`. Those need
+lifting because the value of type `instance` they belong to is
+exported back to the client of the library.
+
+The maintainers of this lexer library should call the following
+function `fail` instead of raising directly an `Error` exception:
+
+```
+let fail region error =
+  let value = Error.to_string error in
+  raise (Error Region.{value; region})
+```
+
+### The function `open_stream`
+
+As we saw in the section about
+[the Core Interface](#the-core-interface), the function `open_stream`
+exported by the module `Core` is only used by `API` to instantiate the
+sundry kinds of lexers it offers. The functions is made of four parts.
+
+The first consists in defining some local variables of use in the
+following parts, in particular a reference `state` of type `State.t
+ref`. The reason for it is that `open_stream` returns lexers (fields
+`read_token` and `read_unit` in the lexer instance of type `'token
+instance`) of type:
+
+```
+  read_token : Lexing.lexbuf -> ('token, message) result;
+  read_unit  : Lexing.lexbuf -> ('token Unit.t, message) result;
+```
+
+In other words, those lexers do not take a value of `State.t` as
+input, and do not return a new state with the token or the lexical
+unit. That is why the state (and the client), which is needed by the
+lexing rules
+
+```
+rule scan client state = parse
+```
+
+have to be hidden in a reference in the scope of `read_token` and
+`read_unit`. So the first part is
+
+```
+  let log       = output_unit config stdout
+  ...
+  let window () = !state#window in
+```
+
+Notice the first value, `log`, which is used for tracing the behaviour
+of the lexers `read_token` and `read_unit`.
+
+The second part is the definition of `read_unit`:
+
+```
+  let read_unit lexbuf =
+    let unit, state' = scan !state lexbuf in
+    let () = log unit in
+    let () = state := state' in
+    let () =
+      match unit with
+        `Token token -> state := !state#slide_window token
+      | `Markup _ | `Directive _ -> ()
+    in unit in
+```
+
+It is quite straightforward. Perhaps notice how the token window is
+slided if the recognised lexical unit is actually a token.
+
+The third part is the definition of `read_token`, which is simply
+based on `read_unit`:
+
+```
+  let rec read_token lexbuf =
+    match read_unit lexbuf with
+                 `Token token -> token
+    | `Markup _ | `Directive _ -> read_token lexbuf in
+```
+
+Simply, it skips any markup or directive, and returns the tokens
+without the wrapping `` `Token``.
+
+The fourth and last part of `open_stream` we already have seen above
+when presenting the converters `lift` and `drop`, in the context of
+[error handling](#error-handling):
+
+```
+  match lexbuf_from_input config input with
+    Stdlib.Ok (lexbuf, close) ->
+      let read_unit  = lift read_unit
+      and read_token = lift read_token in
+      Ok {read_unit; read_token; input; lexbuf; close; window}
+  | Error _ as e -> e
+```
+
+A lexing buffer is made from the input and its configuration. In case
+of success, we lift `read_unit` and `read_token` and we are done with
+the fields of `'token instance`.
+
+We should now turn our attention to the scanning rules (we will come
+back to the header function `scan_utf8_wrap` and regular
+expressions). Please not that, in `ocamllex`, those rules are called
+_parsing rules_, as the keyword `parse` shows.
+
+### The `scan` Parsing Rule
+
+The main entry rule is `scan`, and its first line has already been
+quoted several times already:
+
+```
+rule scan client state = parse
+```
+
+which shows that it takes as argument a value of type `Client.t`
+(which includes the client lexer as a callback) and a value of type
+`State.t` (the logical or high-level state, in opposition with the
+state of the lexing buffer, which might be considered physical and
+low-level, in our context).
