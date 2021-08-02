@@ -40,8 +40,8 @@ type 'token state = <
   sync          : Lexing.lexbuf -> 'token sync;
   decoder       : Uutf.decoder;
   supply        : Bytes.t -> int -> int -> unit;
-  mk_line       :      Thread.t -> Markup.t * 'token state;
-  mk_block      :      Thread.t -> Markup.t * 'token state;
+  mk_line       :      Thread.t -> Markup.t;
+  mk_block      :      Thread.t -> Markup.t;
   mk_newline    : Lexing.lexbuf -> Markup.t * 'token state;
   mk_space      : Lexing.lexbuf -> Markup.t * 'token state;
   mk_tabs       : Lexing.lexbuf -> Markup.t * 'token state;
@@ -119,15 +119,13 @@ let make ~config ~window ~pos ~decoder ~supply : 'token state =
       let start  = thread#opening#start in
       let region = Region.make ~start ~stop:self#pos
       and value  = thread#to_string in
-      let markup = Markup.LineCom Region.{region; value}
-      in markup, self
+      Markup.LineCom Region.{region; value}
 
     method mk_block thread =
       let start  = thread#opening#start in
       let region = Region.make ~start ~stop:self#pos
       and value  = thread#to_string in
-      let markup = Markup.BlockCom Region.{region; value}
-      in markup, self
+      Markup.BlockCom Region.{region; value}
 
     method mk_space lexbuf =
       let {region; lexeme; state} = self#sync lexbuf in

@@ -187,7 +187,7 @@ let open_stream scan config input =
 
   let rec read_token lexbuf =
     match read_unit lexbuf with
-                 `Token token -> token
+                  `Token token -> token
     | `Markup _ | `Directive _ -> read_token lexbuf in
 
   match lexbuf_from_input config input with
@@ -284,11 +284,10 @@ rule scan client state = parse
 
   (* Strings *)
 
-| '\''
-| '"' as lexeme {
+| '\'' | '"' as lexeme {
     if client#support_string_delimiter lexeme then
       let State.{region; state; _} = state#sync lexbuf in
-      let thread             = Thread.make region in
+      let thread = Thread.make region in
       scan_string lexeme thread state lexbuf |> client#mk_string
     else (rollback lexbuf; client#callback state lexbuf) }
 
@@ -301,18 +300,18 @@ rule scan client state = parse
         let thread             = Thread.make region in
         let thread             = thread#push_string lexeme in
         let thread, state      = scan_block block thread state lexbuf
-        in state#mk_block thread |> mk_markup
+        in `Markup (state#mk_block thread), state
     | Some _ | None -> (* Not a comment for this syntax *)
         rollback lexbuf; client#callback state lexbuf }
 
 | line_comments as lexeme {
     match state#config#line with
-      Some line when line = lexeme ->
+      Some opening when opening = lexeme ->
         let State.{region; state; _} = state#sync lexbuf in
         let thread             = Thread.make region in
         let thread             = thread#push_string lexeme in
         let thread, state      = scan_line thread state lexbuf
-        in state#mk_line thread |> mk_markup
+        in `Markup (state#mk_line thread), state
     | Some _ | None -> (* Not a comment for this syntax *)
         rollback lexbuf; client#callback state lexbuf }
 
@@ -326,7 +325,7 @@ rule scan client state = parse
   (* Other tokens *)
 
 | eof | _ { rollback lexbuf;
-            client#callback state lexbuf (* May raise exceptions *) }
+            client#callback state lexbuf (* May raise exception [Error] *) }
 
 (* Block comments
 

@@ -44,8 +44,8 @@ type 'token state = <
   sync          : Lexing.lexbuf -> 'token sync;
   decoder       : Uutf.decoder;
   supply        : Bytes.t -> int -> int -> unit;
-  mk_line       :      Thread.t -> Markup.t * 'token state;
-  mk_block      :      Thread.t -> Markup.t * 'token state;
+  mk_line       :      Thread.t -> Markup.t;
+  mk_block      :      Thread.t -> Markup.t;
   mk_newline    : Lexing.lexbuf -> Markup.t * 'token state;
   mk_space      : Lexing.lexbuf -> Markup.t * 'token state;
   mk_tabs       : Lexing.lexbuf -> Markup.t * 'token state;
