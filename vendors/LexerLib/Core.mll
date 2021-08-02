@@ -11,7 +11,7 @@ module Utils  = Simple_utils.Utils
 
 let (<@) = Utils.(<@)
 
-(* Wrapping tokens, markup and directives *)
+(* Wrapping tokens, markup and directives. See module [Unit]. *)
 
 let mk_token     (token,     state) = `Token     token,     state
 let mk_markup    (markup,    state) = `Markup    markup,    state
@@ -48,7 +48,7 @@ let reset_offset offset lexbuf =
   assert (offset >= 0);
   let open Lexing in
   let bol = lexbuf.lex_curr_p.pos_bol in
-  lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_cnum = bol + offset }
+  lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_cnum = bol + offset}
 
 let reset ?file ?(line=1) ?offset lexbuf =
   let () =

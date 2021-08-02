@@ -852,7 +852,6 @@ options and the version hash:
       | _             -> status
 ```
 
-
 ### The API Implementation
 
 Perhaps surprinsingly, the API implementation is relatively simple, at
@@ -877,7 +876,6 @@ the exception being
     let from_file config path =
       Core.open_stream Lexer.client config (Core.File path)
 ```
-
 
 ### The State Implementation
 
@@ -920,8 +918,7 @@ Note how we call `Lexing.new_line` and `start#new_line`. Indeed, it is
 of the utmost importance to call those two functions after recognising
 an end-of-line character, so both the logical state and lexing buffer
 register the change of lines in the input. See the scanning rule
-`scan_block` for an example, and, of course, `scan` itself, as
-examples.
+`scan_block` for an example, and, of course, `scan` itself.
 
 ### The Thread Implementation
 
@@ -929,7 +926,13 @@ The implementation of the module `Thread` is straightforward.
 
 ### The Core Implementation
 
-The heart of the lexer library resides in the file `Core.mll` and how,
-from a lexer for tokens, provided by the client, a lexer for the
-tokens _and the other lexical units_ is made. Actually, how several
-lexers are made, depending on the kind of input.
+The heart of the lexer library resides in the `ocamllex` specification
+`Core.mll` and how, from a lexer for tokens provided by the client, a
+lexer for the tokens _and the other lexical units_ is made. Actually,
+how several lexers are made, depending on the kind of input.
+
+In the section about the lexer instance, we find the definition of a
+function `output_unit`. Its purpose is to print tokens, or all lexical
+units, or lexemes onto an output channel, for debugging purposes. This
+enables to see up to what lexical unit the lexing went before it
+failed, either due to an internal error or an error in the input file.
