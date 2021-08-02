@@ -10,7 +10,7 @@ homepage     : "https://gitlab.com/ligolang/LexerLib"
 bug-reports  : "https://gitlab.com/ligolang/LexerLib/issues"
 # If you change the dependencies, run `opam lock` in the root
 depends      : ["dune" "base" "ocaml" "simple-utils"
-                "getopt" "uutf" "preprocessor"]
+                "getopt" "uutf" "Preprocessor"]
 build        : [
                 [ "dune" "build" "-p" name "-j" jobs ]
                ]
