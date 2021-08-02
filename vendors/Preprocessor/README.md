@@ -1205,12 +1205,36 @@ and new_rule state = parse
 | _   { ... }
 ```
 
-Assuming the new rule might raise en error, you need to add it to the
+Assuming the new rule might raise an error, you need to add it to the
 type `Error.t`, both the implementation and the interface. You need
 then to add a case for it in `Error.to_string`. In the semantic
 actions of `new_rule`, **always** fail by calling either the function
 `fail` or `stop`. In particular, _do not raise your own exception or
-even the local exception `Error`_.
+even the local exception `Error`_. That exception should not escape
+the module `API`. It is catched when calling the entry point of the
+lexer, in function `from_lexbuf`:
+
+```
+  match preproc state buffer with
+    state ->
+      List.iter close_in state.chans;
+      Stdlib.Ok (state.out, state.import)
+  | exception Error (buffer, msg) ->
+      Stdlib.Error (Some buffer, msg)
+```
+
+and in the utility function `apply`:
+
+```
+let apply transform region state =
+  match transform state with
+    Stdlib.Ok state  -> state
+  | Stdlib.Error err -> fail state region err
+```
+
+The internal exception `Error` is only raise by the function `fail`
+and `expr`, which parses the Boolean expressions of directives `#if`
+and `#elif`.
 
 If the new directive is expected to gather information during the
 preprocessing, you then need to extend the type `State.t` with

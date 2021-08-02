@@ -94,7 +94,7 @@ let extend cond mode = apply (State.extend cond mode)
 let expr state buffer : mode =
   let ast =
     try E_Parser.expr E_Lexer.scan buffer with
-      E_Lexer.Error e -> raise (Error (state.out, e))
+      E_Lexer.Error msg -> raise (Error (state.out, msg))
     | E_Parser.Error  -> stop state buffer Error.Parse_error in
   let () = State.print state "\n" in
   if E_AST.eval state.env ast then Copy else Skip
@@ -579,14 +579,11 @@ and preproc state = parse
 
 type file_path   = string
 type module_name = string
-
 type module_deps = (file_path * module_name) list
 type success     = Buffer.t * module_deps
-
 type message     = string Region.reg
 type error       = Buffer.t option * message
-
-type result = (success, error) Stdlib.result
+type result      = (success, error) Stdlib.result
 
 type 'src preprocessor = State.config -> 'src -> result
 

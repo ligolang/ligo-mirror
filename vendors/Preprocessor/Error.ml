@@ -62,7 +62,7 @@ let to_string = function
 | Error_directive msg ->
     if msg = "" then sprintf "Directive #error reached." else msg
 | Parse_error ->
-    "Parse error in expression."
+    "Parse error in Boolean expression."
 | Invalid_symbol ->
    "Expected a symbol (identifier)."
 | File_not_found name ->
