@@ -206,7 +206,7 @@ type 'token cut =
 type 'token client = <
   mk_string                : 'token cut;
   callback                 : 'token scanner;
-  support_string_delimiter : char -> bool
+  is_string_delimiter : char -> bool
 >
 ```
 
@@ -229,7 +229,7 @@ to provide:
     equivalent in this documentation) for tokens other than strings
     (as `mk_string` takes care of those).
 
-  * A method `support_string_delimiter` which is a predicate telling
+  * A method `is_string_delimiter` which is a predicate telling
     whether the character it is given delimits a string. This enables
     to have different string delimiters for different client lexers.
 
@@ -926,7 +926,7 @@ Note how we call `Lexing.new_line` and `start#new_line`. Indeed, it is
 of the utmost importance to call those two functions after recognising
 an end-of-line character, so both the logical state and lexing buffer
 register the change of lines in the input. See the scanning rule
-`scan_block` for an example, and, of course, `scan` itself.
+`in_block` for an example, and, of course, `scan` itself.
 
 There two methods of the object type `State.t` are similar in their
 difference with the other in the way they process the state: `mk_line`
@@ -1020,10 +1020,10 @@ let mk_scan (client: 'token Client.t) =
     object
       method mk_string = mk_token <@ client#mk_string
 
-      method callback state lexbuf =
-        mk_token @@ drop (client#callback state) lexbuf
+      method callback state =
+        mk_token <@ (drop @@ client#callback state)
 
-      method support_string_delimiter = client#support_string_delimiter
+      method is_string_delimiter = client#is_string_delimiter
     end
   and first_call = ref true in
   fun state ->
@@ -1036,7 +1036,7 @@ That function converts the client lexer `client#callback` from
 error-passing style to exception-raising style by calling
 
 ```
-drop (client#callback state) lexbuf
+drop @@ client#callback state
 ```
 
 The additional composition with `mk_token` is due to the client only
@@ -1221,17 +1221,17 @@ let us start with strings. The program is as follows:
 
 ```
 | '\'' | '"' as lexeme {
-    if client#support_string_delimiter lexeme then
+    if client#is_string_delimiter lexeme then
       let State.{region; state; _} = state#sync lexbuf in
       let thread = Thread.make region in
-      scan_string lexeme thread state lexbuf |> client#mk_string
+      in_string lexeme thread state lexbuf |> client#mk_string
     else (rollback lexbuf; client#callback state lexbuf) }
 ```
 
 The regular expression matches characters that are possible delimiters
 for strings, but whether those are actually actual delimiters depends
 on the client, hence the conditional test on
-`client#support_string_delimiter lexeme`.
+`client#is_string_delimiter lexeme`.
 
   * If not a valid delimiter, the lexing buffer is rolled back and the
     client lexer is called back. Indeed, we assume that the characters
@@ -1246,7 +1246,7 @@ on the client, hence the conditional test on
     created (see the section on
     [the Thread Interface](#the-thread-interface)) which starts with
     the delimiter `lexeme`, and the specialised parsing rule
-    `scan_string` is called. It is supposed to return with a pair made
+    `in_string` is called. It is supposed to return with a pair made
     of the final value of the thread and of the state, which are then
     fed to the client method for making string tokens,
     `client#mk_string`.
@@ -1265,7 +1265,7 @@ say line comments:
         let State.{region; state; _} = state#sync lexbuf in
         let thread             = Thread.make region in
         let thread             = thread#push_string lexeme in
-        let thread, state      = scan_line thread state lexbuf
+        let thread, state      = in_line thread state lexbuf
         in state#mk_line thread |> mk_markup
     | Some _ | None -> (* Not a comment for this syntax *)
         rollback lexbuf; client#callback state lexbuf }
@@ -1306,17 +1306,89 @@ If a valid line comment opening, the semantic action is similar to one
 for strings (see above), with one difference:
 
 ```
-        let thread, state      = scan_line thread state lexbuf
+        let thread, state      = in_line thread state lexbuf
         in `Markup (state#mk_line thread), state
 ```
 
 compared with
 
 ```
-      scan_string lexeme thread state lexbuf |> client#mk_string
+      in_string lexeme thread state lexbuf |> client#mk_string
 ```
 
 In the former case, we need to call the method `mk_line`, which
 belongs firmly on the library side (the `State`) because line comments
-are not tokens, and tokens are dealt on the client side (hence the
-`client#mk_string`).
+are not tokens, and tokens are dealt with on the client side (hence
+the `client#mk_string`).
+
+Before moving forth with the scanning of comments and strings, let us
+have a look at a parsing rule that functions as a wrapper for `scan`:
+
+```
+and init client state = parse
+  utf8_bom { state#mk_bom lexbuf |> mk_markup          }
+| _        { rollback lexbuf; scan client state lexbuf }
+```
+
+The first time the lexer is run, the rule `init` is called, and
+subsequent runs call `scan` above. This can be readily seen in the
+implementation of the trailer function `mk_scan`, which we saw in the
+section about [error handling](#error-handling). Let us then show here
+the relevant part:
+
+```
+let mk_scan (client: 'token Client.t) =
+  let internal_client =
+    object
+      ...
+    end
+  and first_call = ref true in
+  fun state ->
+    let scanner =
+      if !first_call then (first_call := false; init) else scan
+    in scanner internal_client state
+```
+
+We see that a hidden reference `first_call` records whether the
+returned lambda has been called before or not. The rationale for the
+rule `init` is to parse the optional Byte-Order Mark (BOM).
+
+### The `in_block` Parsing Rule
+
+The parsing of block comments is rather involved for several reasons:
+
+  1. Manage different delimiters, depending on the client.
+
+  2. Manage UTF-8 encoded glyphs.
+
+  3. Manage nested block comments.
+
+  4. Manage strings.
+
+The lexer generator `ocamllex` we use is byte-oriented, meaning that
+its lexing buffer is seen as an array of bytes. Clearly, this would be
+fine for scanning UTF-8 encoded glyphs, as the lexer is not concerned
+with the interpretation of the bytes: this is a task of the text
+editor. We have nevertheless to take into account UTF-8 because of
+error reporting: it may be that a lexing error occurs _after_ the
+comment, and, if the location of that error would be reported in bytes
+(lines and horizontal offset, for example), it would be seem wrong if
+the text editor interprets UTF-8 and displays a glyph as one
+"character". This is why the module `Pos` in
+`vendors/ligo-utils/simple-utils` can count in bytes or UTF-8
+codepoints. But it has to be instructed to do so, and this is why we
+must pay attention to UTF-8 in comments.
+
+Let us go through the different cases of `in_block`.
+
+#### Scanning Nested Comments
+
+#### Closing the Current Comment
+
+#### End-of-Line and End-of-File
+
+#### Scanning Text in UTF-8
+
+### The `in_line` Parsing Rule
+
+### The `in_string` Parsing Rule
