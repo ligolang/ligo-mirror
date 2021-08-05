@@ -1125,7 +1125,8 @@ that are not programming languages, to be tested.
 ## Maintaining the Preprocessor
 
 This section explains how to perform some maintenance tasks aiming at
-adding new features.
+adding new features, but, whatever you modify in this directory, you
+should re-read this file to ensure that the quoted code is current.
 
 ### Adding a Command-Line Option
 

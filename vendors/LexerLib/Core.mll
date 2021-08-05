@@ -224,10 +224,6 @@ let blank      = ' ' | '\t'
 let digit      = ['0'-'9']
 let natural    = digit | digit (digit | '_')* digit
 let string     = [^'"' '\\' '\n']*  (* For strings of #include *)
-let hexa_digit = digit | ['A'-'F' 'a'-'f']
-let byte       = hexa_digit hexa_digit
-let esc        = "\\n" | "\\\"" | "\\\\" | "\\b"
-               | "\\r" | "\\t" | "\\x" byte
 let flag       = '1' | '2' (* Linemarkers *)
 
 (* Comment delimiters *)
@@ -279,7 +275,7 @@ let pascaligo_string_delimiter  = "\""
 let cameligo_string_delimiter   = "\""
 let reasonligo_string_delimiter = "\""
 let michelson_string_delimiter  = "\""
-let jsligo_string_delimiter     = "\"" | "'"
+let jsligo_string_delimiter     = "\""
 
 let string_delimiters =
   pascaligo_string_delimiter
@@ -303,8 +299,9 @@ rule scan client state = parse
     let lexeme = Lexing.lexeme lexbuf in
     if client#is_string_delimiter lexeme then
       let State.{region; state; _} = state#sync lexbuf in
-      let thread = (Thread.make region)#push_string lexeme in
-      in_string lexeme thread state lexbuf |> client#mk_string
+      let thread = Thread.make ~opening:region in
+      let thread, state = in_string lexeme thread state lexbuf
+      in `Token (client#mk_string thread), state
     else (rollback lexbuf; client#callback state lexbuf) }
 
   (* Comments *)
@@ -314,7 +311,7 @@ rule scan client state = parse
     match state#config#block with
       Some block when block#opening = lexeme -> (* A valid comment *)
         let State.{region; state; _} = state#sync lexbuf in
-        let thread        = Thread.make region in
+        let thread        = Thread.make ~opening:region in
         let thread        = thread#push_string lexeme in
         let thread, state = in_block block client thread state lexbuf
         in `Markup (state#mk_block thread), state
@@ -326,7 +323,7 @@ rule scan client state = parse
     match state#config#line with
       Some opening when opening = lexeme -> (* A valid comment *)
         let State.{region; state; _} = state#sync lexbuf in
-        let thread        = Thread.make region in
+        let thread        = Thread.make ~opening:region in
         let thread        = thread#push_string lexeme in
         let thread, state = in_line thread state lexbuf
         in `Markup (state#mk_line thread), state
@@ -342,8 +339,7 @@ rule scan client state = parse
 
   (* Other tokens *)
 
-| eof | _ { rollback lexbuf;
-            client#callback state lexbuf (* May raise exception [Error] *) }
+| eof | _ { rollback lexbuf; client#callback state lexbuf }
 
 (* Block comments
 
@@ -362,6 +358,7 @@ and in_block block client thread state = parse
          let thread        = thread#push_string lexeme in
          let thread        = thread#set_opening region in
          let thread, state = in_string lexeme thread state lexbuf in
+         let thread        = thread#push_string lexeme in
          let thread        = thread#set_opening opening
          in in_block block client thread state lexbuf
     else begin
@@ -418,13 +415,9 @@ and scan_char_in_block block client thread state = parse
 (* Line comments *)
 
 and in_line thread state = parse
-  nl as nl { let ()     = Lexing.new_line lexbuf
-             and thread = thread#push_string nl
-             and state  = state#set_pos (state#pos#new_line nl)
-             in thread, state }
-| eof      { thread, state }
-| _        { let scan_utf8 = scan_utf8_char (fun _ -> Stdlib.Ok ())
-             in scan_utf8_wrap scan_utf8 in_line thread state lexbuf }
+  eof | nl  { rollback lexbuf; thread, state }
+| _         { let scan_utf8 = scan_utf8_char (fun _ -> Stdlib.Ok ())
+              in scan_utf8_wrap scan_utf8 in_line thread state lexbuf }
 
 
 (* Scanning UTF-8 encoded characters *)
@@ -433,37 +426,49 @@ and scan_utf8_char if_eof thread state = parse
   eof { thread, if_eof thread }
 | _   { let lexeme = Lexing.lexeme lexbuf in
         let thread = thread#push_string lexeme in
-           let () = state#supply (Bytes.of_string lexeme) 0 1 in
-           match Uutf.decode state#decoder with
-             `Uchar _     -> thread, Stdlib.Ok ()
-           | `Malformed _
-           | `End         -> thread, Stdlib.Error Invalid_utf8_sequence
-           | `Await       -> scan_utf8_char if_eof thread state lexbuf }
+        let () = state#supply (Bytes.of_string lexeme) 0 1 in
+        match Uutf.decode state#decoder with
+          `Uchar _     -> thread, Stdlib.Ok ()
+        | `Malformed _
+        | `End         -> thread, Stdlib.Error Invalid_utf8_sequence
+        | `Await       -> scan_utf8_char if_eof thread state lexbuf }
 
 (* Scanning strings *)
 
 and in_string delimiter thread state = parse
-  nl     { fail thread#opening Error.Broken_string }
-| eof    { fail thread#opening Error.Unterminated_string }
-| ['\t' '\r' '\b']
-         { let State.{region; _} = state#sync lexbuf
-           in fail region Error.Invalid_character_in_string }
-
-| string_delimiters {
-           let State.{state; lexeme; _} = state#sync lexbuf in
-           let thread = thread#push_string lexeme in
+  string_delimiters {
+           let State.{state; lexeme; region} = state#sync lexbuf in
            if lexeme = delimiter then (* Closing the string *)
-             thread, state
+             let thread = thread#set_closing region
+             in thread, state
            else (* Still inside the string *)
+             let thread = thread#push_string lexeme in
              in_string delimiter thread state lexbuf }
-
-| esc    { let State.{lexeme; state; _} = state#sync lexbuf in
-           let thread = thread#push_string lexeme
-           in in_string delimiter thread state lexbuf }
-| '\\' _ { let State.{region; _} = state#sync lexbuf
-           in fail region Error.Undefined_escape_sequence }
+| '\\'   { let State.{state; _} = state#sync lexbuf
+           in scan_escape delimiter thread state lexbuf }
+| nl     { fail thread#opening Error.Broken_string }
+| eof    { fail thread#opening Error.Unterminated_string }
+| ['\000' - '\031'] as c
+         { let State.{region; _} = state#sync lexbuf
+           in fail region (Error.Invalid_character_in_string c) }
 | _ as c { let State.{state; _} = state#sync lexbuf in
            in_string delimiter (thread#push_char c) state lexbuf }
+
+and scan_escape delimiter thread state = parse
+  string_delimiters {
+         let State.{state; lexeme; _} = state#sync lexbuf in
+         let string = if lexeme = delimiter then lexeme else "\\" ^ lexeme in
+         let thread = thread#push_string string in
+         in_string delimiter thread state lexbuf }
+| 'n'  { let State.{state; _} = state#sync lexbuf in
+         let thread = thread#push_char '\n'
+         in in_string delimiter thread state lexbuf }
+| '\\' { let State.{state; lexeme; _} = state#sync lexbuf in
+         let thread = thread#push_string lexeme in
+         in_string delimiter thread state lexbuf }
+| _    { rollback lexbuf;
+         let thread = thread#push_char '\\' in
+         in_string delimiter thread state lexbuf }
 
 (* Scanner called first *)
 
@@ -479,10 +484,9 @@ and init client state = parse
 let mk_scan (client: 'token Client.t) =
   let internal_client =
     object
-      method mk_string = mk_token <@ client#mk_string
+      method mk_string = client#mk_string
 
-      method callback state =
-        mk_token <@ (drop @@ client#callback state)
+      method callback state = mk_token <@ (drop @@ client#callback state)
 
       method is_string_delimiter = client#is_string_delimiter
     end

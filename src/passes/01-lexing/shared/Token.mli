@@ -38,7 +38,7 @@ module Region = Simple_utils.Region
 (* TOKENS *)
 
 type lexeme = string
-  
+
 module type S =
   sig
     type token
@@ -60,7 +60,7 @@ module type S =
 
     (* Injections *)
 
-    type   int_err = Non_canonical_zero 
+    type   int_err = Non_canonical_zero
     type mutez_err = Unsupported_mutez_syntax
                    | Non_canonical_zero_tez
     type ident_err = Reserved_name
@@ -71,8 +71,6 @@ module type S =
     type  lang_err = Unsupported_lang_syntax
     type   kwd_err = Invalid_keyword
 
-
-    
     val mk_int      : lexeme -> Region.t -> (token,   int_err) result
     val mk_nat      : lexeme -> Region.t -> (token,   nat_err) result
     val mk_mutez    : lexeme -> Region.t -> (token, mutez_err) result
@@ -89,9 +87,7 @@ module type S =
 
     (* Predicates *)
 
-    val is_eof      : token -> bool
-
-    val support_string_delimiter : char -> bool
+    val is_eof              : token -> bool
+    val is_string_delimiter : string -> bool
     val verbatim_delimiters : string * string
-
   end

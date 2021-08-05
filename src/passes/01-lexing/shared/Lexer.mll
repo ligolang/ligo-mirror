@@ -67,19 +67,17 @@ module Make (Token : Token.S) =
       let msg = error_to_string error in
       raise (Error Region.{value=msg;region})
 
-    let support_string_delimiter = Token.support_string_delimiter
+    let is_string_delimiter = Token.is_string_delimiter
 
     (* TOKENS *)
 
     (* Making tokens *)
 
-    let mk_string (thread, state) =
-      let start  = thread#opening#start in
-      let stop   = state#pos in
-      let region = Region.make ~start ~stop in
-      let lexeme = thread#to_string in
-      let token  = Token.mk_string lexeme region
-      in token, state
+    let mk_string thread =
+      let start    = thread#opening#start in
+      let stop     = thread#closing#stop in
+      let region   = Region.make ~start ~stop in
+      Token.mk_string (thread#to_string) region
 
     let mk_verbatim (thread, state) =
       let start  = thread#opening#start in
@@ -150,7 +148,7 @@ module Make (Token : Token.S) =
           if Z.equal Z.one should_be_1 then Some (Q.num mutez) else None
       | exception Not_found -> assert false
 
-    let mk_tez_decimal state buffer =
+    let mk_tez_dec state buffer =
       let State.{region; lexeme; state} = state#sync buffer in
       let lexeme = Str.(global_replace (regexp "_") "" lexeme) in
       let lexeme = Str.string_before lexeme (String.index lexeme 't') in
@@ -259,25 +257,25 @@ let symbol =
    through recursive calls. *)
 
 rule scan state = parse
-  ident                  { mk_ident        state lexbuf }
-| constr                 { mk_constr       state lexbuf }
-| bytes                  { mk_bytes seq    state lexbuf }
-| natural 'n'            { mk_nat          state lexbuf }
-| natural "mutez"        { mk_mutez        state lexbuf }
+  ident                  { mk_ident     state lexbuf }
+| constr                 { mk_constr    state lexbuf }
+| bytes                  { mk_bytes seq state lexbuf }
+| natural 'n'            { mk_nat       state lexbuf }
+| natural "mutez"        { mk_mutez     state lexbuf }
 | natural "tz"
-| natural "tez"          { mk_tez          state lexbuf }
+| natural "tez"          { mk_tez       state lexbuf }
 | decimal "tz"
-| decimal "tez"          { mk_tez_decimal  state lexbuf }
-| natural                { mk_int          state lexbuf }
-| symbol                 { mk_sym          state lexbuf }
-| eof                    { mk_eof          state lexbuf }
-| "[@" (attr as a) "]"   { mk_attr       a state lexbuf }
-| "[%" (attr as l)       { mk_lang       l state lexbuf }
+| decimal "tez"          { mk_tez_dec   state lexbuf }
+| natural                { mk_int       state lexbuf }
+| symbol                 { mk_sym       state lexbuf }
+| eof                    { mk_eof       state lexbuf }
+| "[@" (attr as a) "]"   { mk_attr    a state lexbuf }
+| "[%" (attr as l)       { mk_lang    l state lexbuf }
 
 | "`" | "{|" as lexeme {
     if lexeme = fst Token.verbatim_delimiters then
       let State.{region; state; _} = state#sync lexbuf in
-      let thread = Thread.make region
+      let thread = Thread.make ~opening:region
       in scan_verbatim (snd Token.verbatim_delimiters)
                        thread state lexbuf |> mk_verbatim
     else
@@ -332,7 +330,7 @@ and scan_verbatim verbatim_end thread state = parse
     object
       method mk_string = mk_string
       method callback  = lift <@ scan
-      method support_string_delimiter = support_string_delimiter
+      method is_string_delimiter = is_string_delimiter
     end
 
   end (* of functor [Make] in HEADER *)

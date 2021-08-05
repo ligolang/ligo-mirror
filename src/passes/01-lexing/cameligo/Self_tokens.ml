@@ -4,7 +4,6 @@
 (* Vendor dependencies *)
 
 module Region = Simple_utils.Region
-module Utils  = Simple_utils.Utils
 module Unit   = LexerLib.Unit
 
 (* Signature *)
@@ -29,4 +28,4 @@ type token = Token.t
 
 (* Exported *)
 
-let filter = Utils.(AttachComments.attach <@ Style.check)
+let filter units = AttachComments.attach @@ Style.check units

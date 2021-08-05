@@ -200,6 +200,15 @@ module T =
 
     type token = t
 
+    (* Verbatim strings need to be escaped, but OCaml escaping
+       function for strings escapes the double quotes, so we need to
+       unescape those. *)
+
+    let escape_verbatim s =
+      let escaped = String.escaped s in
+      let regexp = Str.regexp "\\\"" in
+      Str.global_replace regexp "\"" escaped
+
     let proj_token = function
         (* Preprocessing directives *)
 
@@ -209,9 +218,9 @@ module T =
       (* Literals *)
 
     | String Region.{region; value} ->
-        region, sprintf "String %S" value
+        region, sprintf "String %S" value (* Escaped *)
     | Verbatim Region.{region; value} ->
-        region, sprintf "Verbatim %S" value
+        region, sprintf "Verbatim {|%s|}" (escape_verbatim value)
     | Bytes Region.{region; value = s,b} ->
         region,
         sprintf "Bytes (%S, \"0x%s\")" s (Hex.show b)
@@ -277,6 +286,8 @@ module T =
     | ES6FUN   region -> region, "ES6FUN"
     | Module   region -> region, "Module"
 
+    (* From tokens to lexemes *)
+
     let to_lexeme = function
       (* Directives *)
 
@@ -284,8 +295,8 @@ module T =
 
       (* Literals *)
 
-    | String s   -> sprintf "%S" (String.escaped s.Region.value)
-    | Verbatim v -> String.escaped v.Region.value
+    | String s   -> sprintf "%S" s.Region.value (* Escaped *)
+    | Verbatim v -> escape_verbatim v.Region.value
     | Bytes b    -> fst b.Region.value
     | Int i
     | Nat i
@@ -504,7 +515,7 @@ and scan_constr region lexicon = parse
       let value = lexeme, `Hex norm
       in Bytes Region.{region; value}
 
-    type int_err = 
+    type int_err =
       Non_canonical_zero
 
     let mk_int lexeme region =
@@ -531,7 +542,7 @@ and scan_constr region lexicon = parse
           then Error Non_canonical_zero_nat
           else Ok (Nat Region.{region; value = lexeme,z})
 
-    type mutez_err = 
+    type mutez_err =
         Unsupported_mutez_syntax
       | Non_canonical_zero_tez
 
@@ -605,7 +616,7 @@ and scan_constr region lexicon = parse
 
     (* Code injection *)
 
-    type lang_err = 
+    type lang_err =
       Unsupported_lang_syntax
 
     let mk_lang lang region = Ok(Lang Region.{value=lang; region})
@@ -614,11 +625,9 @@ and scan_constr region lexicon = parse
 
     let is_eof = function EOF _ -> true | _ -> false
 
-    let support_string_delimiter c =
-      c = '"'
+    let is_string_delimiter s = (s = "\"")
 
     let verbatim_delimiters = ("{|", "|}")
-
   end
 
 include T

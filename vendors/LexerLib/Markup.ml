@@ -30,6 +30,8 @@ let to_lexeme = function
 | BlockCom Region.{value;_}
 | BOM      Region.{value;_} -> value
 
+(* Note: %S implies escaping strings à la OCaml *)
+
 let to_string ~offsets mode markup =
   let region, val_str =
     match markup with
@@ -39,15 +41,15 @@ let to_string ~offsets mode markup =
     | Space Region.{value; region} ->
         region, sprintf "Space %S" (String.make value ' ')
     | Newline Region.{value; region} ->
-        region, sprintf "Newline %S" value
+       region, sprintf "Newline %S" value
     | LineCom Region.{value; region} ->
-        region, sprintf "LineCom %S" (String.escaped value)
+        region, sprintf "LineCom %S" value
     | BlockCom Region.{value; region} ->
-        region, sprintf "BlockCom %S" (String.escaped value)
+        region, sprintf "BlockCom %S" value
     | BOM Region.{value; region} ->
-        region, sprintf "BOM %S" (String.escaped value) in
+        region, sprintf "BOM %S" value in
   let reg_str = region#compact ~offsets mode
-  in sprintf "%s: %s" reg_str val_str
+  in sprintf "%s> %s" reg_str val_str
 
 (* Comments *)
 

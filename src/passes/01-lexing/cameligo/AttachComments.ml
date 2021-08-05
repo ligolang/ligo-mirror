@@ -73,16 +73,16 @@ let set_markup markup tokens =
       | Constr i -> Constr {i with region = (set_markup i.region markup)}
       | Lang i -> Lang {i with region = (set_markup i.region markup)}
       | Attr i -> Attr {i with region = (set_markup i.region markup)}
-      | Directive (Linemarker d) -> Directive (Linemarker {d with region = (set_markup d.region markup)})
-    ) :: rest)
-  | [] -> (
-    let region = match markup with
-      Region.LineCom ({region; _}, _) :: _ -> region
-    | BlockCom ({region; _}, _) :: _ -> region
-    | [] -> failwith "should not happen"
-    in
-    [EOF (set_markup region markup)]
-  )
+      | Directive (Linemarker d) ->
+         Directive (Linemarker {d with region = set_markup d.region markup})
+      ) :: rest)
+  | [] ->
+     let region =
+       match markup with
+         Region.LineCom ({region; _}, _) :: _ -> region
+       | BlockCom ({region; _}, _) :: _ -> region
+       | [] -> failwith "should not happen"
+     in [EOF (set_markup region markup)]
 
 let rec lex_unit_to_closest_token_region = function
   `Token t :: _ -> Token.to_region t

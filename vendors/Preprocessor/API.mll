@@ -77,7 +77,6 @@ let apply transform region state =
 
 let find dir file    = apply (State.find dir file)
 let reduce_cond      = apply State.reduce_cond
-let reduce_region    = apply State.reduce_region
 let extend cond mode = apply (State.extend cond mode)
 
 (* Evaluating a preprocessor expression
@@ -106,12 +105,10 @@ let directives = [
   "elif";
   "else";
   "endif";
-  "endregion";
   "error";
   "if";
   "import";
   "include";
-  "region";
   "undef"
 ]
 
@@ -128,7 +125,7 @@ let small     = ['a'-'z']
 let capital   = ['A'-'Z']
 let letter    = small | capital
 let ident     = letter (letter | '_' | digit)*
-let directive = '#' (blank* as space) (small+ as id)
+let directive = '#' blank* (small+ as id)
 
 (* Comments *)
 
@@ -375,16 +372,6 @@ rule scan state = parse
     | "error" ->
         fail state region (Error.Error_directive (message [] lexbuf))
 
-    | "region" ->
-        let msg = message [] lexbuf
-        in print state ("#" ^ space ^ "region" ^ msg ^ "\n");
-           let state = {state with trace=Region::state.trace}
-           in scan state lexbuf
-    | "endregion" ->
-        let msg = message [] lexbuf
-        in print state ("#" ^ space ^ "endregion" ^ msg ^ "\n");
-           scan (reduce_region region state) lexbuf
-
     | _ -> assert false
   }
 
@@ -451,7 +438,7 @@ and skip_line state = parse
 | eof { rollback lexbuf        }
 | _   { skip_line state lexbuf }
 
-(* For #error, #region and #endregion *)
+(* For #error *)
 
 and message acc = parse
   nl     { Lexing.new_line lexbuf;
@@ -473,11 +460,11 @@ and in_block block opening state = parse
   '"' | block_comment_openings {
     let lexeme = Lexing.lexeme lexbuf in
     if   block#opening = lexeme || lexeme = "\""
-    then let ()       = copy state lexbuf in
-         let opening' = mk_reg lexbuf in
-         let next     = if lexeme = "\"" then in_string
-                        else in_block block in
-         let state    = next opening' state lexbuf
+    then let ()        = copy state lexbuf in
+         let opening'  = mk_reg lexbuf in
+         let scan_next = if lexeme = "\"" then in_string
+                         else in_block block in
+         let state     = scan_next opening' state lexbuf
          in in_block block opening state lexbuf
     else let ()    = rollback lexbuf in
          let n     = String.length lexeme in

@@ -58,8 +58,8 @@ let annot_to_string ~offsets mode annot =
 
 type keyword =
   K_parameter of Region.t  (* "parameter" *)
-  | K_storage   of Region.t  (* "storage"   *)
-  | K_code      of Region.t  (* "code"      *)
+| K_storage   of Region.t  (* "storage"   *)
+| K_code      of Region.t  (* "code"      *)
 
 let keyword_to_lexeme = function
    K_parameter _ -> "parameter"
@@ -693,7 +693,7 @@ type t =
 type token = t
 
 let to_lexeme = function
-  String s  -> s.Region.value
+  String s   -> sprintf "%S" (String.escaped s.Region.value)
 | Bytes b   -> fst b.Region.value
 | Int i     -> fst i.Region.value
 | Keyword k -> keyword_to_lexeme k
@@ -895,7 +895,7 @@ let is_ident = function
 let is_annot    = function Annot _  -> true | _ -> false
 let is_eof      = function EOF _    -> true | _ -> false
 
-let support_string_delimiter c = c = '"'
+let is_string_delimiter s = (s = "\"")
 
 let is_sym = function
   SEMI _ | LPAREN _ | RPAREN _ | LBRACE _ | RBRACE _ -> true

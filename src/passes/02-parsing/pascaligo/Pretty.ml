@@ -692,8 +692,8 @@ and pp_constr_pattern = function
 | PConstrApp a -> pp_pconstr_app a
 
 and pp_psome {value=_, p; _} =
-  prefix 4 1 
-    (string "Some") 
+  prefix 4 1
+    (string "Some")
     (match p with PTuple _ -> pp_pattern p | _ -> (string "(" ^^ pp_pattern p ^^ string ")" ))
 
 and pp_pconstr_app {value; _} =

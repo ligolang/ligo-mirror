@@ -2,17 +2,19 @@ module Region = Simple_utils.Region
 
 type thread = <
   opening     : Region.t;
+  closing     : Region.t;
   length      : int;
   acc         : char list;
   to_string   : string;
   push_char   : char -> thread;
   push_string : string -> thread;
-  set_opening : Region.t -> thread
+  set_opening : Region.t -> thread;
+  set_closing : Region.t -> thread
 >
 
 type t = thread
 
-let make region : t =
+let make ~opening : t =
   (* The call [explode s a] is the list made by pushing the characters
      in the string [s] on top of [a], in reverse order. For example,
      [explode "ba" ['c';'d'] = ['a'; 'b'; 'c'; 'd']]. *)
@@ -23,7 +25,10 @@ let make region : t =
     | i -> s.[i-1] :: push (i-1)
     in push (String.length s) in
   object
-    val opening = region
+    val closing = opening
+    method closing = closing
+
+    val opening = opening
     method opening = opening
 
     val length = 0
@@ -32,7 +37,9 @@ let make region : t =
     val acc = []
     method acc = acc
 
-    method set_opening opening = {< opening; length; acc >}
+    method set_opening opening = {< opening >}
+
+    method set_closing closing = {< closing >}
 
     method push_char char =
       {< opening; length=length+1; acc=char::acc >}

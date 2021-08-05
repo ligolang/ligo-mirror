@@ -21,9 +21,9 @@ let length: string => nat
 let length: (s: string) => nat
 </SyntaxTitle>
 
-Get the size of a string. 
+Get the size of a string.
 
-[Michelson only supports ASCII strings](http://tezos.gitlab.io/whitedoc/michelson.html#constants) 
+[Michelson only supports ASCII strings](http://tezos.gitlab.io/whitedoc/michelson.html#constants)
 so for now you can assume that each character takes one byte of storage.
 
 <Syntax syntax="pascaligo">
@@ -32,7 +32,7 @@ so for now you can assume that each character takes one byte of storage.
 function string_size (const s: string) : nat is String.length(s)
 ```
 
-> Note that `size` and `String.size` are *deprecated*. 
+> Note that `size` and `String.size` are *deprecated*.
 
 </Syntax>
 <Syntax syntax="cameligo">
@@ -74,7 +74,7 @@ let sub: (nat, nat, string) => string
 let sub: (offset: nat, length: nat, s: string) => string
 </SyntaxTitle>
 
-Extract a substring from a string based on the given offset and length. For 
+Extract a substring from a string based on the given offset and length. For
 example the string "abcd" given to the function below would return "bc".
 
 
@@ -185,4 +185,3 @@ let concat_syntax_alt = (s: string): string => s + "test_literal";
 ```
 
 </Syntax>
-

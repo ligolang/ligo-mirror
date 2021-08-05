@@ -5,7 +5,7 @@ type error =
 | Unterminated_comment of string
 | Unterminated_string
 | Broken_string
-| Invalid_character_in_string
+| Invalid_character_in_string of char
 | Undefined_escape_sequence
 
 type t = error
@@ -28,6 +28,6 @@ let to_string = function
     "The string starting here is interrupted by a line break.\n\
      Hint: Remove the break, close the string before or insert a \
      backslash."
-| Invalid_character_in_string ->
-    "Invalid character in string.\n\
-     Hint: Remove or replace the character."
+| Invalid_character_in_string c ->
+    sprintf "Invalid character %S in string.\n\
+             Hint: Remove or replace the character." (Char.escaped c)

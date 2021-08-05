@@ -6,54 +6,58 @@ module Region = Simple_utils.Region
 open! Region
 open! PPrint
 module Option = Simple_utils.Option
-(*module Directive = LexerLib.Directive*)
 
-
-let pp_markup markup pos = 
-  let rec inner result previous_after = function 
-    (LineCom (c, Before))  :: rest when pos = Before -> inner (result ^^ string "//" ^^ string c.value ^^ hardline) None rest
-  | (BlockCom (c, Before)) :: rest when pos = Before -> inner (result ^^ string "(*" ^^ string c.value ^^ string "*)"  ^^ hardline) None rest
-  | (LineCom (c, Inline)) :: rest when pos = Inline -> inner (result ^^ string "//" ^^ string c.value) None rest
-  | (BlockCom (c, Inline)) :: rest when pos = Inline -> inner (result ^^ string " (*" ^^ string c.value ^^ string "*) ") None rest
-  | (LineCom (c, After)) :: rest when pos = After -> 
+let pp_markup markup pos =
+  let rec inner result previous_after = function
+    LineCom (c, Before) :: rest when pos = Before ->
+      inner (result ^^ string "//" ^^ string c.value ^^ hardline ^^ hardline)
+            None rest
+  | BlockCom (c, Before) :: rest when pos = Before ->
+      inner (result ^^ string "(*" ^^ string c.value ^^ string "*)"
+            ^^ hardline) None rest
+  | LineCom (c, Inline) :: rest when pos = Inline ->
+      inner (result ^^ string "//" ^^ string c.value ^^ hardline ^^ hardline)
+            None rest
+  | BlockCom (c, Inline) :: rest when pos = Inline ->
+      inner (result ^^ string " (*" ^^ string c.value ^^ string "*) ")
+            None rest
+  | LineCom (c, After) :: rest when pos = After ->
       let line = c.region#stop#line in
-      let hl = match previous_after with
-        Some previous_after ->
-          if line > previous_after + 1 then 
-            hardline ^^ hardline 
-          else
-            hardline
-      | None -> 
-          hardline
-      in
-      inner (result ^^ hl ^^ string "//" ^^ string c.value) (Some line) rest
-  | (BlockCom (c, After)) :: rest  when pos = After -> 
-    let line = c.region#stop#line in
-    let hl = match previous_after with
-      Some previous_after ->
-        if line > previous_after + 1 then 
-          hardline ^^ hardline 
-        else
-          hardline
-    | None -> 
-        hardline
-    in
-    inner (result ^^ hl ^^ string ("(*" ^ c.value ^ "*)")) (Some line) rest 
+      let hl =
+        match previous_after with
+          Some previous_after ->
+            if line > previous_after + 1 then
+              hardline ^^ hardline
+            else hardline
+        | None -> hardline
+      in inner (result ^^ hl
+                ^^ string "//" ^^ string c.value ^^ hardline ^^ hardline)
+               (Some line) rest
+  | BlockCom (c, After) :: rest  when pos = After ->
+      let line = c.region#stop#line in
+      let hl =
+        match previous_after with
+          Some previous_after ->
+            if line > previous_after + 1 then
+              hardline ^^ hardline
+            else hardline
+        | None -> hardline
+      in inner (result ^^ hl ^^ string ("(*" ^ c.value ^ "*)"))
+               (Some line) rest
   | [] -> result
   | _ -> empty
-  in
-  inner empty None markup
+  in inner empty None markup
 
-let pp_region_reg func token  = 
-  (pp_markup token.region#markup Before) ^^ 
-  func token ^^ 
-  (pp_markup token.region#markup Inline) ^^ 
+let pp_region_reg func token  =
+  (pp_markup token.region#markup Before) ^^
+  func token ^^
+  (pp_markup token.region#markup Inline) ^^
   (pp_markup token.region#markup After)
 
 let pp_region_t func token  =
-  (pp_markup token#markup Before) ^^ 
-  func ^^ 
-  (pp_markup token#markup Inline) ^^ 
+  (pp_markup token#markup Before) ^^
+  func ^^
+  (pp_markup token#markup Inline) ^^
   (pp_markup token#markup After)
 
 let pp_par printer {value; _} =
@@ -91,7 +95,7 @@ and pp_let_decl {value; _} =
   let kwd_let, rec_opt, binding, attr = value in
   let let_str =
     match rec_opt with
-        None -> (pp_region_t (string "let ") kwd_let) 
+        None -> (pp_region_t (string "let ") kwd_let)
     | Some r -> (pp_region_t (string "let ") kwd_let) ^^ (pp_region_t (string "rec ") r)
   in
   let let_str = if attr = [] then let_str
@@ -101,7 +105,7 @@ and pp_let_decl {value; _} =
 and pp_attributes = function
     [] -> empty
 | attr ->
-   let make s = 
+   let make s =
     pp_region_reg (fun _ -> string "[@" ^^ string s.value ^^ string "]") s
    in separate_map (break 0) make attr
 
@@ -184,7 +188,7 @@ and pp_ptuple {value; _} =
   | [(_, p)] -> group (break 1 ^^ pp_pattern p)
   | (c, p)::items ->
       group (break 1 ^^ pp_pattern p ^^ (pp_region_t (string ",") c)) ^^ app items
-  in match tail with 
+  in match tail with
     [] -> pp_pattern head
   | h :: tail -> pp_pattern head ^^ (pp_region_t (string ",") (fst h)) ^^ app (h :: tail)
 
@@ -201,7 +205,7 @@ and pp_ptyped {value; _} =
 and pp_type_decl decl =
   let {name; type_expr; kwd_type; eq; _} = decl.value in
   (* let padding = match type_expr with TSum _ -> 0 | _ -> 2 in *)
-  pp_region_t (string "type ") kwd_type 
+  pp_region_t (string "type ") kwd_type
   ^^ pp_region_reg pp_ident name ^^ (pp_region_t (string " = ") eq)
   ^^ pp_type_expr type_expr
 
@@ -246,8 +250,8 @@ and pp_expr = function
 and pp_case_expr {value; _} =
   let {kwd_match; expr; kwd_with; lead_vbar; cases} = value in
   group (pp_region_t (string "match ") kwd_match ^^ nest 6 (pp_expr expr) ^/^ pp_region_t (string "with") kwd_with)
-  ^^ hardline ^^ 
-  (match lead_vbar with 
+  ^^ hardline ^^
+  (match lead_vbar with
     Some v -> pp_region_t (string "| ") v
   | None -> blank 2) ^^
   pp_cases cases
@@ -337,8 +341,8 @@ and pp_injection :
     | (c, item) :: rest -> inner (result ^^ pp_region_t (string ";") c ^^ break 1 ^^ (printer item)) rest
     | [] -> result
     in
-    let elements = match elements with 
-    | Some elements -> printer (fst elements) ^^ inner empty (snd elements) 
+    let elements = match elements with
+    | Some elements -> printer (fst elements) ^^ inner empty (snd elements)
     | None -> empty
     in
     match Option.map ~f:pp_compound compound with
@@ -381,7 +385,7 @@ and pp_ne_injection :
       match Option.map ~f:pp_compound compound with
         None -> elements
       | Some ((opening, a), (closing, b)) ->
-        surround 2 1 (pp_region_t (string opening) a) elements (pp_region_t (string closing) b) 
+        surround 2 1 (pp_region_t (string opening) a) elements (pp_region_t (string closing) b)
       in
     let inj = if attributes = [] then inj
               else pp_attributes attributes ^^ blank 1 ^^ inj
@@ -397,7 +401,7 @@ and pp_nsepseq :
     printer (fst elements) ^^ inner empty (snd elements)
 
 and pp_nseq : 'a.('a -> document) -> 'a Utils.nseq -> document =
-  fun printer (head, tail) -> 
+  fun printer (head, tail) ->
     separate_map (break 1) printer (head::tail)
 
 and pp_projection {value; _} =
@@ -450,7 +454,7 @@ and pp_tuple_expr {value; _} =
   | [(_, p)] -> group (break 1 ^^ pp_expr p)
   | (c, p)::items ->
       group (break 1 ^^ pp_expr p ^^ (pp_region_t (string ",") c)) ^^ app items
-  in match tail with 
+  in match tail with
     [] -> pp_expr head
   | h :: tail -> pp_expr head ^^ (pp_region_t (string ",") (fst h)) ^^ app (h :: tail)
 
@@ -460,7 +464,7 @@ and pp_let_in {value; _} =
   let {kwd_let; binding; kwd_rec; body; attributes=attr; kwd_in; _} = value in
   let let_str =
     match kwd_rec with
-        None -> (pp_region_t (string "let ") kwd_let) 
+        None -> (pp_region_t (string "let ") kwd_let)
     | Some r -> (pp_region_t (string "let ") kwd_let) ^^ (pp_region_t (string "rec ") r)
   in
   let let_str = if attr = [] then let_str
@@ -486,7 +490,7 @@ and pp_mod_in {value; _} =
      ^^ pp_region_t (string " in") kwd_in ^^ hardline ^^ group (pp_expr body)
 
 and pp_mod_alias {value; _} =
-  let {mod_alias; body; kwd_in} = value in 
+  let {mod_alias; body; kwd_in} = value in
   let {kwd_module; alias; eq; binders} = mod_alias in
   pp_region_t (string "module ") kwd_module ^^ pp_region_reg pp_ident alias ^^ pp_region_t (string " =") eq
   ^^ group (nest 0 (break 1 ^^ pp_nsepseq "." (pp_region_reg pp_ident) binders))
@@ -510,8 +514,8 @@ and pp_seq {value; _} =
   | (c, item) :: rest -> inner (result ^^ pp_region_t (string ";") c ^^ hardline ^^ (pp_expr item)) rest
   | [] -> result
   in
-  let elements = match elements with 
-  | Some elements -> pp_expr (fst elements) ^^ inner empty (snd elements) 
+  let elements = match elements with
+  | Some elements -> pp_expr (fst elements) ^^ inner empty (snd elements)
   | None -> empty
   in
   match Option.map ~f:pp_compound compound with
@@ -541,7 +545,7 @@ and pp_cartesian {value; _} =
   | [(_, p)] -> group (break 1 ^^ pp_type_expr p)
   | (c, p)::items ->
       group (break 1 ^^ pp_type_expr p ^^ (pp_region_t (string " *") c)) ^^ app items
-  in match tail with 
+  in match tail with
     [] -> pp_type_expr head
   | h :: tail -> pp_type_expr head ^^ (pp_region_t (string " *") (fst h)) ^^ app (h :: tail)
 
@@ -551,15 +555,15 @@ and pp_sum_type {value; _} =
   | (c, item) :: rest -> inner (result ^^ break 1 ^^ pp_region_t (string "| ") c  ^^ (pp_variant item)) rest
   | [] -> result
   in
-  let whole = 
+  let whole =
     (match lead_vbar with
       Some v -> pp_region_t (string "| ") v
     | None -> empty)
     ^^
     pp_variant (fst variants) ^^ inner empty (snd variants)
   in
-  let whole = nest 2 (break 0 ^^ 
-  (match lead_vbar with 
+  let whole = nest 2 (break 0 ^^
+  (match lead_vbar with
     Some _ -> whole
   | None -> ifflat whole (blank 2 ^^ whole)
   ))
@@ -594,11 +598,11 @@ and pp_type_tuple {value; _} =
     []  -> empty
   | [(_, e)] -> group (break 1 ^^ pp_type_expr e)
   | (c, e)::items ->
-      group (break 1 ^^ pp_type_expr e ^^ pp_region_t (string ",") c) ^^ app items 
+      group (break 1 ^^ pp_type_expr e ^^ pp_region_t (string ",") c) ^^ app items
   in
-  match tail with 
+  match tail with
     []        -> pp_type_expr head
-  | h :: tail -> 
+  | h :: tail ->
     let components =
       pp_type_expr head ^^ (pp_region_t (string ",") (fst h)) ^^ app (h :: tail)
     in (pp_region_t (string "(") value.lpar) ^^ nest 1 (components ^^ (pp_region_t (string ")") value.rpar))

@@ -1,9 +1,9 @@
 (* The API of the preprocessor
 
-  This preprocessor recognised the following directives:
+   This preprocessor recognised the following directives:
 
-  "#define", "#elif", "#else", "#endif", "#endregion", "#error",
-  "#if", "#include", "#region" and "#undef".
+   "#define", "#elif", "#else", "#endif", "#error", "#if", "#include",
+   and "#undef".
 
    Those are derived from the C# preprocessor.
 

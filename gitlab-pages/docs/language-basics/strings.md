@@ -35,18 +35,10 @@ let a : string = "Hello Alice";
 let a: string = "Hello Alice";
 ```
 
-or with single quotes:
-
-```jsligo
-let a: string = 'Hello Alice';
-```
-
 </Syntax>
 
 
-
 ## Concatenating Strings
-
 
 <Syntax syntax="pascaligo">
 
@@ -150,7 +142,7 @@ const name : string = "Alice"
 const length : nat = String.length (name) // length = 5
 ```
 
-> Note that `size` is *deprecated*. 
+> Note that `size` is *deprecated*.
 
 </Syntax>
 <Syntax syntax="cameligo">
@@ -181,4 +173,3 @@ let length: nat = String.length(name);  // length == 5
 ```
 
 </Syntax>
-

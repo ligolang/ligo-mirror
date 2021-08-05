@@ -64,7 +64,7 @@ module type TOKEN =
     val is_sym    : token -> bool
     val is_eof    : token -> bool
 
-    val support_string_delimiter : char -> bool
+    val is_string_delimiter : string -> bool
   end
 
 (* The functorised interface *)
@@ -160,19 +160,17 @@ module Make (Token : TOKEN) =
       let msg = error_to_string error in
       raise (Error Region.{value=msg;region})
 
-    let support_string_delimiter = Token.support_string_delimiter
+    let is_string_delimiter = Token.is_string_delimiter
 
     (* TOKENS *)
 
     (* Making tokens *)
 
-    let mk_string (thread, state) =
+    let mk_string thread =
       let start  = thread#opening#start in
-      let stop   = state#pos in
+      let stop   = thread#closing#stop in
       let region = Region.make ~start ~stop in
-      let lexeme = thread#to_string in
-      let token  = Token.mk_string lexeme region
-      in token, state
+      Token.mk_string (thread#to_string) region
 
     let mk_bytes bytes state buffer =
       let State.{region; state; _} = state#sync buffer in
@@ -293,7 +291,7 @@ rule scan state = parse
     object
       method mk_string = mk_string
       method callback  = lift <@ scan
-      method support_string_delimiter = support_string_delimiter
+      method is_string_delimiter = is_string_delimiter
     end
 
   end (* of functor [Make] in HEADER *)

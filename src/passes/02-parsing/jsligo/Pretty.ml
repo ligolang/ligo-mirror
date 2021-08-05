@@ -55,22 +55,22 @@ and pp_statement = function
 | SWhile      s -> pp_while s
 
 and pp_for_of {value; _} =
-  string "for" ^^ string "(" ^^ string 
-    (if value.const then "const" else "let") ^^ string value.name.value ^^ 
-    string " of " ^^ 
+  string "for" ^^ string "(" ^^ string
+    (if value.const then "const" else "let") ^^ string value.name.value ^^
+    string " of " ^^
     pp_expr value.expr ^^ string ")" ^^ pp_statement value.statement
 
 and pp_while {value; _} =
-  string "while" ^^ string "(" ^^ pp_expr value.expr ^^ string ")" ^^ pp_statement value.statement 
+  string "while" ^^ string "(" ^^ pp_expr value.expr ^^ string ")" ^^ pp_statement value.statement
 
-and pp_import {value; _} = 
+and pp_import {value; _} =
   string "import" ^^ string value.alias.value ^^ string "=" ^^ pp_nsepseq "." (fun a -> string a.value) value.module_path
 
 and pp_export {value = (_, statement); _} =
   string "export" ^^ pp_statement statement
 
 and pp_namespace {value = (_, name, statements); _} =
-  string "namespace" ^^ string name.value ^^ group (pp_braced ";" pp_statement statements) 
+  string "namespace" ^^ string name.value ^^ group (pp_braced ";" pp_statement statements)
 
 and pp_cond_expr {value; _} =
   let {test; ifso; ifnot; _} = value in
@@ -91,9 +91,9 @@ and pp_const {value = {bindings; _}; _} =
   string "const " ^^ pp_nsepseq "," pp_let_binding bindings
 
 and pp_let_binding {value = {binders; lhs_type; expr; attributes; _}; _} =
-  (if attributes = [] then empty else 
+  (if attributes = [] then empty else
   pp_attributes attributes)
-  ^^ 
+  ^^
   prefix 2 0 ((match lhs_type with
     Some (_, type_expr) -> pp_pattern binders ^^ string ": " ^^ pp_type_expr type_expr
   | None -> pp_pattern binders)
@@ -186,7 +186,7 @@ and pp_array_item = function
 
 
 and pp_constr_expr = function
-  ENone      _ -> string "None ()" 
+  ENone      _ -> string "None ()"
 | ESomeApp   a -> pp_some a
 | EConstrApp a -> pp_constr_app a
 
@@ -336,9 +336,9 @@ and pp_sum_type {value; _} =
 
 and pp_attributes = function
   [] -> empty
-| attr -> 
+| attr ->
   let make s = string "@" ^^ string s.value ^^ string " "
-  in 
+  in
   string "/* " ^^ concat_map make attr ^^ string "*/ "
 
 and pp_object_type fields = group (pp_ne_injection pp_field_decl fields)

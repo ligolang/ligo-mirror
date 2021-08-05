@@ -47,6 +47,6 @@ let project = function
 let to_string ~offsets mode directive =
   let region, string = project directive in
   let reg_str = region#compact ~offsets mode
-  in sprintf "%s: %s" reg_str string
+  in sprintf "%s> %s" reg_str string
 
 let to_region d = fst @@ project d
