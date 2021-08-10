@@ -3,9 +3,11 @@
    internally used by PreprocMain.ml with default settings, for
    testing purposes. *)
 
-module Make (CLI : CLI.S) :
+(* The functor *)
+
+module Make (Parameters : CLI.PARAMETERS) :
   sig
+    module API : API.S
     val check_cli  : unit -> unit
-    val config     : State.config
     val preprocess : unit -> API.result
   end

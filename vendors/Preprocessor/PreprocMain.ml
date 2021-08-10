@@ -3,16 +3,20 @@
 module CLI = Preprocessor.CLI
 module PreprocMainGen = Preprocessor.PreprocMainGen
 
-module Comments =
+module Config =
   struct
-    type line_comment  = string (* Opening of a line comment *)
-    type block_comment = <opening : string; closing : string>
+    type block_comment_delimiters = <opening : string; closing : string>
+    type line_comment_delimiter   = string (* Opening of a line comment *)
+    type string_delimiter         = string
 
-    let block = None
-    let line  = None
+    let block    = None
+    let line     = None
+    let string   = Some "\""
+    let file_ext = None
   end
 
-module Main = PreprocMainGen.Make (CLI.Make (Comments))
+module Parameters = CLI.Make (Config)
+module Main = PreprocMainGen.Make (Parameters)
 
 let () = Main.check_cli ()
 let () = Main.preprocess () |> ignore

@@ -1,33 +1,25 @@
-(* Parsing the command-line options *)
+(* Command-Line Interface (CLI) *)
 
 (* Vendor dependencies *)
 
-module Argv = Simple_utils.Argv
+module Argv = Simple_utils.Argv (* Filters the command line *)
 
-(* The signature [COMMENTS] specifies the kind of comments
-   expected. Those fields do not correspond to CLI (command-line
-   options), as they are for internal use. *)
+(* General configuration *)
 
-module type COMMENTS =
+module type CONFIG = module type of Config
+
+(* CLI options *)
+
+module type OPTIONS = module type of Options
+
+(* Configuration, options and the parsing status of the latter *)
+
+module type PARAMETERS =
   sig
-    type line_comment  = string (* Opening of a line comment *)
-    type block_comment = <opening : string; closing : string>
+    module Config  : CONFIG
+    module Options : OPTIONS
 
-    val block : block_comment option
-    val line  : line_comment option
-  end
-
-(* Command-Line Interface (CLI) options *)
-
-module type S =
-  sig
-    include COMMENTS
-
-    val input     : string option (* input file             *)
-    val extension : string option (* file extension         *)
-    val dirs      : string list   (* -I                     *)
-    val show_pp   : bool          (* --show-pp              *)
-    val offsets   : bool          (* negation of --columns  *)
+    (* Status after parsing CLI options *)
 
     type status = [
       `Done
@@ -36,6 +28,7 @@ module type S =
     | `CLI          of Buffer.t
     | `SyntaxError  of string
     | `FileNotFound of string
+    | `WrongFileExt of string
     ]
 
     val status : status
@@ -43,9 +36,11 @@ module type S =
 
 (* Parsing the command line options *)
 
-module Make (Comments: COMMENTS) : S =
+module Make (Config : CONFIG) : PARAMETERS =
   struct
-    include Comments
+    (* General configuration *)
+
+    module Config = Config
 
     (* Auxiliary functions and modules *)
 
@@ -229,6 +224,7 @@ module Make (Comments: COMMENTS) : S =
     | `CLI          of Buffer.t
     | `SyntaxError  of string
     | `FileNotFound of string
+    | `WrongFileExt of string
     ]
 
     let status =
@@ -245,13 +241,13 @@ module Make (Comments: COMMENTS) : S =
     (* Re-exporting immutable fields with their CLI value *)
 
     let dirs    = !dirs
-    and offsets = not !columns
     and show_pp = !show_pp
+    and offsets = not !columns
     and help    = !help
     and version = !version
 
     let string_of_opt convert = function
-      None -> "None"
+      None   -> "None"
     | Some x -> sprintf "Some %S" (convert x)
 
     let string_of_dirs = sprintf "[%s]" (String.concat ";" dirs)
@@ -274,28 +270,38 @@ module Make (Comments: COMMENTS) : S =
       Buffer.add_char   cli_buffer '\n'
     end
 
+    (* Checking the input file (if any) *)
+
+    let check_file file_path =
+      let actual = Filename.extension file_path in
+      match Config.file_ext with
+        Some expected when expected <> actual ->
+          let msg = sprintf "Expected file extension .%S." expected
+          in `WrongFileExt msg
+      | Some _ | None ->
+          if   Sys.file_exists file_path
+          then `Done
+          else `FileNotFound "Source file not found."
+
     (* Input and status *)
 
     let input, status =
       match status with
-        `SyntaxError _  -> !input, status
-      | _ when help     -> !input, `Help (make_help ())
-      | _ when !cli     -> !input, `CLI cli_buffer
-      | _ when version  -> !input, `Version Version.version
-      | _ -> match !input with
-               None | Some "-" -> None, `Done
-             | Some file_path ->
-                 !input,
-                 if   Sys.file_exists file_path
-                 then `Done
-                 else `FileNotFound "Source file not found."
+        `SyntaxError _     -> !input, status
+      | `Done when help    -> !input, `Help (make_help ())
+      | `Done when !cli    -> !input, `CLI cli_buffer
+      | `Done when version -> !input, `Version Version.version
+      | `Done -> match !input with
+                   None | Some "-" -> None, `Done
+                 | Some file_path -> !input, check_file file_path
 
-    (* File extension (must come after handling of input above) *)
+    (* Packaging the CLI options *)
 
-    let extension =
-      match input with
-        None -> None
-      | Some file_path ->
-          let x = Filename.extension file_path
-          in if x = "" then None else Some x
+    module Options =
+      struct
+        let dirs    = dirs
+        and show_pp = show_pp
+        and offsets = offsets
+        and input   = input
+      end
    end

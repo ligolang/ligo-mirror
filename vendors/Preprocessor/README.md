@@ -523,7 +523,7 @@ the support for a
 Strings and comments are recognised by the preprocessor, even in
 pieces of the input that are not copied. (This last point is a
 difference between `cpp` and the `C#` preprocessor.) The rationale for
-doing so is twofold:
+doing so when copying the input is twofold:
 
   1. We do not want the preprocessor to interpret a directive that is
      actually in a comment. This can happen when commenting out a
@@ -535,6 +535,30 @@ doing so is twofold:
      of a bootstrapped compiler, that is, a compiler for its own
      language. Another scenario is that of a test: the source code is
      actually printing what is happening.
+
+When the processor is in skip mode, that is, the input is not copied,
+strings and comments are also recognised. This ensures that a string
+or a comment containing a conditional directive, for example `#endif`,
+does not start to interact with previous directives, like `#if`, or
+raises an error when switching from copy mode to skip mode. In other
+words, the interpretation of strings and comments should always be the
+same. For example, we want the input
+
+```
+#if true
+"#endif"
+#endif
+```
+
+and
+
+```
+#if true
+"#endif"
+#endif
+```
+
+to not raise an error.
 
 Strings are enclosed between double quotes.
 

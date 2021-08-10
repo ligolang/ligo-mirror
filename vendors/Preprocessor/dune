@@ -3,25 +3,25 @@
 (library
   (name Preprocessor)
   (public_name Preprocessor)
-  (wrapped true)
   (libraries
     ;; Vendor
     simple-utils
     ;; Third party
     getopt
     str)
-  (modules Error State Version CLI E_Parser
-           E_Lexer E_AST API PreprocMainGen)
-  (private_modules E_AST E_Lexer E_Parser Version Error))
+  (modules Boolean Config Options Error State Version
+           CLI Env API PreprocMainGen)
+  (modules_without_implementation Config Options)
+  (private_modules Version Error Boolean))
 
 ;; Building the lexers of the preprocessor
 
-(ocamllex E_Lexer API)
+(ocamllex API)
 
 ;; Building the parser of the preprocessor (for boolean expressions)
 
 (menhir
-  (modules E_Parser))
+  (modules Boolean))
 
 ;; Building PreprocMain.exe for a standalone preprocessor
 

@@ -20,14 +20,19 @@ let print_and_quit msg =
 
 (* The functor *)
 
-module Make (CLI : CLI.S) =
+module Make (Parameters : CLI.PARAMETERS) =
   struct
+    module Config  = Parameters.Config
+    module Options = Parameters.Options
+    module API = API.Make (Config) (Options)
+
     (* Checking for errors and valid exits *)
 
     let check_cli () =
-      let open CLI in
+      let open Parameters in
       match status with
         `SyntaxError  msg
+      | `WrongFileExt msg
       | `FileNotFound msg -> cli_error msg
       | `Help         buf
       | `CLI          buf -> print_and_quit (Buffer.contents buf)
@@ -36,27 +41,18 @@ module Make (CLI : CLI.S) =
 
     (* Calling the preprocessor on the input file *)
 
-    let config =
-      object
-        method block   = CLI.block
-        method line    = CLI.line
-        method input   = CLI.input
-        method offsets = CLI.offsets
-        method dirs    = CLI.dirs
-      end
-
     let preprocess () : API.result =
       let preprocessed =
-        match CLI.input with
-               None -> API.from_channel config stdin
-        | Some path -> API.from_file config path in
+        match Options.input with
+               None -> API.from_channel stdin
+        | Some path -> API.from_file path in
       let () =
         match preprocessed with
           Stdlib.Ok (buffer, _) ->
-            if CLI.show_pp then
+            if Options.show_pp then
               Printf.printf "%s\n%!" (Buffer.contents buffer)
         | Error (Some buffer, Region.{value; _}) ->
-            if CLI.show_pp then
+            if Options.show_pp then
               Printf.printf "%s\n%!" (Buffer.contents buffer);
             Printf.eprintf "\027[31m%s\027[0m%!" value
         | Error (None, Region.{value; _}) ->

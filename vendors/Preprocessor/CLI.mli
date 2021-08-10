@@ -1,34 +1,21 @@
-(* Parsing the command-line options *)
+(* Command-Line Interface (CLI) *)
 
-(* The signature [COMMENTS] specifies the kind of comments
-   expected. Those fields do not correspond to CLI (command-line
-   options), as they are for internal use.
+(* General configuration *)
 
-   WARNING: The delimiters for comments must be chosen from the ones
-   recognised by the scanning rules in [API.mll]. *)
+module type CONFIG = module type of Config
 
-module type COMMENTS =
+(* CLI options *)
+
+module type OPTIONS = module type of Options
+
+(* Configuration, options and the parsing status of the latter *)
+
+module type PARAMETERS =
   sig
-    type line_comment  = string (* Opening of a line comment *)
-    type block_comment = <opening : string; closing : string>
+    module Config  : CONFIG
+    module Options : OPTIONS
 
-    val block : block_comment option
-    val line  : line_comment option
-  end
-
-(* The signature [S] (command-line interface) gathers the options
-   given to the tool, following the GNU convention, and exports then
-   as module fields. *)
-
-module type S =
-  sig
-    include COMMENTS
-
-    val input     : string option (* input file             *)
-    val extension : string option (* file extension         *)
-    val dirs      : string list   (* -I                     *)
-    val show_pp   : bool          (* --show-pp              *)
-    val offsets   : bool          (* negation of --columns  *)
+    (* Status after parsing CLI options *)
 
     type status = [
       `Done
@@ -37,6 +24,7 @@ module type S =
     | `CLI          of Buffer.t
     | `SyntaxError  of string
     | `FileNotFound of string
+    | `WrongFileExt of string
     ]
 
     val status : status
@@ -45,4 +33,4 @@ module type S =
 (* The instantiation of functor [Make] reads the command line
    interface. *)
 
-module Make (Comments: COMMENTS) : S
+module Make (Config : CONFIG) : PARAMETERS

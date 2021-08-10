@@ -3,24 +3,23 @@
 type error =
   Directive_inside_line
 | Missing_endif
-| Newline_in_string
-| Unterminated_string
 | Dangling_endif
-| Open_region_in_conditional
-| Dangling_endregion
-| Conditional_in_region
 | If_follows_elif
 | Else_follows_else
 | Dangling_else
 | Elif_follows_else
 | Dangling_elif
 | Error_directive of string           (* #error ONLY *)
-| Parse_error
-| Invalid_symbol
-| File_not_found of string
-| Unterminated_comment of string
+| Invalid_symbol                      (* #define and #undef *)
+| File_not_found of string            (* #include *)
 | Missing_filename                    (* #include *)
+| Unterminated_comment of string      (* #include and #import *)
 | Unexpected_argument                 (* #include and #import *)
+| Newline_in_string                   (* #include and #import *)
+| Unterminated_string                 (* #include and #import *)
+| Invalid_character_in_string of char
+| Invalid_character of char           (* #if and #elif *)
+| Parse_error                         (* #if and #elif *)
 
 type t = error
 
@@ -39,15 +38,6 @@ let to_string = function
 | Dangling_endif ->
     sprintf "Dangling #endif directive.\n\
              Hint: Remove it or add a #if before."
-| Open_region_in_conditional ->
-    sprintf "Unterminated of #region in conditional.\n\
-             Hint: Close with #endregion before #endif."
-| Dangling_endregion ->
-   sprintf "Dangling #endregion directive.\n\
-            Hint: Remove it or use #region before."
-| Conditional_in_region ->
-    sprintf "Conditional in region.\n\
-             Hint: Remove the conditional or the region."
 | If_follows_elif ->
     sprintf "Directive #if found in a clause #elif."
 | Else_follows_else ->
@@ -74,3 +64,8 @@ let to_string = function
     sprintf "Filename expected in a string literal."
 | Unexpected_argument ->
     sprintf "Unexpected argument."
+| Invalid_character_in_string c ->
+    sprintf "Invalid character %S in string.\n\
+             Hint: Remove or replace the character." (Char.escaped c)
+| Invalid_character c ->
+    sprintf "Invalid character '%c' (%d)." c (Char.code c)

@@ -5,10 +5,9 @@
 
 type mode = Copy | Skip
 
-(* Trace of directives. We keep track of directives #if, #elif, #else,
-   #region and #endregion. *)
+(* Trace of directives. We keep track of directives #if, #elif, and #else *)
 
-type cond  = If of mode | Elif of mode | Else | Region
+type cond  = If of mode | Elif of mode | Else
 type trace = cond list
 
 (* The type [state] groups the information that needs to be
@@ -40,23 +39,11 @@ type trace = cond list
      * the field [import] is a list of (filename, module) imports
        (#import) *)
 
-type line_comment  = string (* Opening of a line comment *)
-type block_comment = <opening : string; closing : string>
-
 type file_path = string
 type module_name = string
 
-type config = <
-  block   : block_comment option;
-  line    : line_comment option;
-  input   : file_path option;
-  offsets : bool;
-  dirs    : file_path list (* Directories to search for #include files *)
->
-
 type state = {
-  config : config;
-  env    : E_AST.Env.t;
+  env    : Env.t;
   mode   : mode;
   trace  : trace;
   out    : Buffer.t;
@@ -81,16 +68,12 @@ val mk_path  : state -> string
 (* The function [reduce_cond] is called when a #endif directive is
    found, and the trace (see type [trace] above) needs updating.
 
-   The function [reduce_region] is called when a #endregion directive
-   is read, and the trace needs updating.
-
    The function [extend] is called when encountering conditional
    directives #if, #else and #elif. As its name suggests, it extends
    the current trace with the current conditional directive, whilst
    performing some validity checks. *)
 
 val reduce_cond   : t -> (t, Error.t) Stdlib.result
-val reduce_region : t -> (t, Error.t) Stdlib.result
 val extend        : cond -> mode -> t -> (t, Error.t) Stdlib.result
 
 (* PRINTING *)
@@ -103,16 +86,6 @@ val print   : t -> string        -> unit
 
 val env_add : string -> state -> state
 val env_rem : string -> state -> state
-
-(* FINDING FILES *)
-
-type dir = string
-
-val find :
-  dir ->
-  file_path ->
-  state ->
-  (file_path * in_channel * t, Error.t) Stdlib.result
 
 (* INPUT CHANNELS *)
 

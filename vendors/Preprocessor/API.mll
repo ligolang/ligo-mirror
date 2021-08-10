@@ -8,109 +8,154 @@
 module Region = Simple_utils.Region
 module Pos    = Simple_utils.Pos
 
-(* Local dependencies *)
+(* General configuration *)
 
-open State
+module type CONFIG = module type of Config
 
-(* Extracting the region matched in a lexing buffer *)
+(* CLI options *)
 
-let mk_reg buffer =
-  let start = Lexing.lexeme_start_p buffer |> Pos.from_byte
-  and stop  = Lexing.lexeme_end_p buffer |> Pos.from_byte
-  in Region.make ~start ~stop
+module type OPTIONS = module type of Options
 
-(* Rolling back one lexeme _within the current semantic action_ *)
+(* Functor *)
 
-let rollback buffer =
-  let open Lexing in
-  let len = String.length (lexeme buffer) in
-  let pos_cnum = buffer.lex_curr_p.pos_cnum - len in
-  buffer.lex_curr_pos <- buffer.lex_curr_pos - len;
-  buffer.lex_curr_p <- {buffer.lex_curr_p with pos_cnum}
+module type S =
+  sig
+    type file_path   = string
+    type module_name = string
+    type module_deps = (file_path * module_name) list
+    type success     = Buffer.t * module_deps
 
-(* Utility functions *)
+    type message     = string Region.reg
+    type error       = Buffer.t option * message
 
-let sprintf = Printf.sprintf
+    type result      = (success, error) Stdlib.result
+    type 'src preprocessor = 'src -> result
 
-(* STRING PROCESSING *)
+    (* Preprocessing from various sources *)
 
-(* The value of [mk_str len p] ("make string") is a string of length
-   [len] containing the [len] characters in the list [p], in reverse
-   order. For instance, [mk_str 3 ['c';'b';'a'] = "abc"]. *)
+    val from_lexbuf  : Lexing.lexbuf preprocessor
+    val from_channel : in_channel    preprocessor
+    val from_string  : string        preprocessor
+    val from_file    : file_path     preprocessor
+  end
 
-let mk_str (len: int) (p: char list) : string =
-  let () = assert (len = List.length p) in
-  let bytes = Bytes.make len ' ' in
-  let rec fill i = function
-    [] -> bytes
-  | char::l -> Bytes.set bytes i char; fill (i-1) l
-  in fill (len-1) p |> Bytes.to_string
+module Make (Config : CONFIG) (Options : OPTIONS) =
+  struct
+    (* Local dependencies *)
 
-(* ERRORS *)
+    open State
 
-(* IMPORTANT : Make sure the functions [fail] and [expr] remain the
-   only ones raising [Error]. *)
+    (* FINDING FILES *)
 
-exception Error of (Buffer.t * string Region.reg)
+    let open_file path state =
+      let in_chan = open_in path in
+      let state   = State.push_chan in_chan state
+      in path, in_chan, state
 
-let format_error config ~msg (region: Region.t) =
-  let file  = config#input <> None in
-  let reg   = region#to_string
-                ~file
-                ~offsets:config#offsets
-                `Byte in
-  let value = sprintf "%s:\n%s\n" reg msg
-  in Region.{value; region}
+    let find file_path state =
+      let rec aux = function
+          [] -> Stdlib.Error (Error.File_not_found file_path)
+      | dir::dirs -> let path =
+                      if dir = "." || dir = "" then file_path
+                      else dir ^ Filename.dir_sep ^ file_path in
+                    try Stdlib.Ok (open_file path state) with
+                      Sys_error _ -> aux dirs
+      in aux Options.dirs
 
-let fail state region error =
-  let msg = Error.to_string error in
-  let msg = format_error state.config ~msg region
-  in List.iter close_in state.chans;
-     raise (Error (state.out, msg))
+    let find dir file state =
+      let path =
+        if dir = "." || dir = "" then file
+        else dir ^ Filename.dir_sep ^ file in
+      try Stdlib.Ok (open_file path state) with
+        Sys_error _ ->
+          let base = Filename.basename file in
+          if base = file then find file state
+          else Stdlib.Error (Error.File_not_found file)
 
-let stop state buffer = fail state (mk_reg buffer)
+    (* Extracting the region matched in a lexing buffer *)
 
-let apply transform region state =
-  match transform state with
-    Stdlib.Ok state  -> state
-  | Stdlib.Error err -> fail state region err
+    let mk_reg buffer =
+      let start = Lexing.lexeme_start_p buffer |> Pos.from_byte
+      and stop  = Lexing.lexeme_end_p buffer |> Pos.from_byte
+      in Region.make ~start ~stop
 
-let find dir file    = apply (State.find dir file)
-let reduce_cond      = apply State.reduce_cond
-let extend cond mode = apply (State.extend cond mode)
+    (* Rolling back one lexeme _within the current semantic action_ *)
 
-(* Evaluating a preprocessor expression
+    let rollback buffer =
+      let open Lexing in
+      let len = String.length (lexeme buffer) in
+      let pos_cnum = buffer.lex_curr_p.pos_cnum - len in
+      buffer.lex_curr_pos <- buffer.lex_curr_pos - len;
+      buffer.lex_curr_p <- {buffer.lex_curr_p with pos_cnum}
 
-   The evaluation of conditional directives may involve symbols whose
-   value may be defined using #define directives, or undefined by
-   means of #undef. Therefore, we need to evaluate conditional
-   expressions in an environment made of a set of defined symbols.
+    (* Utility functions *)
 
-     Note that we rely on an external lexer and parser for the
-   conditional expressions. See modules [E_AST], [E_Lexer] and
-   [E_Parser]. *)
+    let sprintf = Printf.sprintf
 
-let expr state buffer : mode =
-  let ast =
-    try E_Parser.expr E_Lexer.scan buffer with
-      E_Lexer.Error msg -> raise (Error (state.out, msg))
-    | E_Parser.Error  -> stop state buffer Error.Parse_error in
-  let () = State.print state "\n" in
-  if E_AST.eval state.env ast then Copy else Skip
+    (* STRING PROCESSING *)
 
-(* DIRECTIVES *)
+    (* The value of [mk_str len p] ("make string") is a string of length
+       [len] containing the [len] characters in the list [p], in
+       reverse order. For instance, [mk_str 3 ['c';'b';'a'] = "abc"]. *)
 
-let directives = [
-  "define";
-  "elif";
-  "else";
-  "endif";
-  "error";
-  "if";
-  "import";
-  "include";
-  "undef"
-]
+    let mk_str (len: int) (p: char list) : string =
+      let () = assert (len = List.length p) in
+      let bytes = Bytes.make len ' ' in
+      let rec fill i = function
+        [] -> bytes
+      | char::l -> Bytes.set bytes i char; fill (i-1) l
+      in fill (len-1) p |> Bytes.to_string
+
+    (* ERRORS *)
+
+    (* IMPORTANT : Make sure the functions [fail] and [expr] remain the only
+       ones raising [Error]. *)
+
+    exception Error of (Buffer.t * string Region.reg)
+
+    let format_error  ~msg (region: Region.t) =
+      let file  = Options.input <> None in
+      let reg   = region#to_string
+                    ~file
+                    ~offsets:Options.offsets
+                    `Byte in
+      let value = sprintf "%s:\n%s\n" reg msg
+      in Region.{value; region}
+
+    let fail state region error =
+      let msg = Error.to_string error in
+      let msg = format_error ~msg region
+      in List.iter close_in state.chans;
+         raise (Error (state.out, msg))
+
+    let stop state buffer = fail state (mk_reg buffer)
+
+    let find dir file region state =
+      match find dir file state with
+        Stdlib.Ok result -> result
+      | Stdlib.Error err -> fail state region err
+
+    let apply transform region state =
+      match transform state with
+        Stdlib.Ok state  -> state
+      | Stdlib.Error err -> fail state region err
+
+    let reduce_cond      = apply State.reduce_cond
+    let extend cond mode = apply (State.extend cond mode)
+
+    (* DIRECTIVES *)
+
+    let directives = [
+      "define";
+      "elif";
+      "else";
+      "endif";
+      "error";
+      "if";
+      "import";
+      "include";
+      "undef"
+    ]
 
 (* END OF HEADER *)
 }
@@ -127,7 +172,7 @@ let letter    = small | capital
 let ident     = letter (letter | '_' | digit)*
 let directive = '#' blank* (small+ as id)
 
-(* Comments *)
+(* Comment delimiters *)
 
 let pascaligo_block_comment_opening = "(*"
 let pascaligo_block_comment_closing = "*)"
@@ -163,7 +208,22 @@ let line_comments =
 | reasonligo_line_comment
 | michelson_line_comment
 
-(* Rules *)
+(* String delimiters *)
+
+let pascaligo_string_delimiter  = "\""
+let cameligo_string_delimiter   = "\""
+let reasonligo_string_delimiter = "\""
+let michelson_string_delimiter  = "\""
+let jsligo_string_delimiter     = "\""
+
+let string_delimiters =
+  pascaligo_string_delimiter
+| cameligo_string_delimiter
+| reasonligo_string_delimiter
+| michelson_string_delimiter
+| jsligo_string_delimiter
+
+(* RULES *)
 
 (* The rule [scan] scans the input buffer for directives, strings,
    comments, blanks, new lines and end of file characters. As a
@@ -181,8 +241,38 @@ rule scan state = parse
 | nl      { proc_nl state lexbuf; scan state lexbuf }
 | blank   { if state.mode = Copy then copy state lexbuf;
             scan state lexbuf }
-| '"'     { if state.mode = Copy then copy state lexbuf;
-            scan (in_string (mk_reg lexbuf) state lexbuf) lexbuf }
+
+  (* Strings *)
+
+| string_delimiters {
+    if state.mode = Copy then copy state lexbuf;
+    let lexeme = Lexing.lexeme lexbuf in
+    match Config.string with
+      Some delimiter when delimiter = lexeme ->
+        let state = in_string delimiter (mk_reg lexbuf) state lexbuf
+        in scan state lexbuf
+    | Some _ | None -> scan state lexbuf }
+
+  (* Comments *)
+
+| block_comment_openings {
+    if state.mode = Copy then copy state lexbuf;
+    let lexeme = Lexing.lexeme lexbuf in
+    match Config.block with
+      Some block when block#opening = lexeme ->
+        let state = in_block block (mk_reg lexbuf) state lexbuf
+        in scan state lexbuf
+    | Some _ | None -> scan state lexbuf }
+
+| line_comments {
+    if state.mode = Copy then copy state lexbuf;
+    let lexeme = Lexing.lexeme lexbuf in
+    match Config.line with
+      Some line when line = lexeme ->
+        scan (in_line state lexbuf) lexbuf
+    | Some _ | None -> scan state lexbuf }
+
+(* Directive *)
 
 | directive {
     let  region = mk_reg lexbuf in
@@ -330,7 +420,10 @@ rule scan state = parse
         in (proc_nl state lexbuf; scan state lexbuf)
 
     | "if" ->
-        let mode  = expr state lexbuf in
+        let bool =
+          try Boolean.expr (if_expr state) lexbuf state.env with
+            Boolean.Error -> stop state lexbuf Error.Parse_error in
+        let mode  = if bool then Copy else Skip in
         let mode  = if state.mode = Copy then mode else Skip in
         let state = extend (If state.mode) mode region state
         in scan state lexbuf
@@ -344,7 +437,10 @@ rule scan state = parse
         in scan state lexbuf
 
     | "elif" ->
-        let mode = expr state lexbuf in
+        let bool =
+          try Boolean.expr (if_expr state) lexbuf state.env with
+            Boolean.Error -> stop state lexbuf Parse_error in
+        let mode  = if bool then Copy else Skip in
         let state =
           match state.mode with
             Copy -> extend (Elif Skip) Skip region state
@@ -375,51 +471,33 @@ rule scan state = parse
     | _ -> assert false
   }
 
-| block_comment_openings {
-    let lexeme = Lexing.lexeme lexbuf in
-    match state.config#block with
-      Some block when block#opening = lexeme ->
-        if state.mode = Copy then
-          begin
-            copy state lexbuf;
-            let state = in_block block (mk_reg lexbuf) state lexbuf
-            in scan state lexbuf
-          end
-        else scan state lexbuf
-    | Some _ | None ->
-        let n = String.length lexeme in
-          begin
-            rollback lexbuf;
-            assert (n > 0);
-            scan (scan_n_char n state lexbuf) lexbuf
-          end }
-
-| line_comments {
-    let lexeme = Lexing.lexeme lexbuf in
-    match state.config#line with
-      Some line when line = lexeme ->
-        if state.mode = Copy then
-          begin
-            copy state lexbuf;
-            scan (in_line_com state lexbuf) lexbuf
-          end
-        else scan state lexbuf
-    | Some _ | None ->
-        let n = String.length lexeme in
-          begin
-            rollback lexbuf;
-            assert (n > 0);
-            scan (scan_n_char n state lexbuf) lexbuf
-          end }
-
 | _ { if state.mode = Copy then copy state lexbuf;
       scan state lexbuf }
 
-(* Scanning a series of characters *)
+(* Scanning boolean expressions after #if and #elif *)
 
-and scan_n_char n state = parse
-  _  { if state.mode = Copy then copy state lexbuf;
-       if n = 1 then state else scan_n_char (n-1) state lexbuf }
+and if_expr state = parse
+  blank+      { if_expr state lexbuf     }
+| nl          { proc_nl state lexbuf;
+                Boolean.EOL              }
+| eof         { Boolean.EOL              }
+| "true"      { Boolean.True             }
+| "false"     { Boolean.False            }
+| ident as id { Boolean.Ident id         }
+| '('         { Boolean.LPAR             }
+| ')'         { Boolean.RPAR             }
+| "||"        { Boolean.OR               }
+| "&&"        { Boolean.AND              }
+| "=="        { Boolean.EQ               }
+| "!="        { Boolean.NEQ              }
+| "!"         { Boolean.NOT              }
+| "//"        { if_expr_com state lexbuf }
+| _ as c      { stop state lexbuf (Error.Invalid_character c) }
+
+and if_expr_com state = parse
+  nl  { proc_nl state lexbuf; Boolean.EOL }
+| eof { Boolean.EOL                       }
+| _   { if_expr_com state lexbuf          }
 
 (* Support for #define and #undef *)
 
@@ -450,42 +528,41 @@ and message acc = parse
 
 (* Comments *)
 
-and in_line_com state = parse
+and in_block block opening state = parse
+  string_delimiters {
+    if state.mode = Copy then copy state lexbuf;
+    let lexeme = Lexing.lexeme lexbuf in
+    match Config.string with
+      Some delimiter when delimiter = lexeme ->
+        let state = in_string delimiter (mk_reg lexbuf) state lexbuf
+        in in_block block opening state lexbuf
+    | Some _ | None -> in_block block opening state lexbuf }
+
+| block_comment_openings {
+    if state.mode = Copy then copy state lexbuf;
+    let lexeme = Lexing.lexeme lexbuf in
+    if block#opening = lexeme then
+      let state = in_block block (mk_reg lexbuf) state lexbuf
+      in in_block block opening state lexbuf
+    else in_block block opening state lexbuf }
+
+| block_comment_closings {
+    if state.mode = Copy then copy state lexbuf;
+    let lexeme = Lexing.lexeme lexbuf in
+    if block#closing = lexeme then state
+    else in_block block opening state lexbuf }
+
+| nl  { proc_nl state lexbuf; in_block block opening state lexbuf }
+| eof { let err = Error.Unterminated_comment block#closing
+        in fail state opening err                                 }
+| _   { if state.mode = Copy then copy state lexbuf;
+        in_block block opening state lexbuf                       }
+
+and in_line state = parse
   nl  { proc_nl state lexbuf; state                  }
 | eof { rollback lexbuf; state                       }
 | _   { if state.mode = Copy then copy state lexbuf;
-        in_line_com state lexbuf                     }
-
-and in_block block opening state = parse
-  '"' | block_comment_openings {
-    let lexeme = Lexing.lexeme lexbuf in
-    if   block#opening = lexeme || lexeme = "\""
-    then let ()        = copy state lexbuf in
-         let opening'  = mk_reg lexbuf in
-         let scan_next = if lexeme = "\"" then in_string
-                         else in_block block in
-         let state     = scan_next opening' state lexbuf
-         in in_block block opening state lexbuf
-    else let ()    = rollback lexbuf in
-         let n     = String.length lexeme in
-         let ()    = assert (n > 0) in
-         let state = scan_n_char n state lexbuf
-         in in_block block opening state lexbuf }
-
-| block_comment_closings {
-    let lexeme = Lexing.lexeme lexbuf in
-    if   block#closing = lexeme
-    then (copy state lexbuf; state)
-    else let ()    = rollback lexbuf in
-         let n     = String.length lexeme in
-         let ()    = assert (n > 0) in
-         let state = scan_n_char n state lexbuf
-         in in_block block opening state lexbuf }
-
-| nl   { proc_nl state lexbuf; in_block block opening state lexbuf }
-| eof  { let err = Error.Unterminated_comment block#closing
-         in fail state opening err                                 }
-| _    { copy state lexbuf; in_block block opening state lexbuf    }
+        in_line state lexbuf                         }
 
 (* #include *)
 
@@ -532,7 +609,6 @@ and in_module opening imp_path acc len state = parse
 | eof    { fail state opening Error.Unterminated_string                     }
 | _ as c { in_module opening imp_path (c::acc) (len+1) state lexbuf         }
 
-
 and end_module opening closing imp_path acc len state = parse
   nl     { proc_nl state lexbuf;
            Region.cover opening closing, imp_path, mk_str len acc   }
@@ -540,13 +616,20 @@ and end_module opening closing imp_path acc len state = parse
 | blank+ { end_module opening closing imp_path acc len state lexbuf }
 | _      { stop state lexbuf Error.Unexpected_argument              }
 
-(* Strings *)
+and in_string delimiter opening state = parse
+  string_delimiters {
+           if state.mode = Copy then copy state lexbuf;
+           let lexeme = Lexing.lexeme lexbuf in
+           if lexeme = delimiter then state
+           else in_string delimiter opening state lexbuf }
+| nl     { fail state opening Error.Newline_in_string   }
+| eof    { fail state opening Error.Unterminated_string }
+| ['\000' - '\031'] as c
+         { stop state lexbuf (Error.Invalid_character_in_string c) }
+| _      { if state.mode = Copy then copy state lexbuf;
+           in_string delimiter opening state lexbuf }
 
-and in_string opening state = parse
-  "\\\"" { copy state lexbuf; in_string opening state lexbuf }
-| '"'    { copy state lexbuf; state                          }
-| eof    { rollback lexbuf; state                            }
-| _      { copy state lexbuf; in_string opening state lexbuf }
+(* Entry point *)
 
 and preproc state = parse
   eof { state }
@@ -560,57 +643,58 @@ and preproc state = parse
 {
 (* START OF TRAILER *)
 
-(* The function [preproc] is a wrapper of [scan], which also checks
-   that the trace is empty at the end.  Note that we discard the state
-   at the end. *)
+  (* The function [preproc] is a wrapper of [scan], which also checks that
+     the trace is empty at the end.  Note that we discard the
+     state at the end. *)
 
-type file_path   = string
-type module_name = string
-type module_deps = (file_path * module_name) list
-type success     = Buffer.t * module_deps
-type message     = string Region.reg
-type error       = Buffer.t option * message
-type result      = (success, error) Stdlib.result
+  type file_path   = string
+  type module_name = string
+  type module_deps = (file_path * module_name) list
+  type success     = Buffer.t * module_deps
 
-type 'src preprocessor = State.config -> 'src -> result
+  type message     = string Region.reg
+  type error       = Buffer.t option * message
 
-(* Preprocessing from various sources *)
+  type result      = (success, error) Stdlib.result
+  type 'src preprocessor = 'src -> result
 
-let from_lexbuf config buffer =
-  let path = Lexing.(buffer.lex_curr_p.pos_fname) in
-  let state = {
-    config;
-    env    = E_AST.Env.empty;
-    mode   = Copy;
-    trace  = [];
-    out    = Buffer.create 80;
-    chans  = [];
-    incl   = [Filename.dirname path];
-    import = []
-  } in
-  match preproc state buffer with
-    state ->
-      List.iter close_in state.chans;
-      Stdlib.Ok (state.out, state.import)
-  | exception Error (buffer, msg) ->
-      Stdlib.Error (Some buffer, msg)
+  (* Preprocessing from various sources *)
 
-let from_channel config chan =
-  Lexing.from_channel chan |> from_lexbuf config
+  let from_lexbuf buffer =
+    let path = Lexing.(buffer.lex_curr_p.pos_fname) in
+    let state = {
+      env    = Env.empty;
+      mode   = Copy;
+      trace  = [];
+      out    = Buffer.create 80;
+      chans  = [];
+      incl   = [Filename.dirname path];
+      import = []
+      } in
+    match preproc state buffer with
+      state ->
+        List.iter close_in state.chans;
+        Stdlib.Ok (state.out, state.import)
+    | exception Error (buffer, msg) ->
+        Stdlib.Error (Some buffer, msg)
 
-let from_string config str =
-  Lexing.from_string str |> from_lexbuf config
+  let from_channel channel =
+    Lexing.from_channel channel |> from_lexbuf
 
-let from_file config name =
-  try
-    let lexbuf = open_in name |> Lexing.from_channel in
-    let open Lexing in
-    begin
-      lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_fname=name};
-      from_lexbuf config lexbuf
-    end
-  with Sys_error msg ->
-    Stdlib.Error (None, Region.wrap_ghost msg)
+  let from_string string =
+    Lexing.from_string string |> from_lexbuf
 
+  let from_file name =
+    try
+      let lexbuf = open_in name |> Lexing.from_channel in
+      let open Lexing in
+        begin
+          lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_fname=name};
+          from_lexbuf lexbuf
+        end
+    with Sys_error msg ->
+      Stdlib.Error (None, Region.wrap_ghost msg)
+
+  end (* of functor [Make] *)
 (* END OF TRAILER *)
 }
