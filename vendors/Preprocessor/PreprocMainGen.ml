@@ -30,7 +30,7 @@ module Make (Parameters : CLI.PARAMETERS) =
 
     let check_cli () =
       let open Parameters in
-      match status with
+      match Status.status with
         `SyntaxError  msg
       | `WrongFileExt msg
       | `FileNotFound msg -> cli_error msg

@@ -3,8 +3,8 @@
 module SSet : Set.S with type elt = string and type t = Set.Make(String).t
 
 (* The effect of the call [filter ~opt_with_arg ~opt_wo_arg] is a side
-   effect on the contents of the array [Sys.argv] so only options
-   opt_with arguments in [opt_with_arg] and opt_without [opt_wo_arg]
+   effect on the contents of the array [Sys.argv] so only options with
+   arguments in [opt_with_arg] and options without in [opt_wo_arg]
    remain. Consequently, the client is expected to make a copy of
    [Sys.argv] before calling [filter] and restore the original version
    if they want parse the command line several times.

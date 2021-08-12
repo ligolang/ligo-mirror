@@ -12,26 +12,17 @@ module type CONFIG = module type of Config
 
 module type OPTIONS = module type of Options
 
+(* Status after parsing the CLI *)
+
+module type STATUS = module type of Status
+
 (* Configuration, options and the parsing status of the latter *)
 
 module type PARAMETERS =
   sig
     module Config  : CONFIG
     module Options : OPTIONS
-
-    (* Status after parsing CLI options *)
-
-    type status = [
-      `Done
-    | `Version      of string
-    | `Help         of Buffer.t
-    | `CLI          of Buffer.t
-    | `SyntaxError  of string
-    | `FileNotFound of string
-    | `WrongFileExt of string
-    ]
-
-    val status : status
+    module Status  : STATUS
   end
 
 (* Parsing the command line options *)
@@ -304,4 +295,14 @@ module Make (Config : CONFIG) : PARAMETERS =
         and offsets = offsets
         and input   = input
       end
+
+    (* Packaging the parsing status *)
+
+    module Status =
+      struct
+        type t = status
+        type nonrec status = status
+        let status = status
+      end
+
    end

@@ -9,9 +9,9 @@
     ;; Third party
     getopt
     str)
-  (modules Boolean Config Options Error State Version
+  (modules Boolean Status Config Options Error State Version
            CLI Env API PreprocMainGen)
-  (modules_without_implementation Config Options)
+  (modules_without_implementation Config Options Status)
   (private_modules Version Error Boolean))
 
 ;; Building the lexers of the preprocessor
