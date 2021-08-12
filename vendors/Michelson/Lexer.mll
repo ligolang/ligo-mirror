@@ -8,7 +8,8 @@
 (* VENDOR DEPENDENCIES *)
 
 module Region = Simple_utils.Region
-module Client = LexerLib.Client
+module Thread = LexerLib.Thread
+module State  = LexerLib.State
 
 (* TOKENS *)
 
@@ -67,9 +68,23 @@ module type TOKEN =
     val is_string_delimiter : string -> bool
   end
 
-(* The functorised interface *)
+(* The signature of the lexer *)
 
-module type S = LexerLib.API.LEXER
+module type S =
+  sig
+    type token
+
+    type message = string Region.reg
+
+    type lexer =
+      token State.t ->
+      Lexing.lexbuf ->
+      (token * token State.t, message) Stdlib.result
+
+    val mk_string           : Thread.t -> token
+    val callback            : lexer
+    val is_string_delimiter : string -> bool
+  end
 
 module Make (Token : TOKEN) =
   struct
@@ -286,13 +301,16 @@ rule scan state = parse
 
   (* Function [scan] is the main exported function *)
 
-  let client : token Client.t =
-    let open Simple_utils.Utils in
-    object
-      method mk_string = mk_string
-      method callback  = lift <@ scan
-      method is_string_delimiter = is_string_delimiter
-    end
+  type lexer =
+    token State.t ->
+    Lexing.lexbuf ->
+    (token * token State.t, message) Stdlib.result
+
+  open Simple_utils.Utils
+
+  let mk_string = mk_string
+  let callback : lexer = lift <@ scan
+  let is_string_delimiter = is_string_delimiter
 
   end (* of functor [Make] in HEADER *)
 (* END TRAILER *)

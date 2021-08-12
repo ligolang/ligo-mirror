@@ -41,6 +41,8 @@
 (* VENDOR DEPENDENCIES *)
 
 module Region = Simple_utils.Region
+module Thread = LexerLib.Thread
+module State  = LexerLib.State
 
 (* TOKENS *)
 
@@ -107,8 +109,22 @@ module type TOKEN =
 
 (* The signature of the lexer *)
 
-module type S = LexerLib.API.LEXER
+module type S =
+  sig
+    type token
+
+    type message = string Region.reg
+
+    type lexer =
+      token State.t ->
+      Lexing.lexbuf ->
+      (token * token State.t, message) Stdlib.result
+
+    val mk_string           : Thread.t -> token
+    val callback            : lexer
+    val is_string_delimiter : string -> bool
+  end
 
 (* The functorised interface *)
 
-module Make (Token : TOKEN) : S
+module Make (Token : TOKEN) : S with type token = Token.t
