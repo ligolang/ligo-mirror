@@ -4,7 +4,7 @@ type error =
   Invalid_utf8_sequence
 | Unterminated_comment of string
 | Unterminated_string
-| Broken_string
+| Newline_in_string
 | Invalid_character_in_string of char
 | Undefined_escape_sequence
 
@@ -24,7 +24,7 @@ let to_string = function
 | Unterminated_comment ending ->
     sprintf "Unterminated comment.\n\
              Hint: Close with %S." ending
-| Broken_string ->
+| Newline_in_string ->
     "The string starting here is interrupted by a line break.\n\
      Hint: Remove the break, close the string before or insert a \
      backslash."

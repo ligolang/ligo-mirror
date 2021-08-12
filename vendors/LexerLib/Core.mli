@@ -4,33 +4,76 @@
 
 module Region = Simple_utils.Region
 
-(* Utility types *)
+(* The signature of client lexers *)
 
-type file_path = string
-type message   = string Region.reg
+module type CLIENT =
+  sig
+    type token
 
-(* LEXER INSTANCE (see README.md) *)
+    type message = string Simple_utils.Region.reg
 
-type input =
-  File    of file_path
-| String  of string
-| Channel of in_channel
-| Buffer  of Lexing.lexbuf
+    type lexer =
+      token State.t ->
+      Lexing.lexbuf ->
+      (token * token State.t, message) Stdlib.result
 
-type 'token instance = {
-  input      : input;
-  read_token : Lexing.lexbuf -> ('token, message) result;
-  read_unit  : Lexing.lexbuf -> ('token Unit.t, message) result;
-  lexbuf     : Lexing.lexbuf;
-  close      : unit -> unit;
-  window     : unit -> 'token State.window option
-}
+    val mk_string           : Thread.t -> token
+    val callback            : lexer
+    val is_string_delimiter : string -> bool
+  end
 
-val open_stream :
-  'token Client.t ->
-  'token State.config ->
-  input ->
-  ('token instance, message) Stdlib.result
+(* The functor return signature *)
+
+module type S =
+  sig
+    type token
+
+    (* Utility types *)
+
+    type file_path = string
+    type message   = string Region.reg
+
+    (* LEXER INSTANCE (see README.md) *)
+
+    type input =
+      File    of file_path
+    | String  of string
+    | Channel of in_channel
+    | Buffer  of Lexing.lexbuf
+
+    type instance = {
+      input      : input;
+      read_token : Lexing.lexbuf -> (token, message) result;
+      read_unit  : Lexing.lexbuf -> (token Unit.t, message) result;
+      lexbuf     : Lexing.lexbuf;
+      close      : unit -> unit;
+      window     : unit -> token State.window option
+    }
+
+    val open_stream : input -> (instance, message) Stdlib.result
+  end
+
+(* THE FUNCTOR *)
+
+(* General configuration *)
+
+module type CONFIG = module type of Preprocessor.Config
+
+(* CLI options *)
+
+module type OPTIONS = module type of Options
+
+(* The signature of tokens *)
+
+module type TOKEN = module type of Token
+
+(* The functor signature *)
+
+module Make (Config  : CONFIG)
+            (Options : OPTIONS)
+            (Token   : TOKEN)
+            (Client  : CLIENT with type token = Token.t)
+       : S with type token = Token.t
 
 (* LEXER ENGINE *)
 
@@ -41,7 +84,7 @@ val open_stream :
    (of which the user is not normally aware). *)
 
 val reset :
-  ?file:file_path ->
+  ?file:string ->
   ?line:int ->
   ?offset:int ->
   Lexing.lexbuf ->

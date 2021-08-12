@@ -5,26 +5,7 @@
 module Region = Simple_utils.Region
 module Pos    = Simple_utils.Pos
 
-type line_comment  = string (* Opening of a line comment *)
-type block_comment = <opening : string; closing : string>
-
-type command = [`Copy | `Units | `Tokens] option
-
 type lexeme = string
-type file_path = string
-
-type 'token config = <
-  block     : block_comment option;
-  line      : line_comment option;
-  input     : file_path option;
-  offsets   : bool;
-  mode      : [`Byte | `Point];
-  command   : command;
-  is_eof    : 'token -> bool;
-  to_region : 'token -> Region.t;
-  to_lexeme : 'token -> string;
-  to_string : offsets:bool -> [`Byte | `Point] -> 'token -> string
->
 
 type 'token window = <
   last_token    : 'token option;
@@ -32,7 +13,6 @@ type 'token window = <
 >
 
 type 'token state = <
-  config        : 'token config;
   window        : 'token window option;
   pos           : Pos.t;
   set_pos       : Pos.t -> 'token state;
@@ -61,9 +41,9 @@ and 'token sync = {
 
 type 'token t = 'token state
 
-let make ~config ~window ~pos ~decoder ~supply : 'token state =
+let make ~window ~pos ~decoder ~supply : 'token state =
   object (self)
-    method config  = config
+    (*    method config  = config*)
     val window     = window
     method window  = window
     val pos        = pos

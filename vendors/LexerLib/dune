@@ -5,9 +5,9 @@
 (library
   (name LexerLib)
   (public_name LexerLib)
-  (modules CLI API Core Unit Client Error
+  (modules Token Status Options CLI API Core Unit Error
            Thread State Markup Directive Version)
-  (modules_without_implementation Client Unit)
+  (modules_without_implementation Unit Token Options Status)
   (private_modules Core Error Version)
   (libraries
     ;; Vendor

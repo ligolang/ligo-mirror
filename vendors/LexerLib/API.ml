@@ -3,15 +3,22 @@
 module Region = Simple_utils.Region
 module Utils  = Simple_utils.Utils
 
-(* FUNCTOR *)
+(* The signature of client lexers *)
 
-(* Generic signature of input lexers *)
-
-module type LEXER =
+module type CLIENT =
   sig
     type token
 
-    val client : token Client.t
+    type message = string Simple_utils.Region.reg
+
+    type lexer =
+      token State.t ->
+      Lexing.lexbuf ->
+      (token * token State.t, message) Stdlib.result
+
+    val mk_string           : Thread.t -> token
+    val callback            : lexer
+    val is_string_delimiter : string -> bool
   end
 
 (* The functor itself *)
@@ -23,10 +30,7 @@ module type S =
     type file_path = string
     type message   = string Region.reg
 
-    type ('src,'dst) lexer =
-      token State.config ->
-      'src ->
-      ('dst, message) Stdlib.result
+    type ('src,'dst) lexer = 'src -> ('dst, message) Stdlib.result
 
     module Tokens :
       sig
@@ -49,23 +53,40 @@ module type S =
       end
   end
 
-module Make (Lexer: LEXER) =
+(* THE FUNCTOR *)
+
+(* General configuration *)
+
+module type CONFIG = module type of Preprocessor.Config
+
+(* CLI options *)
+
+module type OPTIONS = module type of Options
+
+(* The signature of tokens *)
+
+module type TOKEN = module type of Token
+
+(* The functor definition *)
+
+module Make (Config  : CONFIG)
+            (Options : OPTIONS)
+            (Token   : TOKEN)
+            (Client  : CLIENT with type token = Token.t) =
   struct
-    type token = Lexer.token
+    module Core = Core.Make (Config) (Options) (Token) (Client)
+
+    type token = Token.t
 
     type file_path = string
     type message   = string Region.reg
 
-    type ('src,'dst) lexer =
-      token State.config ->
-      'src ->
-      ('dst, message) Stdlib.result
+    type ('src,'dst) lexer = 'src -> ('dst, message) Stdlib.result
 
     (* Generic lexer for all kinds of inputs *)
 
-    let generic lexbuf_of config source =
-      let buffer = Core.Buffer (lexbuf_of source)
-      in Core.open_stream Lexer.client config buffer
+    let generic lexbuf_of source =
+      Core.(open_stream @@ Buffer (lexbuf_of source))
 
     (* Lexing the input to recognise one token *)
 
@@ -73,57 +94,46 @@ module Make (Lexer: LEXER) =
     let from_channel = generic Lexing.from_channel
     let from_string  = generic Lexing.from_string
 
-    let from_buffer config buffer =
-      from_string config @@ Buffer.contents buffer
-    let from_file config path =
-      Core.open_stream Lexer.client config (Core.File path)
+    let from_buffer buffer = from_string @@ Buffer.contents buffer
+    let from_file path = Core.(open_stream (File path))
 
     (* Lexing the entire input *)
 
     module Tokens =
       struct
-        let scan_all_tokens (config: 'token State.config) = function
+        let scan_all_tokens = function
           Stdlib.Error _ as err -> flush_all (); err
         | Ok Core.{read_token; lexbuf; close; _} ->
             let close_all () = flush_all (); close () in
             let rec read_tokens tokens =
               match read_token lexbuf with
                 Stdlib.Ok token ->
-                  if   config#is_eof token
+                  if   Token.is_eof token
                   then Stdlib.Ok (List.rev tokens)
                   else read_tokens (token::tokens)
               | Error _ as err -> err in
             let result = read_tokens []
             in close_all (); result
 
-        let from_lexbuf config lexbuf =
-          from_lexbuf config lexbuf |> scan_all_tokens config
-
-        let from_channel config chan =
-          from_channel config chan |> scan_all_tokens config
-
-        let from_string config str =
-          from_string config str |> scan_all_tokens config
-
-        let from_buffer config buf =
-          from_buffer config buf |> scan_all_tokens config
-
-        let from_file config src =
-          from_file config src |> scan_all_tokens config
+        let from_lexbuf   lexbuf = from_lexbuf   lexbuf |> scan_all_tokens
+        let from_channel channel = from_channel channel |> scan_all_tokens
+        let from_string   string = from_string   string |> scan_all_tokens
+        let from_buffer   buffer = from_buffer   buffer |> scan_all_tokens
+        let from_file        src = from_file        src |> scan_all_tokens
       end
 
     module LexUnits =
       struct
         type nonrec 'src lexer = ('src, token Unit.t list) lexer
 
-        let scan_all_units (config: 'token State.config) = function
+        let scan_all_units = function
           Stdlib.Error _ as err -> flush_all (); err
         | Ok Core.{read_unit; lexbuf; close; _} ->
             let close_all () = flush_all (); close () in
             let rec read_units units =
               match read_unit lexbuf with
                 Stdlib.Ok (`Token token as unit) ->
-                  if   config#is_eof token
+                  if   Token.is_eof token
                   then Stdlib.Ok (List.rev units)
                   else read_units (unit::units)
               | Ok unit -> read_units (unit::units)
@@ -131,20 +141,11 @@ module Make (Lexer: LEXER) =
             let result = read_units []
             in close_all (); result
 
-        let from_lexbuf config lexbuf =
-          from_lexbuf config lexbuf |> scan_all_units config
-
-        let from_channel config chan =
-          from_channel config chan |> scan_all_units config
-
-        let from_string config str =
-          from_string config str |> scan_all_units config
-
-        let from_buffer config buf =
-          from_buffer config buf |> scan_all_units config
-
-        let from_file config src =
-          from_file config src |> scan_all_units config
+        let from_lexbuf   lexbuf = from_lexbuf   lexbuf |> scan_all_units
+        let from_channel channel = from_channel channel |> scan_all_units
+        let from_string   string = from_string   string |> scan_all_units
+        let from_buffer   buffer = from_buffer   buffer |> scan_all_units
+        let from_file        src = from_file        src |> scan_all_units
       end
   end
 

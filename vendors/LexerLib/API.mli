@@ -1,21 +1,28 @@
-(* Using Core to make UTF-8 aware lexers *)
+(* Specialising the Core lexer for the library clients *)
 
 (* Vendor dependencies *)
 
 module Region = Simple_utils.Region
 
-(* FUNCTOR *)
+(* The signature of client lexers *)
 
-(* Generic signature of client lexer *)
-
-module type LEXER =
+module type CLIENT =
   sig
     type token
 
-    val client : token Client.t
+    type message = string Simple_utils.Region.reg
+
+    type lexer =
+      token State.t ->
+      Lexing.lexbuf ->
+      (token * token State.t, message) Stdlib.result
+
+    val mk_string           : Thread.t -> token
+    val callback            : lexer
+    val is_string_delimiter : string -> bool
   end
 
-(* The functor itself *)
+(* The functor's return signature *)
 
 module type S =
   sig
@@ -24,8 +31,7 @@ module type S =
     type file_path = string
     type message   = string Region.reg
 
-    type ('src,'dst) lexer =
-      token State.config -> 'src -> ('dst, message) Stdlib.result
+    type ('src,'dst) lexer = 'src -> ('dst, message) Stdlib.result
 
     module Tokens :
       sig
@@ -48,7 +54,27 @@ module type S =
       end
   end
 
-module Make (Lexer : LEXER) : S with type token = Lexer.token
+(* THE FUNCTOR *)
+
+(* General configuration *)
+
+module type CONFIG = module type of Preprocessor.Config
+
+(* CLI options *)
+
+module type OPTIONS = module type of Options
+
+(* The signature of tokens *)
+
+module type TOKEN = module type of Token
+
+(* The functor signature *)
+
+module Make (Config  : CONFIG)
+            (Options : OPTIONS)
+            (Token   : TOKEN)
+            (Client  : CLIENT with type token = Token.t)
+       : S with type token = Token.t
 
 (* LEXER ENGINE *)
 

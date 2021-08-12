@@ -4,32 +4,36 @@
 
 module Argv = Simple_utils.Argv
 
-(* The signature [S] (command-line interface) gathers the options
-   given to the tool, following the GNu convention, and exports then
-   as module fields. *)
+(* General configuration *)
 
-module type S =
+module type CONFIG = module type of Preprocessor.Config
+
+(* CLI options *)
+
+module type OPTIONS =
   sig
-    module Preprocessor_CLI : Preprocessor.CLI.S
+    include module type of Preprocessor.Options
+    include module type of Options
+  end
 
-    val preprocess : bool
-    val mode       : [`Byte | `Point]
-    val command    : [`Copy | `Units | `Tokens] option
+(* Status after parsing CLI options of Preprocessor AND LexerLib *)
 
-    type status = [
-      Preprocessor_CLI.status
-    | `Conflict of string * string
-    ]
+module type STATUS = module type of Status
 
-    val status : status
+(* Configuration, options and the parsing status of the latter *)
+
+module type PARAMETERS =
+  sig
+    module Config  : CONFIG
+    module Options : OPTIONS
+    module Status  : STATUS
   end
 
 (* Parsing the command line options *)
 
-module Make (Preprocessor_CLI: Preprocessor.CLI.S) : S =
+module Make (Preprocessor_Params: Preprocessor.CLI.PARAMETERS)
+       : PARAMETERS =
   struct
-    module Preprocessor_CLI = Preprocessor_CLI
-
     (* Auxiliary functions and modules *)
 
     let sprintf = Printf.sprintf
@@ -191,11 +195,11 @@ module Make (Preprocessor_CLI: Preprocessor.CLI.S) : S =
     let () = Argv.filter ~opt_wo_arg ~opt_with_arg
 
     type status = [
-      Preprocessor_CLI.status
+      Preprocessor_Params.Status.t
     | `Conflict of string * string
     ]
 
-    let status = (Preprocessor_CLI.status :> status)
+    let status = (Preprocessor_Params.Status.status :> status)
 
     let status =
       try
@@ -251,4 +255,23 @@ module Make (Preprocessor_CLI: Preprocessor.CLI.S) : S =
       | `CLI buffer   -> `CLI (make_cli buffer)
       | `Version _    -> `Version Version.version
       | _             -> status
+
+    (* Packaging *)
+
+    module Config = Preprocessor_Params.Config
+
+    module Options =
+      struct
+        include Preprocessor_Params.Options
+        let preprocess = preprocess
+        let mode       = mode
+        let command    = command
+      end
+
+    module Status =
+      struct
+        type t = status
+        type nonrec status = status
+        let status = status
+      end
   end
