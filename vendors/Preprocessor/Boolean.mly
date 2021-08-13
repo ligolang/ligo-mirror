@@ -26,14 +26,15 @@ let (<@) f g x = f (g x)
 (* Entries *)
 
 %start expr
-%type <Env.t -> bool> expr
+%type <Env.t -> State.mode> expr
 
 %%
 
 (* Grammar *)
 
 expr:
-  or_expr_level EOL { $1 }
+  or_expr_level EOL {
+    fun env -> State.(if $1 env then Copy else Skip) }
 
 or_expr_level:
   or_expr_level "||" and_expr_level    { bin (||) $1 $3 }

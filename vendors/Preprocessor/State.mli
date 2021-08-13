@@ -36,61 +36,93 @@ type trace = cond list
        current input file, and it is changed to that of any included
        file;
 
-     * the field [import] is a list of (filename, module) imports
+     * the field [imports] is a list of (filename, module) imports
        (#import) *)
 
 type file_path = string
 type module_name = string
 
-type state = {
-  env    : Env.t;
-  mode   : mode;
-  trace  : trace;
-  out    : Buffer.t;
-  chans  : in_channel list;
-  incl   : file_path list;
-  import : (file_path * module_name) list
-}
+type state = <
+  env     : Env.t;
+  mode    : mode;
+  trace   : trace;
+  out     : Buffer.t;
+  chans   : in_channel list;
+  incl    : file_path list;
+  imports : (file_path * module_name) list;
+
+
+  (* DIRECTORIES *)
+
+  push_dir : string -> state;
+  path     : string;
+
+  (* CONDITIONAL DIRECTIVES *)
+
+  (* Predicate *)
+
+  is_copy : bool;
+
+  (* The method [reduce_cond] is called when a #endif directive is
+     found, and the trace (see type [trace] above) needs updating. *)
+
+  reduce_cond : (state, Error.t) Stdlib.result;
+
+  (* The method [extend] is called when encountering conditional
+     directives #if, #else and #elif. As its name suggests, it extends
+     the current trace with the current conditional directive, whilst
+     performing some validity checks. *)
+
+  extend : cond -> mode -> (state, Error.t) Stdlib.result;
+
+  (* Setting the trace *)
+
+  set_trace : trace -> state;
+
+  (* MODE *)
+
+  (* Setting the mode *)
+
+  set_mode : mode -> state;
+
+  (* The function [last_mode] seeks the last mode as recorded in the
+     trace (see type [trace] above). *)
+
+  last_mode : mode;
+
+  (* PRINTING *)
+
+  (* Copying the current lexeme to the buffer if the mode is [Copy],
+     otherwise a no-operation. *)
+
+  copy : Lexing.lexbuf -> unit;
+
+  (* End of lines are always copied. ALWAYS AND ONLY USE AFTER
+     SCANNING newline characters (nl). *)
+
+  proc_nl : Lexing.lexbuf -> unit;
+
+  (* Copying a string *)
+
+  print : string -> unit;
+
+  (* SYMBOL ENVIRONMENT *)
+
+  set_env       : Env.t -> state;
+  add_symbol    : string -> state;
+  remove_symbol : string -> state;
+
+  (* INPUT CHANNELS *)
+
+  set_chans : in_channel list -> state;
+  push_chan : in_channel -> state;
+
+  (* MODULE IMPORTS *)
+
+  set_imports : (file_path * module_name) list -> state;
+  push_import : file_path -> string -> state
+>
 
 type t = state
 
-(* MODE *)
-
-val last_mode : trace -> mode
-
-(* DIRECTORIES *)
-
-val push_dir : string -> state -> state
-val mk_path  : state -> string
-
-(* STATE REDUCTIONS/EXTENSIONS *)
-
-(* The function [reduce_cond] is called when a #endif directive is
-   found, and the trace (see type [trace] above) needs updating.
-
-   The function [extend] is called when encountering conditional
-   directives #if, #else and #elif. As its name suggests, it extends
-   the current trace with the current conditional directive, whilst
-   performing some validity checks. *)
-
-val reduce_cond   : t -> (t, Error.t) Stdlib.result
-val extend        : cond -> mode -> t -> (t, Error.t) Stdlib.result
-
-(* PRINTING *)
-
-val copy    : t -> Lexing.lexbuf -> unit
-val proc_nl : t -> Lexing.lexbuf -> unit
-val print   : t -> string        -> unit
-
-(* SYMBOL ENVIRONMENT *)
-
-val env_add : string -> state -> state
-val env_rem : string -> state -> state
-
-(* INPUT CHANNELS *)
-
-val push_chan : in_channel -> state -> state
-
-(* IMPORTS *)
-
-val push_import : file_path -> string -> state -> state
+val empty : file_path -> state

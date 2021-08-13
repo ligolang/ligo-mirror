@@ -20,86 +20,145 @@ type trace = cond list
 type file_path = string
 type module_name = string
 
-type state = {
-  env    : Env.t;
-  mode   : mode;
-  trace  : trace;
-  out    : Buffer.t;
-  chans  : in_channel list;
-  incl   : file_path list;
-  import : (file_path * module_name) list
-}
+type state = <
+  env     : Env.t;
+  mode    : mode;
+  trace   : trace;
+  out     : Buffer.t;
+  chans   : in_channel list;
+  incl    : file_path list;
+  imports : (file_path * module_name) list;
+
+  (* Directories *)
+
+  push_dir : string -> state;
+  path     : string;
+
+  (* CONDITIONAL DIRECTIVES *)
+
+  is_copy     : bool;
+  reduce_cond : (state, Error.t) Stdlib.result;
+  extend      : cond -> mode -> (state, Error.t) Stdlib.result;
+  set_trace   : trace -> state;
+
+  (* Mode *)
+
+  set_mode  : mode -> state;
+  last_mode : mode;
+
+  (* Printing *)
+
+  copy    : Lexing.lexbuf -> unit;
+  proc_nl : Lexing.lexbuf -> unit;
+  print   : string        -> unit;
+
+  (* Symbol environment *)
+
+  set_env       : Env.t -> state;
+  add_symbol    : string -> state;
+  remove_symbol : string -> state;
+
+  (* Input channels *)
+
+  set_chans : in_channel list -> state;
+  push_chan : in_channel -> state;
+
+  (* Imports *)
+
+  set_imports : (file_path * module_name) list -> state;
+  push_import : file_path -> string -> state
+>
 
 type t = state
 
-(* Directories *)
+let empty file_path =
+  object (self)
+    val env = Env.empty
+    method env = env
 
-let push_dir dir state =
-  if dir = "." then state else {state with incl = dir :: state.incl}
+    val mode = Copy
+    method mode = mode
 
-let mk_path state =
-  String.concat Filename.dir_sep (List.rev state.incl)
+    val trace = []
+    method trace = trace
 
-(* The function [reduce_cond] is called when a #endif directive is
-   found, and the trace (see type [trace] above) needs updating. *)
+    val out = Buffer.create 80
+    method out = out
 
-let reduce_cond state =
-  let rec reduce = function
-                [] -> Stdlib.Error Dangling_endif
-  | If mode::trace -> Stdlib.Ok {state with mode; trace}
-  |       _::trace -> reduce trace
-  in reduce state.trace
+    val chans = []
+    method chans = chans
 
-(* The function [extend] is called when encountering conditional
-   directives #if, #else and #elif. As its name suggests, it extends
-   the current trace with the current conditional directive, whilst
-   performing some validity checks. *)
+    val incl = [Filename.dirname file_path]
+    method incl = incl
 
-let extend cond mode state =
-  match cond, state.trace with
-    If _,   Elif _::_ -> Stdlib.Error If_follows_elif
-  | Else,     Else::_ -> Stdlib.Error Else_follows_else
-  | Else,          [] -> Stdlib.Error Dangling_else
-  | Elif _,   Else::_ -> Stdlib.Error Elif_follows_else
-  | Elif _,        [] -> Stdlib.Error Dangling_elif
-  | hd,            tl -> Stdlib.Ok {state with trace = hd::tl; mode}
+    val imports = []
+    method imports = imports
 
-(* The function [last_mode] seeks the last mode as recorded in the
-   trace (see type [trace] above). *)
+    (* Directories *)
 
-let rec last_mode = function
-                        [] -> assert false  (* TODO: Remove assertion *)
-| (If mode | Elif mode)::_ -> mode
-|                 _::trace -> last_mode trace
+    method push_dir dir =
+      if dir = "." then self else {< incl = dir::incl >}
 
-(* PRINTING *)
+    method path =
+      String.concat Filename.dir_sep (List.rev incl)
 
-(* Copying the current lexeme to the buffer *)
+    (* CONDITIONAL DIRECTIVES *)
 
-let copy state buffer =
-  Buffer.add_string state.out (Lexing.lexeme buffer)
+    method is_copy = (mode = Copy)
 
-(* End of lines are always copied.
-   ALWAYS AND ONLY USE AFTER SCANNING newline characters (nl). *)
+    method reduce_cond =
+      let rec reduce = function
+                    [] -> Stdlib.Error Dangling_endif
+      | If mode::trace -> Stdlib.Ok {< mode; trace >}
+      |       _::trace -> reduce trace
+      in reduce trace
 
-let proc_nl state buffer =
-  Lexing.new_line buffer; copy state buffer
+    method extend cond mode =
+      match cond, trace with
+        If _,   Elif _::_ -> Stdlib.Error If_follows_elif
+      | Else,     Else::_ -> Stdlib.Error Else_follows_else
+      | Else,          [] -> Stdlib.Error Dangling_else
+      | Elif _,   Else::_ -> Stdlib.Error Elif_follows_else
+      | Elif _,        [] -> Stdlib.Error Dangling_elif
+      | hd,            tl -> Stdlib.Ok {< trace = hd::tl; mode >}
 
-(* Copying a string *)
+    method set_trace trace = {< trace >}
 
-let print state string = Buffer.add_string state.out string
+    (* MODE *)
 
-(* SYMBOL ENVIRONMENT *)
+    method set_mode mode = {< mode >}
 
-let env_add id state = {state with env = Env.add id state.env}
+    method last_mode =
+      let rec aux = function
+                              [] -> Copy (* Should not happen *)
+      | (If mode | Elif mode)::_ -> mode
+      |                 _::trace -> aux trace
+      in aux trace
 
-let env_rem id state = {state with env = Env.remove id state.env}
+    (* PRINTING *)
 
-(* INPUT CHANNELS *)
+    method copy buffer =
+      if self#is_copy then Buffer.add_string out (Lexing.lexeme buffer)
 
-let push_chan in_chan state = {state with chans = in_chan :: state.chans}
+    method proc_nl buffer = Lexing.new_line buffer; self#copy buffer
 
-(* IMPORTS *)
+    method print string = Buffer.add_string out string
 
-let push_import path imported_module state =
-  {state with import = (path, imported_module) :: state.import}
+    (* SYMBOL ENVIRONMENT *)
+
+    method set_env env      = {< env >}
+    method add_symbol id    = {< env = Env.add id env >}
+    method remove_symbol id = {< env = Env.remove id env >}
+
+    (* INPUT CHANNELS *)
+
+    method set_chans chans   = {< chans >}
+    method push_chan in_chan = {< chans = in_chan :: chans >}
+
+    (* MODULE IMPORTS *)
+
+    method set_imports imports = {< imports >}
+
+    method push_import path imported_module =
+      {< imports = (path, imported_module) :: imports >}
+  end
