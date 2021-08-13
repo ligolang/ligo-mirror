@@ -416,13 +416,15 @@ rule scan state = parse
         let mode =
           try Boolean.expr (if_expr state) lexbuf state#env with
             Boolean.Error -> stop state lexbuf Parse_error in
+        let open State in
         let state =
           match state#mode with
-            State.Copy -> extend state (State.Elif Skip) State.Skip region
-          | State.Skip ->
+            Copy ->
+              extend state (Elif Skip) Skip region
+          | Skip ->
               let old_mode = state#last_mode in
-              let new_mode = State.(if old_mode = Copy then mode else Skip)
-              in extend state (State.Elif old_mode) new_mode region
+              let new_mode = if old_mode = Copy then mode else Skip
+              in extend state (Elif old_mode) new_mode region
         in scan state lexbuf
 
     | "endif" ->
