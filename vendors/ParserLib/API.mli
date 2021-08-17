@@ -91,8 +91,7 @@ module Make (Lexer  : LEXER)
 
     type message = string Region.reg
 
-    type 'src parser =
-      'src -> (Parser.tree, message) Stdlib.result
+    type 'src parser = 'src -> (Parser.tree, message) Stdlib.result
 
     val get_window : unit -> Lexer.window
 

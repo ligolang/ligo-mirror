@@ -4,81 +4,17 @@
 
 module Argv = Simple_utils.Argv
 
-(* Comments *)
-
-module type COMMENTS =
+module type PARAMETERS =
   sig
-    type line_comment  = string (* Opening of a line comment *)
-    type block_comment = <opening : string; closing : string>
-
-    val block : block_comment option
-    val line  : line_comment option
-  end
-
-(* Preprocessor CLI *)
-
-module type PREPROCESSING_CLI =
-  sig
-    include COMMENTS
-
-    val input     : string option (* input file     *)
-    val extension : string option (* file extension *)
-    val dirs      : string list   (* -I             *)
-    val show_pp   : bool          (* --show-pp      *)
-    val offsets   : bool          (* neg --columns  *)
-
-    type status = [
-      `Done
-    | `Version      of string
-    | `Help         of Buffer.t
-    | `CLI          of Buffer.t
-    | `SyntaxError  of string
-    | `FileNotFound of string
-    ]
-
-    val status : status
-  end
-
-(* Lexer CLI *)
-
-module type LEXER_CLI =
-  sig
-    module Preprocessor_CLI : PREPROCESSING_CLI
-
-    val preprocess : bool
-    val mode       : [`Byte | `Point]
-    val command    : [`Copy | `Units | `Tokens] option
-
-    type status = [
-      Preprocessor_CLI.status
-    | `Conflict of string * string
-    ]
-
-    val status : status
-  end
-
-(* Parser CLI *)
-
-module type S =
-  sig
-    module Lexer_CLI : LEXER_CLI
-
-    val mono       : bool
-    val pretty     : bool
-    val cst        : bool
-    val cst_tokens : bool
-
-    type status = Lexer_CLI.status
-
-    val status : status
+    module Config  : Preprocessor.Config.S
+    module Options : Options.S
+    module Status  : module type of Status
   end
 
 (* Parsing the command line options *)
 
-module Make (Lexer_CLI: LEXER_CLI) : S =
+module Make (PreParams: LexerLib.CLI.PARAMETERS) : PARAMETERS =
   struct
-    module Lexer_CLI = Lexer_CLI
-
     (* Auxiliary functions *)
 
     let sprintf = Printf.sprintf
@@ -177,7 +113,7 @@ module Make (Lexer_CLI: LEXER_CLI) : S =
          - [(None, None)]: not allowed *)
 
     let specs =
-      let open! Getopt in [
+      Getopt.[
         noshort, "mono",       set mono true, None;
         noshort, "pretty",     set pretty true, None;
         noshort, "cst",        set cst true, None;
@@ -186,7 +122,7 @@ module Make (Lexer_CLI: LEXER_CLI) : S =
         noshort, "cli",        set cli true, None;
         'h',     "help",       set help true, None;
         'v',     "version",    set version true, None
-        ]
+      ]
 
      (* Handler of anonymous arguments: those have been handled by a
         previous IO *)
@@ -209,10 +145,7 @@ module Make (Lexer_CLI: LEXER_CLI) : S =
        We make a copy of [Sys.argv], we filter it in a list, the
        resulting list is copied to [Sys.argv] (with the remaning cells
        set to [""]), we parse the options with [Getopt.parse_cmdline]
-       and we finally restore [Sys.argv] from its original copy.
-
-       Before parsing the command-line, we assign the status with the
-       status of the previous CLI (here, [Lexer_CLI.status]). *)
+       and we finally restore [Sys.argv] from its original copy. *)
 
     module SSet = Set.Make (String)
 
@@ -235,9 +168,9 @@ module Make (Lexer_CLI: LEXER_CLI) : S =
 
     let () = Argv.filter ~opt_wo_arg ~opt_with_arg
 
-    type status = Lexer_CLI.status
+    type status = PreParams.Status.t
 
-    let status = Lexer_CLI.status
+    let status = PreParams.Status.status
 
     let status =
       try
@@ -271,6 +204,8 @@ module Make (Lexer_CLI: LEXER_CLI) : S =
       buffer
     end
 
+    (* STATUS *)
+
     (* Checking combinations of options *)
 
     let status =
@@ -287,12 +222,30 @@ module Make (Lexer_CLI: LEXER_CLI) : S =
       |     _,  true,     _,  true -> `Conflict ("--pretty", "--cst-tokens")
       |     _,     _,  true,  true -> `Conflict ("--cst", "--cst-tokens")
 
-    (* Status *)
-
     let status =
       match status with
         `Help buffer  -> `Help (make_help buffer)
       | `CLI buffer   -> `CLI (make_cli buffer)
       | `Version _    -> `Version Version.version
       | _             -> status
+
+    (* Packaging *)
+
+    module Config = PreParams.Config
+
+    module Options =
+      struct
+        include PreParams.Options
+        let mono       = mono
+        let pretty     = pretty
+        let cst        = cst
+        let cst_tokens = cst_tokens
+      end
+
+    module Status =
+      struct
+        type t = status
+        type nonrec status = status
+        let status = status
+      end
   end

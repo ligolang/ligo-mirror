@@ -84,8 +84,7 @@ module Make (Lexer: LEXER)
 
     type message = string Region.reg
 
-    type 'src parser =
-      'src -> (Parser.tree, message) Stdlib.result
+    type 'src parser = 'src -> (Parser.tree, message) Stdlib.result
 
     (* Errors and error messages *)
 
@@ -116,9 +115,9 @@ module Make (Lexer: LEXER)
         (* See [mk_menhir_lexer]: *)
         LexingError msg -> Stdlib.Error msg
       | Parser.Error -> (* Menhir exception *)
-        let window = get_window () in
-        let region = Token.to_region window#current_token
-        in Stdlib.Error Region.{value=""; region}
+          let window = get_window () in
+          let region = Token.to_region window#current_token
+          in Stdlib.Error Region.{value=""; region}
 
     let mono_from_lexbuf  = mono_menhir (fun x -> x)
     let mono_from_channel = mono_menhir Lexing.from_channel
@@ -159,7 +158,7 @@ module Make (Lexer: LEXER)
     let state checkpoint : int option =
       let stack = function
         Inter.HandlingError env -> Some (Inter.stack env)
-      |                       _ -> None in
+      | _ -> None in
       let module Stream = MenhirLib.General in
       match stack checkpoint with
         None -> None
