@@ -8,8 +8,8 @@ module PreprocMainGen = Preprocessor.PreprocMainGen
 
 (* Internal dependencies *)
 
+module type ESCAPE      = module type of Preprocessor.Escape
 module type FILE        = Preprocessing_shared.File.S
-module type COMMENTS    = Preprocessing_shared.Comments.S
 module type TOKEN       = Lexing_shared.Token.S
 module type SELF_TOKENS = Lexing_shared.Self_tokens.S
 module type PARSER      = ParserLib.API.PARSER
@@ -43,7 +43,7 @@ type 'token window = <
 
 module Make
          (File        : FILE)
-         (Comments    : COMMENTS)
+         (Escape      : ESCAPE)
          (Token       : TOKEN)
          (ParErr      : sig val message : int -> string end)
          (Self_tokens : SELF_TOKENS with type token = Token.t)

@@ -7,46 +7,41 @@ open! Region
 open! PPrint
 module Option = Simple_utils.Option
 
+
 let pp_markup markup pos =
   let rec inner result previous_after = function
-    LineCom (c, Before) :: rest when pos = Before ->
-      inner (result ^^ string "//" ^^ string c.value ^^ hardline ^^ hardline)
-            None rest
-  | BlockCom (c, Before) :: rest when pos = Before ->
-      inner (result ^^ string "(*" ^^ string c.value ^^ string "*)"
-            ^^ hardline) None rest
-  | LineCom (c, Inline) :: rest when pos = Inline ->
-      inner (result ^^ string "//" ^^ string c.value ^^ hardline ^^ hardline)
-            None rest
-  | BlockCom (c, Inline) :: rest when pos = Inline ->
-      inner (result ^^ string " (*" ^^ string c.value ^^ string "*) ")
-            None rest
-  | LineCom (c, After) :: rest when pos = After ->
+    (LineCom (c, Before))  :: rest when pos = Before -> inner (result ^^ string "//" ^^ string c.value ^^ hardline) None rest
+  | (BlockCom (c, Before)) :: rest when pos = Before -> inner (result ^^ string "(*" ^^ string c.value ^^ string "*)"  ^^ hardline) None rest
+  | (LineCom (c, Inline)) :: rest when pos = Inline -> inner (result ^^ string "//" ^^ string c.value) None rest
+  | (BlockCom (c, Inline)) :: rest when pos = Inline -> inner (result ^^ string " (*" ^^ string c.value ^^ string "*) ") None rest
+  | (LineCom (c, After)) :: rest when pos = After ->
       let line = c.region#stop#line in
-      let hl =
-        match previous_after with
-          Some previous_after ->
-            if line > previous_after + 1 then
-              hardline ^^ hardline
-            else hardline
-        | None -> hardline
-      in inner (result ^^ hl
-                ^^ string "//" ^^ string c.value ^^ hardline ^^ hardline)
-               (Some line) rest
-  | BlockCom (c, After) :: rest  when pos = After ->
-      let line = c.region#stop#line in
-      let hl =
-        match previous_after with
-          Some previous_after ->
-            if line > previous_after + 1 then
-              hardline ^^ hardline
-            else hardline
-        | None -> hardline
-      in inner (result ^^ hl ^^ string ("(*" ^ c.value ^ "*)"))
-               (Some line) rest
+      let hl = match previous_after with
+        Some previous_after ->
+          if line > previous_after + 1 then
+            hardline ^^ hardline
+          else
+            hardline
+      | None ->
+          hardline
+      in
+      inner (result ^^ hl ^^ string "//" ^^ string c.value) (Some line) rest
+  | (BlockCom (c, After)) :: rest  when pos = After ->
+    let line = c.region#stop#line in
+    let hl = match previous_after with
+      Some previous_after ->
+        if line > previous_after + 1 then
+          hardline ^^ hardline
+        else
+          hardline
+    | None ->
+        hardline
+    in
+    inner (result ^^ hl ^^ string ("(*" ^ c.value ^ "*)")) (Some line) rest
   | [] -> result
   | _ -> empty
-  in inner empty None markup
+  in
+  inner empty None markup
 
 let pp_region_reg func token  =
   (pp_markup token.region#markup Before) ^^

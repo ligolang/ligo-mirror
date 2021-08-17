@@ -7,8 +7,8 @@ module Trace  = Simple_utils.Trace
 
 (* Internal dependencies *)
 
+module type ESCAPE      = module type of Preprocessor.Escape
 module type FILE        = Preprocessing_shared.Common.FILE
-module type COMMENTS    = Preprocessing_shared.Comments.S
 module type TOKEN       = Lexing_shared.Token.S
 module type SELF_TOKENS = Lexing_shared.Self_tokens.S
 module type PARSER      = ParserLib.API.PARSER
@@ -17,13 +17,13 @@ module LexerMainGen = Lexing_shared.LexerMainGen
 
 (* CONFIGURATION *)
 
-module CLI (File : FILE) (Comments : COMMENTS) =
+module CLI (File : FILE) (Escape : ESCAPE) =
   struct
     (* Stubs for the libraries CLIs *)
 
     module Preprocessor_CLI : Preprocessor.CLI.S =
       struct
-        include Comments
+        include Escape
 
         let input     = File.input
         let extension = Some File.extension
@@ -97,7 +97,7 @@ type 'token window = <
 
 module MakeParser
          (File        : Preprocessing_shared.File.S)
-         (Comments    : COMMENTS)
+         (Escape      : ESCAPE)
          (Token       : TOKEN)
          (ParErr      : PAR_ERR)
          (Self_tokens : SELF_TOKENS with type token = Token.t)
@@ -129,7 +129,7 @@ module MakeParser
           let extension = File.extension
           let dirs      = []
         end in
-      let module CLI = CLI (File) (Comments) in
+      let module CLI = CLI (File) (Escape) in
       let module MainLexer =
         LexerMainGen.Make
           (File) (Token) (CLI.Lexer_CLI) (Self_tokens) in
@@ -157,7 +157,7 @@ module MakeParser
           let extension = File.extension
           let dirs      = []
         end in
-      let module CLI = CLI (File) (Comments) in
+      let module CLI = CLI (File) (Escape) in
       let module MainLexer =
         LexerMainGen.Make
           (File) (Token) (CLI.Lexer_CLI) (Self_tokens) in
@@ -226,7 +226,7 @@ module type LIGO_PARSER =
 
 module MakeTwoParsers
          (File        : Preprocessing_shared.File.S)
-         (Comments    : COMMENTS)
+         (Escape      : ESCAPE)
          (Token       : TOKEN)
          (ParErr      : PAR_ERR)
          (Self_tokens : SELF_TOKENS with type token = Token.t)
@@ -244,7 +244,7 @@ module MakeTwoParsers
     type buffer = Buffer.t
 
     module Partial =
-      MakeParser (File) (Comments) (Token) (ParErr) (Self_tokens)
+      MakeParser (File) (Escape) (Token) (ParErr) (Self_tokens)
 
     (* Parsing contracts *)
 

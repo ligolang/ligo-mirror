@@ -115,7 +115,7 @@ module Make (PreParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
          - [(None, None)]: not allowed *)
 
     let specs =
-      let open! Getopt in [
+      Getopt.[
         noshort, "copy",       set copy true, None;
         noshort, "tokens",     set tokens true, None;
         noshort, "units",      set units true, None;
@@ -125,7 +125,7 @@ module Make (PreParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
         noshort, "cli",        set cli true, None;
         'h',     "help",       set help true, None;
         'v',     "version",    set version true, None
-        ]
+      ]
 
      (* Handler of anonymous arguments: those have been handled by a
         previous IO *)
@@ -148,11 +148,7 @@ module Make (PreParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
        We make a copy of [Sys.argv], we filter it in a list, the
        resulting list is copied to [Sys.argv] (with the remaning cells
        set to [""]), we parse the options with [Getopt.parse_cmdline]
-       and we finally restore [Sys.argv] from its original copy.
-
-       Before parsing the command-line, we assign the status with the
-       status of the previous CLI (here,
-       [Preprocessor_CLI.status]). *)
+       and we finally restore [Sys.argv] from its original copy. *)
 
     module SSet = Set.Make (String)
 
@@ -216,6 +212,8 @@ module Make (PreParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
       buffer
     end
 
+    (* STATUS *)
+
     (* Checking combinations of options *)
 
     let status, command =
@@ -227,8 +225,6 @@ module Make (PreParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
       | true, true, _ -> `Conflict ("--copy", "--units"), None
       | true, _, true -> `Conflict ("--copy", "--tokens"), None
       | _, true, true -> `Conflict ("--units", "--tokens"), None
-
-    (* Status *)
 
     let status =
       match status with

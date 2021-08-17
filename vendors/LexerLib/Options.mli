@@ -1,4 +1,4 @@
-(* Gathering CLI options from the preprocessor and the lexer *)
+(* Gathering CLI options *)
 
 module type S =
   sig
