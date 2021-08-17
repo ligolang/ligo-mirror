@@ -2,10 +2,8 @@
 
 (* LIGO dependencies *)
 
-module Comments = Preprocessing_cameligo.Comments
+module Config = Preprocessing_cameligo.Config
 
 (* Internal dependencies *)
 
-module Token = Lexing_cameligo.Token
-
-include Lexing_shared.Common.Make (Comments) (Token)
+include Lexing_shared.Common.Make (Config) (Lexing_cameligo.Token)

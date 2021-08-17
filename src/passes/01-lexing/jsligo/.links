@@ -6,9 +6,7 @@ $HOME/git/OCaml-build/Makefile
 ../shared/UnlexerGen.ml
 
 ./Stubs/Preprocessing_jsligo.ml
-./Stubs/Preprocessing_shared.ml
 ./Stubs/Lexing_jsligo.ml
 ./Stubs/Lexing_shared.ml
 
-../../00-preprocessing/jsligo/Comments.ml
-../../00-preprocessing/jsligo/File.ml
+../../00-preprocessing/jsligo/Config.ml

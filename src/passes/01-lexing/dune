@@ -7,6 +7,7 @@
   (libraries
      ;; Vendors
      simple-utils
+     Preprocessor
      ;; LIGO
      lexing_shared
      preprocessing_pascaligo

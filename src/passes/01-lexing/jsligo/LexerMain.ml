@@ -1,13 +1,13 @@
 (* Driver for the JsLIGO lexer *)
 
-module Comments         = Preprocessing_jsligo.Comments
-module File             = Preprocessing_jsligo.File
+module Config           = Preprocessing_jsligo.Config
+module PreParams        = Preprocessor.CLI.Make (Config)
+module Parameters       = LexerLib.CLI.Make (PreParams)
+module Options          = Parameters.Options
 module Token            = Lexing_jsligo.Token
-module Preprocessor_CLI = Preprocessor.CLI.Make (Comments)
-module Lexer_CLI        = LexerLib.CLI.Make (Preprocessor_CLI)
 module Self_tokens      = Lexing_jsligo.Self_tokens
 module MainGen          = Lexing_shared.LexerMainGen
-module Main = MainGen.Make (File) (Token) (Lexer_CLI) (Self_tokens)
+module Main = MainGen.Make (Config) (Options) (Token) (Self_tokens)
 
 let () = Main.check_cli ()
 let () = Main.scan_all ()

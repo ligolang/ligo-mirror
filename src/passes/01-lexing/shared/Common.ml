@@ -1,60 +1,135 @@
-(* Internal dependencies *)
+(* Vendors dependencies *)
 
-module type COMMENTS = Preprocessing_shared.Comments.S
+module Config  = Preprocessor.Config
+module Options = LexerLib.Options
+module Trace   = Simple_utils.Trace
 
 (* Making lexers *)
 
-module Make (Comments : COMMENTS) (Token : Token.S) =
-  struct
-    module Trace = Simple_utils.Trace
-    module Errors = Errors
+module type S =
+  sig
+    module Token : Token.S
+
+    (* Some inputs *)
 
     type file_path = string
+    type directories = file_path list
 
-    module Lexer = Lexer.Make (Token)
-    module Scan  = LexerLib.API.Make (Lexer)
+    (* Results *)
 
-    (* Lexer configurations *)
+    module Errors = Errors
 
-    let mk_config ~input =
-      object
-        method block     = Comments.block
-        method line      = Comments.line
-        method input     = input
-        method offsets   = true       (* TODO: Should flow from CLI *)
-        method mode      = `Point
-        method command   = None
-        method is_eof    = Token.is_eof
-        method to_region = Token.to_region
-        method to_lexeme = Token.to_lexeme
-        method to_string = Token.to_string
+    type raise = Errors.t Trace.raise
+
+    (* Lexing various sources *)
+
+    val from_file    : raise:raise -> directories -> file_path  -> Token.t list
+    val from_string  : raise:raise -> directories -> string     -> Token.t list
+    val from_buffer  : raise:raise -> directories -> Buffer.t   -> Token.t list
+    val from_channel : raise:raise -> directories -> in_channel -> Token.t list
+
+    (* Aliases *)
+
+    val lex_file    : raise:raise -> directories -> file_path  -> Token.t list
+    val lex_string  : raise:raise -> directories -> string     -> Token.t list
+    val lex_buffer  : raise:raise -> directories -> Buffer.t   -> Token.t list
+    val lex_channel : raise:raise -> directories -> in_channel -> Token.t list
+  end
+
+module Make (Config : Config.S) (Token : Token.S) =
+  struct
+    module Token = Token
+
+    (* Some inputs *)
+
+    type file_path = string
+    type directories = file_path list
+
+    (* Results *)
+
+    module Errors = Errors
+
+    type raise = Errors.t Trace.raise
+
+    (* Instantiating the client lexer *)
+
+    module Client = Lexer.Make (Token)
+
+    (* Partially instantiating the final lexer *)
+
+    module Scan (Options : Options.S) =
+      LexerLib.API.Make (Config) (Options) (Token) (Client)
+
+    (* Partial option module *)
+
+    module PreOptions = (* TODO Flow from the compiler CLI *)
+      struct
+        let show_pp    = false
+        let offsets    = true
+        let preprocess = true
+        let mode       = `Point
+        let command    = None
       end
 
     (* Lifting [Stdlib.result] to [Trace.result]. *)
 
-    let lift ~(raise:'a Trace.raise) = function
+    let lift ~(raise:raise) = function
       Ok tokens -> tokens
     | Error msg -> raise.raise @@ Errors.generic msg
 
-    (* Lexing functions *)
+    (* Lexing a file *)
 
-    let from_file ~raise file_path =
-      let config = mk_config ~input:(Some file_path)
-      in Scan.Tokens.from_file config file_path |> lift ~raise
+    let from_file ~raise dirs file_path =
+      let module Options =
+        struct
+          let input = Some file_path
+          let dirs  = dirs
+          include PreOptions
+        end in
+      let open Scan (Options)
+      in Tokens.from_file file_path |> lift ~raise
 
-    let from_string ~raise string =
-      Scan.Tokens.from_string (mk_config ~input:None) string |> lift ~raise
+    let lex_file = from_file
 
-    let from_buffer ~raise buffer =
-      Scan.Tokens.from_buffer (mk_config ~input:None) buffer |> lift ~raise
+    (* Lexing a string *)
 
-    let from_channel ~raise channel =
-      Scan.Tokens.from_channel (mk_config ~input:None) channel |> lift ~raise
+    let from_string ~raise dirs string =
+     let module Options =
+        struct
+          let input = None
+          let dirs  = dirs
+          include PreOptions
+        end in
+     let open Scan (Options)
+     in Tokens.from_string string |> lift ~raise
 
-    (* Aliases *)
+    let lex_string = from_string
 
-    let lex_file    = from_file
-    let lex_string  = from_string
-    let lex_buffer  = from_buffer
+    (* Lexing a string buffer *)
+
+    let from_buffer ~raise dirs buffer =
+     let module Options =
+        struct
+          let input = None
+          let dirs  = dirs
+          include PreOptions
+        end in
+     let open Scan (Options)
+     in Tokens.from_buffer buffer |> lift ~raise
+
+    let lex_buffer = from_buffer
+
+    (* Lexing an input channel *)
+
+    let from_channel ~raise dirs channel =
+     let module Options =
+        struct
+          let input = None
+          let dirs  = dirs
+          include PreOptions
+        end in
+     let open Scan (Options)
+     in Tokens.from_channel channel |> lift ~raise
+
     let lex_channel = from_channel
   end

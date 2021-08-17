@@ -13,8 +13,7 @@
     lexing_shared
     ;; Third party
     str
-    hex)
-)
+    hex))
 
 ;; Build of a standalone lexer for CameLIGO
 
@@ -27,9 +26,7 @@
     lexing_cameligo
     ;; Third party
     str)
-  (modules Version LexerMain)
-)
-
+  (modules Version LexerMain))
 
 ;; Build of the unlexer (for covering the
 ;; error states of the LR automaton)
@@ -42,8 +39,7 @@
     lexing_cameligo
     ;; Third party
     str)
-  (modules Unlexer)
-)
+  (modules Unlexer))
 
 
 ;; --------------------------------------------------------------------

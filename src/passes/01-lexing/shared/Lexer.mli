@@ -36,6 +36,23 @@
 
 (* The functorised interface *)
 
-module type S = LexerLib.API.LEXER
+module State  = LexerLib.State
+module Thread = LexerLib.Thread
 
-module Make (Token : Token.S) : S with type token = Token.t
+module type CLIENT =
+  sig
+    type token
+
+    type message = string Simple_utils.Region.reg
+
+    type lexer =
+      token State.t ->
+      Lexing.lexbuf ->
+      (token * token State.t, message) Stdlib.result
+
+    val mk_string           : Thread.t -> token
+    val callback            : lexer
+    val is_string_delimiter : string -> bool
+  end
+
+module Make (Token : Token.S) : CLIENT with type token = Token.t

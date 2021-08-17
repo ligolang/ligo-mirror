@@ -8,13 +8,28 @@
 (* VENDOR DEPENDENCIES *)
 
 module Region = Simple_utils.Region
-module Client = LexerLib.Client
 module State  = LexerLib.State
 module Thread = LexerLib.Thread
 
-(* The functorised interface *)
+module type CLIENT =
+  sig
+    type token
 
-module type S = LexerLib.API.LEXER
+    type message = string Simple_utils.Region.reg
+
+    type lexer =
+      token State.t ->
+      Lexing.lexbuf ->
+      (token * token State.t, message) Stdlib.result
+
+    val mk_string           : Thread.t -> token
+    val callback            : lexer
+    val is_string_delimiter : string -> bool
+  end
+
+let (<@) f g x = f (g x)
+
+(* The functorised interface *)
 
 module Make (Token : Token.S) =
   struct
@@ -316,22 +331,23 @@ and scan_verbatim verbatim_end thread state = parse
 {
 (* START TRAILER *)
 
-  (* Encoding a function call in exception-raising style (ERS) to
-     error-passing style (EPS) *)
+    type lexer =
+      token State.t ->
+      Lexing.lexbuf ->
+      (token * token State.t, message) Stdlib.result
 
-  let lift scanner lexbuf =
-    try Stdlib.Ok (scanner lexbuf) with
-      Error msg -> Stdlib.Error msg
+    (* Encoding a function call in exception-raising style (ERS) to
+       error-passing style (EPS) *)
 
-  (* Function [scan] is the main exported function *)
+    let lift scanner lexbuf =
+      try Stdlib.Ok (scanner lexbuf) with
+        Error msg -> Stdlib.Error msg
 
-  let client : token Client.t =
-    let open Simple_utils.Utils in
-    object
-      method mk_string = mk_string
-      method callback  = lift <@ scan
-      method is_string_delimiter = is_string_delimiter
-    end
+    (* Function [scan] is the main exported function *)
+
+    let mk_string = mk_string
+    let callback  : lexer = lift <@ scan
+    let is_string_delimiter = is_string_delimiter
 
   end (* of functor [Make] in HEADER *)
 (* END TRAILER *)
