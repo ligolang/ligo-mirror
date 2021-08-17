@@ -3,24 +3,6 @@
 module Region = Simple_utils.Region
 module Utils  = Simple_utils.Utils
 
-(* The signature of client lexers *)
-
-module type CLIENT =
-  sig
-    type token
-
-    type message = string Simple_utils.Region.reg
-
-    type lexer =
-      token State.t ->
-      Lexing.lexbuf ->
-      (token * token State.t, message) Stdlib.result
-
-    val mk_string           : Thread.t -> token
-    val callback            : lexer
-    val is_string_delimiter : string -> bool
-  end
-
 (* The functor itself *)
 
 module type S =
@@ -55,24 +37,10 @@ module type S =
 
 (* THE FUNCTOR *)
 
-(* General configuration *)
-
-module type CONFIG = module type of Preprocessor.Config
-
-(* CLI options *)
-
-module type OPTIONS = module type of Options
-
-(* The signature of tokens *)
-
-module type TOKEN = module type of Token
-
-(* The functor definition *)
-
-module Make (Config  : CONFIG)
-            (Options : OPTIONS)
-            (Token   : TOKEN)
-            (Client  : CLIENT with type token = Token.t) =
+module Make (Config  : Preprocessor.Config.S)
+            (Options : Options.S)
+            (Token   : Token.S)
+            (Client  : Client.S with type token = Token.token) =
   struct
     module Core = Core.Make (Config) (Options) (Token) (Client)
 

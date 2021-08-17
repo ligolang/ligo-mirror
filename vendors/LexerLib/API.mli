@@ -4,24 +4,6 @@
 
 module Region = Simple_utils.Region
 
-(* The signature of client lexers *)
-
-module type CLIENT =
-  sig
-    type token
-
-    type message = string Simple_utils.Region.reg
-
-    type lexer =
-      token State.t ->
-      Lexing.lexbuf ->
-      (token * token State.t, message) Stdlib.result
-
-    val mk_string           : Thread.t -> token
-    val callback            : lexer
-    val is_string_delimiter : string -> bool
-  end
-
 (* The functor's return signature *)
 
 module type S =
@@ -56,24 +38,10 @@ module type S =
 
 (* THE FUNCTOR *)
 
-(* General configuration *)
-
-module type CONFIG = module type of Preprocessor.Config
-
-(* CLI options *)
-
-module type OPTIONS = module type of Options
-
-(* The signature of tokens *)
-
-module type TOKEN = module type of Token
-
-(* The functor signature *)
-
-module Make (Config  : CONFIG)
-            (Options : OPTIONS)
-            (Token   : TOKEN)
-            (Client  : CLIENT with type token = Token.t)
+module Make (Config  : Preprocessor.Config.S)
+            (Options : Options.S)
+            (Token   : Token.S)
+            (Client  : Client.S with type token = Token.token)
        : S with type token = Token.t
 
 (* LEXER ENGINE *)

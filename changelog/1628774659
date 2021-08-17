@@ -1,0 +1,6 @@
+---
+  title: "The API now recognises and interprets strings and comments independently of the mode of the preprocessor."
+  merge_request: "1220"
+  author: "Christian Rinderknecht"
+  type: "changed"
+

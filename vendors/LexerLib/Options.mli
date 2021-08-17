@@ -1,24 +1,30 @@
 (* Gathering CLI options from the preprocessor and the lexer *)
 
-include module type of Preprocessor.Options
+module type S =
+  sig
+    (* We cumulate the preprocessor options *)
 
-(* If the value [mode] is [`Byte], then the unit in which source
-   positions and regions are expressed in messages is the byte. If
-   [`Point], the unit is unicode points (UFT-8).
+    include Preprocessor.Options.S
 
-   The value [command] denotes some possible behaviours of the
-   compiler. The constructors are
+    (* If the value [mode] is [`Byte], then the unit in which source
+       positions and regions are expressed in messages is the byte. If
+       [`Point], the unit is unicode points (UFT-8).
 
-     * [`Copy]: the lexemes of tokens and markup will be printed to
-       standard output, with the expectation of a perfect match with
-       the input file;
+       The value [command] denotes some possible behaviours of the
+       compiler. The constructors are
 
-     * [`Units]: the tokens and markup will be printed to standard
-       output, that is, the abstract representation of the concrete
-       lexical syntax;
+         * [`Copy]: the lexemes of tokens and markup will be printed
+           to standard output, with the expectation of a perfect match
+           with the input file;
 
-     * [`Tokens]: the tokens only will be printed. *)
+         * [`Units]: the tokens and markup will be printed to standard
+           output, that is, the abstract representation of the
+           concrete lexical syntax;
 
-val preprocess : bool               (* --preprocess            *)
-val mode       : [`Byte | `Point]   (* --bytes                 *)
-val command    : [`Copy | `Units | `Tokens] option (* --copy/--units/--tokens *)
+         * [`Tokens]: the tokens only will be printed. *)
+
+    val preprocess : bool               (* --preprocess            *)
+    val mode       : [`Byte | `Point]   (* --bytes                 *)
+    val command    : [`Copy | `Units | `Tokens] option
+                                        (* --copy/--units/--tokens *)
+  end

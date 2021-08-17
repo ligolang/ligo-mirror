@@ -43,7 +43,6 @@ type 'token t = 'token state
 
 let make ~window ~pos ~decoder ~supply : 'token state =
   object (self)
-    (*    method config  = config*)
     val window     = window
     method window  = window
     val pos        = pos

@@ -8,38 +8,35 @@
 module Region = Simple_utils.Region
 module Pos    = Simple_utils.Pos
 
-(* General configuration *)
+(* Utilities *)
 
-module type CONFIG = module type of Config
-
-(* CLI options *)
-
-module type OPTIONS = module type of Options
+let (<@) f g x = f (g x)
 
 (* Functor *)
 
+type file_path   = string
+type module_name = string
+type module_deps = (file_path * module_name) list
+type success     = Buffer.t * module_deps
+
+type message     = string Region.reg
+type error       = Buffer.t option * message
+
+type result      = (success, error) Stdlib.result
+type 'src preprocessor = 'src -> result
+
 module type S =
   sig
-    type file_path   = string
-    type module_name = string
-    type module_deps = (file_path * module_name) list
-    type success     = Buffer.t * module_deps
-
-    type message     = string Region.reg
-    type error       = Buffer.t option * message
-
-    type result      = (success, error) Stdlib.result
-    type 'src preprocessor = 'src -> result
-
     (* Preprocessing from various sources *)
 
     val from_lexbuf  : Lexing.lexbuf preprocessor
     val from_channel : in_channel    preprocessor
     val from_string  : string        preprocessor
     val from_file    : file_path     preprocessor
+    val from_buffer  : Buffer.t      preprocessor
   end
 
-module Make (Config : CONFIG) (Options : OPTIONS) =
+module Make (Config : Config.S) (Options : Options.S) =
   struct
     (* FINDING FILES *)
 
@@ -620,17 +617,6 @@ and preproc state = parse
      the trace is empty at the end.  Note that we discard the
      state at the end. *)
 
-  type file_path   = string
-  type module_name = string
-  type module_deps = (file_path * module_name) list
-  type success     = Buffer.t * module_deps
-
-  type message     = string Region.reg
-  type error       = Buffer.t option * message
-
-  type result      = (success, error) Stdlib.result
-  type 'src preprocessor = 'src -> result
-
   (* Preprocessing from various sources *)
 
   let from_lexbuf buffer =
@@ -648,6 +634,8 @@ and preproc state = parse
 
   let from_string string =
     Lexing.from_string string |> from_lexbuf
+
+  let from_buffer = from_string <@ Buffer.contents
 
   let from_file name =
     try

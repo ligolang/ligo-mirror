@@ -7,7 +7,6 @@
 
 module Make (Parameters : CLI.PARAMETERS) :
   sig
-    module API : API.S
     val check_cli  : unit -> unit
     val preprocess : unit -> API.result
   end

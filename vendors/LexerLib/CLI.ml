@@ -4,35 +4,16 @@
 
 module Argv = Simple_utils.Argv
 
-(* General configuration *)
-
-module type CONFIG = module type of Preprocessor.Config
-
-(* CLI options *)
-
-module type OPTIONS =
-  sig
-    include module type of Preprocessor.Options
-    include module type of Options
-  end
-
-(* Status after parsing CLI options of Preprocessor AND LexerLib *)
-
-module type STATUS = module type of Status
-
-(* Configuration, options and the parsing status of the latter *)
-
 module type PARAMETERS =
   sig
-    module Config  : CONFIG
-    module Options : OPTIONS
-    module Status  : STATUS
+    module Config  : Preprocessor.Config.S
+    module Options : Options.S
+    module Status  : module type of Status
   end
 
 (* Parsing the command line options *)
 
-module Make (Preprocessor_Params: Preprocessor.CLI.PARAMETERS)
-       : PARAMETERS =
+module Make (PreParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
   struct
     (* Auxiliary functions and modules *)
 
@@ -195,11 +176,11 @@ module Make (Preprocessor_Params: Preprocessor.CLI.PARAMETERS)
     let () = Argv.filter ~opt_wo_arg ~opt_with_arg
 
     type status = [
-      Preprocessor_Params.Status.t
+      PreParams.Status.t
     | `Conflict of string * string
     ]
 
-    let status = (Preprocessor_Params.Status.status :> status)
+    let status = (PreParams.Status.status :> status)
 
     let status =
       try
@@ -258,11 +239,11 @@ module Make (Preprocessor_Params: Preprocessor.CLI.PARAMETERS)
 
     (* Packaging *)
 
-    module Config = Preprocessor_Params.Config
+    module Config = PreParams.Config
 
     module Options =
       struct
-        include Preprocessor_Params.Options
+        include PreParams.Options
         let preprocess = preprocess
         let mode       = mode
         let command    = command

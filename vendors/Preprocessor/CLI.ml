@@ -4,30 +4,18 @@
 
 module Argv = Simple_utils.Argv (* Filters the command line *)
 
-(* General configuration *)
-
-module type CONFIG = module type of Config
-
-(* CLI options *)
-
-module type OPTIONS = module type of Options
-
-(* Status after parsing the CLI *)
-
-module type STATUS = module type of Status
-
 (* Configuration, options and the parsing status of the latter *)
 
 module type PARAMETERS =
   sig
-    module Config  : CONFIG
-    module Options : OPTIONS
-    module Status  : STATUS
+    module Config  : Config.S
+    module Options : Options.S
+    module Status  : module type of Status
   end
 
 (* Parsing the command line options *)
 
-module Make (Config : CONFIG) : PARAMETERS =
+module Make (Config : Config.S) : PARAMETERS =
   struct
     (* General configuration *)
 

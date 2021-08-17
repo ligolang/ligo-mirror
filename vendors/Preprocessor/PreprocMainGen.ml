@@ -24,7 +24,7 @@ module Make (Parameters : CLI.PARAMETERS) =
   struct
     module Config  = Parameters.Config
     module Options = Parameters.Options
-    module API = API.Make (Config) (Options)
+    module Scan    = API.Make (Config) (Options)
 
     (* Checking for errors and valid exits *)
 
@@ -44,8 +44,8 @@ module Make (Parameters : CLI.PARAMETERS) =
     let preprocess () : API.result =
       let preprocessed =
         match Options.input with
-               None -> API.from_channel stdin
-        | Some path -> API.from_file path in
+               None -> Scan.from_channel stdin
+        | Some path -> Scan.from_file path in
       let () =
         match preprocessed with
           Stdlib.Ok (buffer, _) ->
