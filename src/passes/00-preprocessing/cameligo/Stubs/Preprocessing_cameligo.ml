@@ -1,2 +1,1 @@
-module Comments = Comments
-module File     = File
+module Config = Config

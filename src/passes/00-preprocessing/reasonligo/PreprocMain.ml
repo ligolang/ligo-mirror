@@ -1,9 +1,8 @@
-(* Driving the preprocessor for ReasonLIGO *)
+(* Driving the standalone preprocessor for ReasonLIGO *)
 
-module Comments       = Preprocessing_reasonligo.Comments
-module File           = Preprocessing_reasonligo.File
+module Config         = Preprocessing_reasonligo.Config
 module PreprocMainGen = Preprocessing_shared.PreprocMainGen
-module PreprocMain    = PreprocMainGen.Make (Comments) (File)
+module PreprocMain    = PreprocMainGen.Make (Config)
 
 let () = PreprocMain.check_cli ()
 let () = PreprocMain.preproc ()

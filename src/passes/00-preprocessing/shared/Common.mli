@@ -1,42 +1,39 @@
-(* PREPROCESSING *)
+(* Interfacing the preprocessor with the LIGO compiler depending on
+   the concrete syntax *)
 
-(* Directories and files *)
+(* Vendors dependencies *)
 
-type file_path = string
-type dirs = file_path list (* #include and #import *)
+module Config = Preprocessor.Config
+module API    = Preprocessor.API
 
-module Make (File : File.S) (Comments : Comments.S) :
+(* Functor *)
+
+module type S =
   sig
-    (* Directories and files *)
+    (* Some inputs *)
 
-    type nonrec file_path = file_path
-    type nonrec dirs = dirs
+    type file_path = string
+    type directories = file_path list
 
     (* Results *)
 
     module Errors = Errors
 
-    type success = Preprocessor.API.success
-    type nonrec result  = (success, Errors.t) result
+    type nonrec result = (API.success, Errors.t) result
 
     (* Preprocessing various sources *)
 
-    val from_file    : dirs -> file_path  -> result
-    val from_string  : dirs -> string     -> result
-    val from_channel : dirs -> in_channel -> result
+    val from_file    : directories -> file_path  -> result
+    val from_string  : directories -> string     -> result
+    val from_buffer  : directories -> Buffer.t   -> result
+    val from_channel : directories -> in_channel -> result
 
     (* Aliases *)
 
-    val preprocess_file    : dirs -> file_path  -> result
-    val preprocess_string  : dirs -> string     -> result
-    val preprocess_channel : dirs -> in_channel -> result
+    val preprocess_file    : directories -> file_path  -> result
+    val preprocess_string  : directories -> string     -> result
+    val preprocess_buffer  : directories -> Buffer.t   -> result
+    val preprocess_channel : directories -> in_channel -> result
   end
 
-(* For further passes *)
-
-module type FILE =
-  sig
-    include File.S
-    val input : file_path option
-    val dirs  : dirs
-  end
+module Make (Config : Config.S) : S

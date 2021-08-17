@@ -1,20 +1,16 @@
-(* Comments for JsLIGO *)
+(* Static configuration for JsLIGO *)
 
-module C =
-  struct
-    type line_comment  = string (* Opening of a line comment *)
-    type block_comment = <opening : string; closing : string>
+type block_comment_delimiters = <opening : string; closing : string>
+type line_comment_delimiter   = string (* Opening of a line comment *)
+type string_delimiter         = string
 
-    let block =
-      object
-        method opening = "/*"
-        method closing = "*/"
-      end
-
-    let block = Some block
-    let line  = Some "//"
+let block =
+  object
+    method opening = "/*"
+    method closing = "*/"
   end
 
-include C
-
-module type S = module type of C
+let block    = Some block
+let line     = Some "//"
+let string   = Some "\""
+let file_ext = Some ".jsligo"

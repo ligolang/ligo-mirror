@@ -1,10 +1,16 @@
 (* Driving the preprocessor *)
 
-module Make (Comments : Comments.S) (File : File.S) =
+(* Vendors dependencies *)
+
+module Config = Preprocessor.Config
+
+(* The functor *)
+
+module Make (Config : Config.S) =
   struct
-    module Preproc_CLI = Preprocessor.CLI.Make (Comments)
-    module Main        = Preprocessor.PreprocMainGen
-    module Preproc     = Main.Make (Preproc_CLI)
+    module Parameters   = Preprocessor.CLI.Make (Config)
+    module Main         = Preprocessor.PreprocMainGen
+    module Preprocessor = Main.Make (Parameters)
 
     (* All exits *)
 
@@ -15,18 +21,11 @@ module Make (Comments : Comments.S) (File : File.S) =
     let cli_error msg =
       red_exit (Printf.sprintf "Command-line error: %s\n" msg)
 
-    let check_cli = Preproc.check_cli
+    let check_cli = Preprocessor.check_cli
 
     let preproc () : unit =
-      let () =
-        match Preproc_CLI.extension with
-          Some ext when ext <> File.extension ->
-            let msg =
-              Printf.sprintf "Expected extension %s." File.extension
-            in cli_error msg
-        | _ -> ()
-      in match Preproc.preprocess () with
-           Stdlib.Ok (buffer, _) ->
-             Printf.printf "%s%!" (Buffer.contents buffer)
-         | _ -> ()
+      match Preprocessor.preprocess () with
+        Stdlib.Ok (buffer, _) ->
+          Printf.printf "%s%!" (Buffer.contents buffer)
+      | _ -> ()
   end

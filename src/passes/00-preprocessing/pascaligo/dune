@@ -7,8 +7,7 @@
   (libraries
      ;; Vendors
      Preprocessor)
-  (modules Comments File)
-)
+  (modules Config))
 
 ;; Build of a standalone preprocessor for PascaLIGO
 
@@ -18,5 +17,4 @@
     ;; LIGO
     preprocessing_pascaligo
     preprocessing_shared)
-  (modules PreprocMain)
-)
+  (modules PreprocMain))

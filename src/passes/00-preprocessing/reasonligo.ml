@@ -1,6 +1,3 @@
-(* Interfacing the ReasonLIGO preprocessor. *)
+(* Interfacing the ReasonLIGO preprocessor with the compiler *)
 
-module File     = Preprocessing_reasonligo.File
-module Comments = Preprocessing_reasonligo.Comments
-
-include Preprocessing_shared.Common.Make (File) (Comments)
+include Preprocessing_shared.Common.Make (Preprocessing_reasonligo.Config)
