@@ -1,0 +1,6 @@
+---
+  title: "Preprocessing directives inside lines will not raise an error anymore."
+  merge_request: "1220"
+  author: "Christian Rinderknecht"
+  type: "removed"
+

@@ -255,10 +255,7 @@ rule scan state = parse
 (* Directives *)
 
 | '#' blank* (small+ as id) {
-    let  region = mk_reg lexbuf in
-    if   region#start#offset `Byte > 0
-    then stop state lexbuf Error.Directive_inside_line
-    else
+    let region = mk_reg lexbuf in
     match id with
       "include" ->
         (* We first extract info about the current file so we can

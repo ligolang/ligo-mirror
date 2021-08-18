@@ -1,8 +1,7 @@
 (* Preprocessing errors *)
 
 type error =
-  Directive_inside_line
-| Missing_endif
+  Missing_endif
 | Dangling_endif
 | If_follows_elif
 | Else_follows_else

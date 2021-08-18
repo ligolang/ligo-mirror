@@ -1,8 +1,13 @@
+(* This module is a wrapper for running the LIGO lexers as standalone
+   pieces of software. *)
+
 (* Vendor dependencies *)
 
-module Region  = Simple_utils.Region
-module Config  = Preprocessor.Config
-module Options = LexerLib.Options
+module Region = Simple_utils.Region
+
+module type CONFIG  = Preprocessor.Config.S
+module type OPTIONS = LexerLib.Options.S
+module type TOKEN   = Token.S
 
 (* This module factors the common actions expected from LexerMain in
    all LIGO syntaxes, like reading and checking the command-line,
@@ -11,12 +16,12 @@ module Options = LexerLib.Options
    that a side-effect is performed (reading from and writing to
    [Sys.argv]: see module [LexerLib.CLI].). *)
 
-module Make (Config      : Config.S)
-            (Options     : Options.S)
-            (Token'      : Token.S)
-            (Self_tokens : Self_tokens.S with type token = Token'.t) :
+module Make (Config      : CONFIG)
+            (Options     : OPTIONS)
+            (Token       : TOKEN)
+            (Self_tokens : Self_tokens.S with type token = Token.t) :
   sig
-    module Token : Token.S
+    module Token : TOKEN
     type token = Token.t
 
     (* Scanning one token *)
@@ -42,4 +47,4 @@ module Make (Config      : Config.S)
     (* Check the CLI *)
 
     val check_cli : unit -> unit
-  end with module Token = Token'
+  end with module Token = Token

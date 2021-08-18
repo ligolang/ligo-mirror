@@ -1,8 +1,9 @@
 (* Vendors dependencies *)
 
-module Config  = Preprocessor.Config
-module Options = LexerLib.Options
-module Trace   = Simple_utils.Trace
+module Trace = Simple_utils.Trace
+
+module type CONFIG  = Preprocessor.Config.S
+module type OPTIONS = LexerLib.Options.S
 
 (* Making lexers *)
 
@@ -36,7 +37,7 @@ module type S =
     val lex_channel : raise:raise -> directories -> in_channel -> Token.t list
   end
 
-module Make (Config : Config.S) (Token : Token.S) =
+module Make (Config : CONFIG) (Token : Token.S) =
   struct
     module Token = Token
 
@@ -57,7 +58,7 @@ module Make (Config : Config.S) (Token : Token.S) =
 
     (* Partially instantiating the final lexer *)
 
-    module Scan (Options : Options.S) =
+    module Scan (Options : OPTIONS) =
       LexerLib.API.Make (Config) (Options) (Token) (Client)
 
     (* Partial option module *)
@@ -71,12 +72,11 @@ module Make (Config : Config.S) (Token : Token.S) =
         let command    = None
       end
 
-    (* Lifting [Stdlib.result] to [Trace.result]. *)
+    (* Lifting [Stdlib.result] to [Trace.raise]. *)
 
     let lift ~(raise:raise) = function
       Ok tokens -> tokens
     | Error msg -> raise.raise @@ Errors.generic msg
-
     (* Lexing a file *)
 
     let from_file ~raise dirs file_path =

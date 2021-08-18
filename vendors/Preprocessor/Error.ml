@@ -1,8 +1,7 @@
 (* Preprocessing errors *)
 
 type error =
-  Directive_inside_line
-| Missing_endif
+  Missing_endif
 | Dangling_endif
 | If_follows_elif
 | Else_follows_else
@@ -26,12 +25,13 @@ type t = error
 let sprintf = Printf.sprintf
 
 let to_string = function
-  Directive_inside_line ->
-    sprintf "Directive inside a line."
-| Missing_endif ->
+  Missing_endif ->
     sprintf "Missing #endif directive."
 | Newline_in_string ->
-    sprintf "Invalid newline character in string."
+    (* TODO: When we add quoted strings to LIGO: " or insert a backslash." *)
+    sprintf
+      "The string starting here is interrupted by a line break.\n\
+       Hint: Remove the break or close the string before."
 | Unterminated_string ->
     sprintf "Unterminated string.\n\
              Hint: Close with double quotes."

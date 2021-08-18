@@ -6,8 +6,9 @@ let%expect_test _ =
 File "../../test/lexer/broken_string.ligo", line 1, characters 18-19:
   1 | const a: string = "broken
   2 | over
+File "../../test/lexer/broken_string.ligo", line 1, characters 18-19:
 The string starting here is interrupted by a line break.
-Hint: Remove the break, close the string before or insert a backslash.
+Hint: Remove the break or close the string before.
  |} ];
 
     run_ligo_bad [ "compile-contract" ; "../../test/lexer/broken_string.mligo" ; "main" ] ;
@@ -15,8 +16,9 @@ Hint: Remove the break, close the string before or insert a backslash.
 File "../../test/lexer/broken_string.mligo", line 1, characters 8-9:
   1 | let a = "broken
   2 | over
+File "../../test/lexer/broken_string.mligo", line 1, characters 8-9:
 The string starting here is interrupted by a line break.
-Hint: Remove the break, close the string before or insert a backslash.
+Hint: Remove the break or close the string before.
  |} ];
 
  run_ligo_bad [ "compile-contract" ; "../../test/lexer/broken_string.religo" ; "main" ] ;
@@ -24,8 +26,9 @@ Hint: Remove the break, close the string before or insert a backslash.
 File "../../test/lexer/broken_string.religo", line 1, characters 8-9:
   1 | let a = "broken
   2 | over
+File "../../test/lexer/broken_string.religo", line 1, characters 8-9:
 The string starting here is interrupted by a line break.
-Hint: Remove the break, close the string before or insert a backslash.
+Hint: Remove the break or close the string before.
  |} ];
 
 (*
@@ -169,7 +172,8 @@ run_ligo_bad [ "compile-contract" ; "../../test/lexer/invalid_character_in_strin
   [%expect {|
 File "../../test/lexer/invalid_character_in_string.ligo", line 1, characters 19-20:
   1 | const z: string = "	";
-Invalid character in string.
+File "../../test/lexer/invalid_character_in_string.ligo", line 1, characters 19-20:
+Invalid character "\\t" in string.
 Hint: Remove or replace the character.
  |} ];
 
@@ -177,7 +181,8 @@ run_ligo_bad [ "compile-contract" ; "../../test/lexer/invalid_character_in_strin
   [%expect {|
 File "../../test/lexer/invalid_character_in_string.mligo", line 1, characters 9-10:
   1 | let z = "	";
-Invalid character in string.
+File "../../test/lexer/invalid_character_in_string.mligo", line 1, characters 9-10:
+Invalid character "\\t" in string.
 Hint: Remove or replace the character.
  |} ];
 
@@ -185,6 +190,7 @@ run_ligo_bad [ "compile-contract" ; "../../test/lexer/invalid_character_in_strin
   [%expect {|
 File "../../test/lexer/invalid_character_in_string.religo", line 1, characters 9-10:
   1 | let z = "	";
-Invalid character in string.
+File "../../test/lexer/invalid_character_in_string.religo", line 1, characters 9-10:
+Invalid character "\\t" in string.
 Hint: Remove or replace the character.
  |} ]

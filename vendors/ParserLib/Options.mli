@@ -12,4 +12,4 @@ module type S =
     val pretty     : bool  (* --pretty     *)
     val cst        : bool  (* --cst        *)
     val cst_tokens : bool  (* --cst-tokens *)
-end
+  end

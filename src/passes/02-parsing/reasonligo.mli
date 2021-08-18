@@ -13,21 +13,23 @@ module Errors = Parsing_shared.Errors
 
 type file_path = string
 
-(* All function read a string buffer but they differ in the way they
+type raise = Errors.t Trace.raise
+
+(* All functions read a string buffer but they differ in the way they
    interpret it: [from_file] assumes that its contents comes
    originally from a file, [from_string] assumes that its contents
    comes originally from a string, and [expression] assumes that is
    contents is an expression and comes from a string. *)
 
-val from_file   : raise:Errors.t Trace.raise -> Buffer.t -> file_path -> CST.t
-val from_string : raise:Errors.t Trace.raise -> Buffer.t -> CST.t
-val expression  : raise:Errors.t Trace.raise -> Buffer.t -> CST.expr
+val from_file   : raise:raise -> Buffer.t -> file_path -> CST.t
+val from_string : raise:raise -> Buffer.t -> CST.t
+val expression  : raise:raise -> Buffer.t -> CST.expr
 
 (* Aliases *)
 
-val parse_file       : raise:Errors.t Trace.raise -> Buffer.t -> file_path -> CST.t
-val parse_string     : raise:Errors.t Trace.raise -> Buffer.t -> CST.t
-val parse_expression : raise:Errors.t Trace.raise -> Buffer.t -> CST.expr
+val parse_file       : raise:raise -> Buffer.t -> file_path -> CST.t
+val parse_string     : raise:raise -> Buffer.t -> CST.t
+val parse_expression : raise:raise -> Buffer.t -> CST.expr
 
 (* Pretty-printing *)
 
@@ -38,5 +40,5 @@ val pretty_print            : CST.t -> Buffer.t
 val pretty_print_expression : CST.expr -> Buffer.t
 val pretty_print_pattern    : CST.pattern -> Buffer.t
 val pretty_print_type_expr  : CST.type_expr -> Buffer.t
-val pretty_print_file       : raise:Errors.t Trace.raise -> Buffer.t -> file_path -> Buffer.t
-val pretty_print_cst        : raise:Errors.t Trace.raise -> Buffer.t -> file_path -> Buffer.t
+val pretty_print_file       : raise:raise -> Buffer.t -> file_path -> Buffer.t
+val pretty_print_cst        : raise:raise -> Buffer.t -> file_path -> Buffer.t

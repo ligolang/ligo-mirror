@@ -6,13 +6,14 @@
 module Region = Simple_utils.Region
 module PreprocMainGen = Preprocessor.PreprocMainGen
 
+module type CONFIG  = Preprocessor.Config.S
+module type OPTIONS = ParserLib.Options.S
+module type PARSER  = ParserLib.API.PARSER
+
 (* Internal dependencies *)
 
-module type ESCAPE      = module type of Preprocessor.Escape
-module type FILE        = Preprocessing_shared.File.S
 module type TOKEN       = Lexing_shared.Token.S
 module type SELF_TOKENS = Lexing_shared.Self_tokens.S
-module type PARSER      = ParserLib.API.PARSER
 
 module LexerMainGen = Lexing_shared.LexerMainGen
 
@@ -42,8 +43,8 @@ type 'token window = <
 >
 
 module Make
-         (File        : FILE)
-         (Escape      : ESCAPE)
+         (Config      : CONFIG)
+         (Options     : OPTIONS)
          (Token       : TOKEN)
          (ParErr      : sig val message : int -> string end)
          (Self_tokens : SELF_TOKENS with type token = Token.t)
@@ -52,20 +53,24 @@ module Make
                                 and type tree = CST.t)
          (Printer     : PRINTER with type tree = CST.t)
          (Pretty      : PRETTY with type tree = CST.t)
-         (CLI         : ParserLib.CLI.S)
  =
   struct
-    (* Instantiating the lexer *)
+    (* Reading the preprocessor CLI *)
 
-    module Lexer_CLI = CLI.Lexer_CLI
+    module PreprocParams = Preprocessor.CLI.Make (Config)
+
+    (* Reading the lexer CLI *)
+
+    module LexerParams = LexerLib.CLI.Make (PreprocParams)
+
+    (* Reading the parser CLI *)
+
+    module Parameters = ParserLib.CLI.Make (LexerParams)
+
+    (* Instantiating the main lexer *)
 
     module MainLexer =
-      LexerMainGen.Make (File) (Token)
-                        (Lexer_CLI : LexerLib.CLI.S)
-                        (Self_tokens)
-    (* Other CLIs *)
-
-    module Preprocessor_CLI = Lexer_CLI.Preprocessor_CLI
+      LexerMainGen.Make (Config) (Options) (Token) (Self_tokens)
 
     (* All exits *)
 
@@ -82,21 +87,16 @@ module Make
 
     let check_cli () =
       MainLexer.check_cli ();
-      match CLI.status with
+      match Parameters.Status.status with
         `SyntaxError  msg
+      | `WrongFileExt msg
       | `FileNotFound msg -> cli_error msg
       | `Help         buf
       | `CLI          buf -> print_and_quit (Buffer.contents buf)
       | `Version      ver -> print_and_quit (ver ^ "\n")
       | `Conflict (o1,o2) ->
            cli_error (Printf.sprintf "Choose either %s or %s." o1 o2)
-      | `Done ->
-           match Preprocessor_CLI.extension with
-             Some ext when ext <> File.extension ->
-               let msg =
-                 Printf.sprintf "Expected extension %s." File.extension
-               in cli_error msg
-      | _ -> ()
+      | `Done -> ()
 
     (* Main *)
 
@@ -105,7 +105,7 @@ module Make
     let wrap : (Parser.tree, MainParser.message) result -> unit =
       function
         Stdlib.Ok tree ->
-          if CLI.pretty then
+          if Options.pretty then
             let doc = Pretty.print tree in
             let width =
               match Terminal_size.get_columns () with
@@ -118,16 +118,16 @@ module Make
           else
             let buffer = Buffer.create 231 in
             let state  = Printer.mk_state
-                           ~offsets:Preprocessor_CLI.offsets
-                           ~mode:Lexer_CLI.mode
+                           ~offsets:Options.offsets
+                           ~mode:Options.mode
                            ~buffer in
-            if CLI.cst then
+            if Options.cst then
               begin
                 Printer.pp_cst state tree;
                 Printf.printf "%s%!" (Buffer.contents buffer)
               end
             else
-              if CLI.cst_tokens then
+              if Options.cst_tokens then
                 begin
                   Printer.print_tokens state tree;
                   Printf.printf "%s%!" (Buffer.contents buffer);
@@ -139,39 +139,35 @@ module Make
          let msg = Printf.sprintf "Parse error %s:\n%s" reg value
          in (flush_all (); print_in_red msg)
 
-    let config =
-      object
-        method offsets = Preprocessor_CLI.offsets
-        method mode    = Lexer_CLI.mode
-      end
+    (* Instantiating the preprocessor *)
 
-    module Preproc = PreprocMainGen.Make (Preprocessor_CLI)
+    module Preproc = Preprocessor.PreprocMainGen.Make (PreprocParams)
 
     let parse () =
-      if Lexer_CLI.preprocess then
+      if Options.preprocess then
         match Preproc.preprocess () with
           Stdlib.Error _ -> ()
         | Stdlib.Ok (buffer, _deps) ->
-            if Preprocessor_CLI.show_pp then
+            if Options.show_pp then
               Printf.printf "%s%!" (Buffer.contents buffer)
             else ();
             let string = Buffer.contents buffer in
             let lexbuf = Lexing.from_string string in
             let open MainParser in
-            if CLI.mono then
+            if Options.mono then
               mono_from_lexbuf lexbuf |> wrap
             else
               incr_from_lexbuf (module ParErr) lexbuf |> wrap
       else
         let open MainParser in
-        match Preprocessor_CLI.input with
+        match Options.input with
           None ->
-            if CLI.mono then
+            if Options.mono then
               mono_from_channel stdin |> wrap
             else
               incr_from_channel (module ParErr) stdin |> wrap
         | Some file_path ->
-            if CLI.mono then
+            if Options.mono then
               mono_from_file file_path |> wrap
             else
               incr_from_file (module ParErr) file_path |> wrap

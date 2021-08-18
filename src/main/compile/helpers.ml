@@ -50,7 +50,7 @@ let variant_to_syntax v =
 type options = Compiler_options.t
 
 let preprocess_file ~raise ~(options:options) ~meta file_path
-  : Preprocessing.Pascaligo.success =
+  : Preprocessor.API.success =
   let open Preprocessing in
   let preprocess_file =
     match meta.syntax with

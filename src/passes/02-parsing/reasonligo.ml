@@ -7,8 +7,7 @@ module Trace = Simple_utils.Trace
 
 (* Internal dependencies *)
 
-module File        = Preprocessing_reasonligo.File
-module Comments    = Preprocessing_reasonligo.Comments
+module Config      = Preprocessing_reasonligo.Config
 module Token       = Lexing_reasonligo.Token
 module Self_tokens = Lexing_reasonligo.Self_tokens
 module ParErr      = Parsing_reasonligo.ParErr
@@ -25,12 +24,13 @@ module ReasonligoParser =
   end
 
 include Parsing_shared.Common.MakeTwoParsers
-          (File) (Comments) (Token) (ParErr) (Self_tokens)
-          (CST) (ReasonligoParser)
+          (Config) (Token) (ParErr) (Self_tokens) (CST) (ReasonligoParser)
 
 (* Making the pretty-printers *)
 
 include Parsing_shared.Common.MakePretty (CST) (Pretty)
+
+type raise = Errors.t Trace.raise
 
 let pretty_print_file ~raise buffer file_path =
   ContractParser.parse_file ~raise buffer file_path |> pretty_print

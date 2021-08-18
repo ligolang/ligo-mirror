@@ -1,3 +1,5 @@
+(* TODO: This error is no more, but others need their trigger
+
 open Cli_expect
 
 let%expect_test _ =
@@ -8,3 +10,4 @@ File "../../test/preprocessor/directive_inside_line.ligo", line 1, characters 2-
 File "../../test/preprocessor/directive_inside_line.ligo", line 1, characters 2-10:
 Directive inside a line.
  |}];
+ *)

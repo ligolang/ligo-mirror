@@ -3,7 +3,6 @@
 (library
   (name ParserLib)
   (public_name ParserLib)
-  (wrapped true)
   (modules Options Status CLI API Version)
   (modules_without_implementation Options Status)
   (libraries

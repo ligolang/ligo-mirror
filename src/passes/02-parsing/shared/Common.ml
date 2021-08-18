@@ -5,60 +5,16 @@
 module Region = Simple_utils.Region
 module Trace  = Simple_utils.Trace
 
+module type CONFIG  = Preprocessor.Config.S
+module type OPTIONS = ParserLib.Options.S
+module type PARSER  = ParserLib.API.PARSER
+
 (* Internal dependencies *)
 
-module type ESCAPE      = module type of Preprocessor.Escape
-module type FILE        = Preprocessing_shared.Common.FILE
 module type TOKEN       = Lexing_shared.Token.S
 module type SELF_TOKENS = Lexing_shared.Self_tokens.S
-module type PARSER      = ParserLib.API.PARSER
 
 module LexerMainGen = Lexing_shared.LexerMainGen
-
-(* CONFIGURATION *)
-
-module CLI (File : FILE) (Escape : ESCAPE) =
-  struct
-    (* Stubs for the libraries CLIs *)
-
-    module Preprocessor_CLI : Preprocessor.CLI.S =
-      struct
-        include Escape
-
-        let input     = File.input
-        let extension = Some File.extension
-        let dirs      = File.dirs
-        let show_pp   = false
-        let offsets   = true
-
-        type status = [
-          `Done
-        | `Version      of string
-        | `Help         of Buffer.t
-        | `CLI          of Buffer.t
-        | `SyntaxError  of string
-        | `FileNotFound of string
-        ]
-
-        let status = `Done
-      end
-
-    module Lexer_CLI : LexerLib.CLI.S =
-      struct
-        module Preprocessor_CLI = Preprocessor_CLI
-
-        let preprocess = false
-        let mode       = `Point
-        let command    = None
-
-        type status = [
-          Preprocessor_CLI.status
-        | `Conflict of string * string (* Two conflicting options *)
-        ]
-
-        let status = `Done
-      end
-  end
 
 (* PRETTY-PRINTING *)
 
@@ -92,12 +48,11 @@ module type PAR_ERR =
 
 type 'token window = <
   last_token    : 'token option;
-  current_token : 'token           (* Including EOF *)
+  current_token : 'token  (* Including EOF *)
 >
 
 module MakeParser
-         (File        : Preprocessing_shared.File.S)
-         (Escape      : ESCAPE)
+         (Config      : CONFIG)
          (Token       : TOKEN)
          (ParErr      : PAR_ERR)
          (Self_tokens : SELF_TOKENS with type token = Token.t)
@@ -107,11 +62,34 @@ module MakeParser
   struct
     type file_path = string list
 
-    (* Lifting [Stdlib.result] to [Trace]. *)
+    type raise = Errors.t Trace.raise
 
-    let lift ~(raise:Errors.t Trace.raise) = function
+    (* Lifting [Stdlib.result] to [Trace.raise]. *)
+
+    let lift ~(raise:raise) = function
       Ok tree -> tree
     | Error msg -> raise.raise @@ Errors.generic msg
+
+    (* Partially instantiating the final lexer *)
+
+    module MainLexer (Options : OPTIONS) =
+      LexerMainGen.Make (Config) (Options) (Token) (Self_tokens)
+
+    (* Partial option module *)
+
+    module PreOptions = (* TODO Flow from the compiler CLI *)
+      struct
+        let dirs       = []
+        let show_pp    = false
+        let offsets    = true
+        let preprocess = true
+        let mode       = `Point
+        let command    = None
+        let mono       = false
+        let pretty     = false
+        let cst        = false
+        let cst_tokens = false
+      end
 
     (* We always parse a string buffer of type [Buffer.t], but the
        interpretation of its contents depends on the functions
@@ -123,21 +101,18 @@ module MakeParser
     (* Parsing a file *)
 
     let from_file ~raise buffer file_path : CST.tree =
-      let module File =
+      let module Options =
         struct
-          let input     = Some file_path
-          let extension = File.extension
-          let dirs      = []
+          let input = Some file_path
+          include PreOptions
         end in
-      let module CLI = CLI (File) (Escape) in
       let module MainLexer =
-        LexerMainGen.Make
-          (File) (Token) (CLI.Lexer_CLI) (Self_tokens) in
+        LexerMainGen.Make (Config) (Options) (Token) (Self_tokens) in
       let module MainParser =
         ParserLib.API.Make (MainLexer) (Parser) in
       let tree =
         let string = Buffer.contents buffer in
-        if CLI.Preprocessor_CLI.show_pp then
+        if Options.show_pp then
           Printf.printf "%s\n%!" string;
         let lexbuf = Lexing.from_string string in
         let     () = LexerLib.API.reset ~file:file_path lexbuf in
@@ -151,21 +126,18 @@ module MakeParser
     (* Parsing a string *)
 
     let from_string ~raise buffer : CST.tree =
-      let module File =
+      let module Options =
         struct
-          let input     = None
-          let extension = File.extension
-          let dirs      = []
+          let input = None
+          include PreOptions
         end in
-      let module CLI = CLI (File) (Escape) in
       let module MainLexer =
-        LexerMainGen.Make
-          (File) (Token) (CLI.Lexer_CLI) (Self_tokens) in
+        LexerMainGen.Make (Config) (Options) (Token) (Self_tokens) in
       let module MainParser =
         ParserLib.API.Make (MainLexer) (Parser) in
       let tree =
         let string = Buffer.contents buffer in
-        if CLI.Preprocessor_CLI.show_pp then
+        if Options.show_pp then
           Printf.printf "%s\n%!" string;
         let lexbuf = Lexing.from_string string in
         let     () = MainLexer.clear () in
@@ -225,8 +197,7 @@ module type LIGO_PARSER =
 (* Making parsers for CSTs and expressions *)
 
 module MakeTwoParsers
-         (File        : Preprocessing_shared.File.S)
-         (Escape      : ESCAPE)
+         (Config      : CONFIG)
          (Token       : TOKEN)
          (ParErr      : PAR_ERR)
          (Self_tokens : SELF_TOKENS with type token = Token.t)
@@ -243,8 +214,9 @@ module MakeTwoParsers
     type expr   = CST.expr
     type buffer = Buffer.t
 
-    module Partial =
-      MakeParser (File) (Escape) (Token) (ParErr) (Self_tokens)
+    (* Partially instantiating a parser *)
+
+    module Partial = MakeParser (Config) (Token) (ParErr) (Self_tokens)
 
     (* Parsing contracts *)
 

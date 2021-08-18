@@ -1,24 +1,26 @@
-(* This module is a wrapper for running the LIGO lexers as standalone
-   pieces of software. *)
-
 (* Vendor dependencies *)
 
-module Region  = Simple_utils.Region
-module Config  = Preprocessor.Config
-module Options = LexerLib.Options
+module Region = Simple_utils.Region
+
+module type CONFIG  = Preprocessor.Config.S
+module type OPTIONS = LexerLib.Options.S
+
+(* Internal dependencies *)
+
+module type TOKEN = Token.S
 
 (* The functor *)
 
-module Make (Config      : Config.S)
-            (Options     : Options.S)
-            (Token       : Token.S)
+module Make (Config      : CONFIG)
+            (Options     : OPTIONS)
+            (Token       : TOKEN)
             (Self_tokens : Self_tokens.S with type token = Token.t) =
   struct
-    (* Reading the preprocessor CLI and making the parameters *)
+    (* Reading the preprocessor CLI *)
 
     module PreParams = Preprocessor.CLI.Make (Config)
 
-    (* Reading the lexer CLI and making the parameters *)
+    (* Reading the lexer CLI *)
 
     module Parameters = LexerLib.CLI.Make (PreParams)
 
