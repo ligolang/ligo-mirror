@@ -31,6 +31,11 @@ let test_basic ~raise () =
   then ()
   else raise.raise @@ `Test_repl ([s], ["4"])
 
+let test_empty ~raise () =
+  test_seq ~raise init_state_cameligo [""]
+                               ["unexpected error, missing expression?"]
+                               ()
+
 let test_def ~raise () =
   test_seq ~raise init_state_cameligo ["let f (x : int) = x * 2"; "f 3"]
                                ["f"; "6"]
@@ -88,6 +93,11 @@ let test_basic_jsligo ~raise () =
   then ()
   else raise.raise @@ `Test_repl ([s], ["4"])
 
+let test_empty_jsligo ~raise () =
+  test_seq ~raise init_state_jsligo [""]
+                               ["unexpected error, missing expression?"]
+                               ()
+
 let test_def_jsligo ~raise () =
   test_seq ~raise init_state_jsligo ["let f = (x : int) : int => x * 2"; "f(3)"]
                              ["f"; "6"]
@@ -115,8 +125,8 @@ let test_long_jsligo ~raise () =
         "#import \"contracts/build/B.jsligo\" \"MYMOD\"";
         "MYMOD.toto";
         "MYMOD.A.toto";
-        "let g = (x : int) : [list<operation>, int] => MYMOD.f (unit, x)";
-        "g(4)";
+        "let f = (x : int) : [list<operation>, int] => MYMOD.f (unit, x)";
+        "f(4)";
         "namespace EURO {\n\
             export type t = nat;\n\
             export let add = ([a, b]: [t, t]): t => a + b;\n\
@@ -132,7 +142,7 @@ let test_long_jsligo ~raise () =
         "Done.";
         "32";
         "1";
-        "g";
+        "f";
         "( LIST_EMPTY() , 48 )";
         "EURO";
         "US_DOLLAR";
@@ -144,6 +154,7 @@ let () =
   run_test @@ test_suite "LIGO" [
     test_suite "REPL (cameligo)" [
         test "basic" test_basic;
+        test "empty" test_empty;
         test "def&eval" test_def;
         test "mod" test_mod;
         test "use" test_use;
@@ -151,6 +162,7 @@ let () =
       ] ;
     test_suite "REPL (jsligo)" [
         test "basic" test_basic_jsligo;
+        test "empty" test_empty_jsligo;
         test "def&eval" test_def_jsligo;
         test "mod" test_mod_jsligo;
         test "use" test_use_jsligo;

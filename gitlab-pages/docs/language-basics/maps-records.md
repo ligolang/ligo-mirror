@@ -191,9 +191,9 @@ xy_translate "(record [x=2;y=3;z=1], record [dx=3;dy=4])"
 # Outputs: {z = 1 , y = 7 , x = 5}
 ```
 
-You have to understand that `p` has not been changed by the functional
-update: a nameless new version of it has been created and returned by
-the block-less function.
+> You have to understand that `p` has not been changed by the functional
+> update: a nameless new version of it has been created and returned by
+> the block-less function.
 
 </Syntax>
 <Syntax syntax="cameligo">
@@ -241,6 +241,20 @@ let xy_translate = ((p, vec) : (point, vector)) : point =>
   {...p, x : p.x + vec.dx, y : p.y + vec.dy};
 ```
 
+You can call the function `xy_translate` defined above by running the
+following command of the shell:
+
+```shell
+ligo evaluate-call
+gitlab-pages/docs/language-basics/src/maps-records/record_update.religo
+xy_translate "({x:2,y:3,z:1}, {dx:3,dy:4})"
+# Outputs: {z = 1 , y = 7 , x = 5}
+```
+
+> You have to understand that `p` has not been changed by the
+> functional update: a nameless new version of it has been created and
+> returned.
+
 </Syntax>
 <Syntax syntax="jsligo">
 
@@ -256,21 +270,21 @@ let xy_translate = ([p, vec]: [point, vector]): point =>
   ({...p, x: p.x + vec.dx, y: p.y + vec.dy});
 ```
 
-</Syntax>
-
-
 You can call the function `xy_translate` defined above by running the
 following command of the shell:
 
 ```shell
 ligo evaluate-call
-gitlab-pages/docs/language-basics/src/maps-records/record_update.religo
+gitlab-pages/docs/language-basics/src/maps-records/record_update.jsligo
 xy_translate "({x:2,y:3,z:1}, {dx:3,dy:4})"
 # Outputs: {z = 1 , y = 7 , x = 5}
 ```
 
-You have to understand that `p` has not been changed by the functional
-update: a nameless new version of it has been created and returned.
+> You have to understand that `p` has not been changed by the
+> functional update: a nameless new version of it has been created and
+> returned.
+
+</Syntax>
 
 #### Nested updates
 
@@ -346,7 +360,7 @@ type account = {
 <Syntax syntax="jsligo">
 
 A unique feature of LIGO is the ability to perform nested updates on records. 
-JsLIGO however does not support the specialized syntax as the other syntaxes. 
+JsLIGO however does not support the specialised syntax as the other syntaxes. 
 The following however also does the trick.
 
 For example if you have the following record structure:
@@ -425,7 +439,7 @@ change_color_preference "(record [id=1001; preferences=record [color=Blue; other
 ### Record Patches
 
 Another way to understand what it means to update a record value is to
-make sure that any further reference to the value afterward will
+make sure that any further reference to the value afterwards will
 exhibit the modification. This is called a `patch` and this is only
 possible in PascaLIGO, because a patch is an *instruction*, therefore
 we can only use it in a block. Similarly to a *functional update*, a

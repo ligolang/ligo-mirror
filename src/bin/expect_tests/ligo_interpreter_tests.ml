@@ -6,7 +6,7 @@ let () = Sys.chdir "../../test/contracts/interpreter_tests/"
 
 let%expect_test _ =
   run_ligo_good [ "test" ; test "interpret_test.mligo" ] ;
-  [%expect {|
+  [%expect{|
     Everything at the top-level was executed.
     - test_lambda_call exited with value ().
     - test_higher_order1 exited with value ().
@@ -52,33 +52,33 @@ let%expect_test _ =
 
 let%expect_test _ =
   run_ligo_good [ "test" ; test "interpret_test_log.mligo" ] ;
-  [%expect {|
+  [%expect{|
     {a = 1 ; b = 2n ; c = "aaa"}
     One (())
     Everything at the top-level was executed. |}]
 
 let%expect_test _ =
   run_ligo_good [ "test" ; test "test_now.mligo" ] ;
-  [%expect {|
-  "storage at origination"
-  "2000-01-01T10:10:10Z"
-  "setting now at:"
-  "storage after calling"
-  "2010-01-01T10:10:11Z"
-  Everything at the top-level was executed.
-  - test_ts exited with value timestamp(946721410).
-  - test exited with value true. |}]
+  [%expect{|
+    "storage at origination"
+    "2000-01-01T10:10:10Z"
+    "setting now at:"
+    "storage after calling"
+    "2010-01-01T10:10:11Z"
+    Everything at the top-level was executed.
+    - test_ts exited with value timestamp(946721410).
+    - test exited with value true. |}]
 
 let%expect_test _ =
   run_ligo_good [ "test" ; test "test_now_from_file.mligo" ] ;
-  [%expect {|
-  "storage at origination"
-  "2000-01-01T10:10:10Z"
-  "setting now at:"
-  "storage after calling"
-  "2010-01-01T10:10:11Z"
-  Everything at the top-level was executed.
-  - test exited with value true. |}]
+  [%expect{|
+    "storage at origination"
+    "2000-01-01T10:10:10Z"
+    "setting now at:"
+    "storage after calling"
+    "2010-01-01T10:10:11Z"
+    Everything at the top-level was executed.
+    - test exited with value true. |}]
 
 let%expect_test _ =
   run_ligo_good [ "test" ; test "test_fail.mligo" ] ;
@@ -139,7 +139,7 @@ let%expect_test _ =
 
 let%expect_test _ =
   run_ligo_good [ "test" ; test "test_mutate_example.mligo" ] ;
-  [%expect {|
+  [%expect{|
     Increment (0)
     10
     Increment (-32)
@@ -213,3 +213,34 @@ let%expect_test _ =
 
     An uncaught error occured:
     Insufficient tokens in initial accounts to create one roll |}]
+
+let%expect_test _ =
+  run_ligo_bad [ "test" ; bad_test "test_trace.mligo" ] ;
+  [%expect {|
+    File "../../test/contracts/negative//interpreter_tests/test_trace.mligo", line 3, characters 5-24:
+      2 |   if x < 0 then
+      3 |     (failwith "negative" : int)
+      4 |   else
+
+    Test failed with "negative"
+    Trace:
+    File "../../test/contracts/negative//interpreter_tests/test_trace.mligo", line 5, characters 4-13 ,
+    File "../../test/contracts/negative//interpreter_tests/test_trace.mligo", line 5, characters 4-13 ,
+    File "../../test/contracts/negative//interpreter_tests/test_trace.mligo", line 5, characters 4-13 ,
+    File "../../test/contracts/negative//interpreter_tests/test_trace.mligo", line 5, characters 4-13 ,
+    File "../../test/contracts/negative//interpreter_tests/test_trace.mligo", line 5, characters 4-13 ,
+    File "../../test/contracts/negative//interpreter_tests/test_trace.mligo", line 9, characters 39-46 ,
+    File "../../test/contracts/negative//interpreter_tests/test_trace.mligo", line 9, characters 14-49 |}]
+
+let%expect_test _ =
+  run_ligo_bad [ "test" ; bad_test "test_trace2.mligo" ] ;
+  [%expect {|
+    File "../../test/contracts/negative//interpreter_tests/test_trace2.mligo", line 6, characters 10-88:
+      5 | let make_call (contr : unit contract) =
+      6 |   let _ = Test.get_storage_of_address ("tz1fakefakefakefakefakefakefakcphLA5" : address) in
+      7 |   Test.transfer_to_contract_exn contr () 10tez
+
+    An uncaught error occured:
+    Did not find service: GET ocaml:context/contracts/tz1fakefakefakefakefakefakefakcphLA5/storage
+    Trace:
+    File "../../test/contracts/negative//interpreter_tests/test_trace2.mligo", line 12, characters 2-33 |}]

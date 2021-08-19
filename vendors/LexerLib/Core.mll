@@ -7,9 +7,8 @@
 
 module Region = Simple_utils.Region
 module Pos    = Simple_utils.Pos
-module Utils  = Simple_utils.Utils
 
-let (<@) = Utils.(<@)
+let (<@) f g x = f (g x)
 
 (* Wrapping tokens, markup and directives. See module [Unit]. *)
 

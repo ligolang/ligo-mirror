@@ -9,7 +9,7 @@ module Region = Simple_utils.Region
 module Config        = Preprocessing_cameligo.Config
 module Token         = Lexing_cameligo.Token
 module Self_tokens   = Lexing_cameligo.Self_tokens
-module CST           = Cst.Cameligo
+module CST           = Cst_cameligo.CST
 module ParErr        = Parser_msg
 module ParserMainGen = Parsing_shared.ParserMainGen
 

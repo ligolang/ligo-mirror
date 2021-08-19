@@ -138,7 +138,7 @@ module Make (Config      : CONFIG)
                 set_window ~current:token ~last;
                 store := tokens;
                 token
-            | [] -> Token.eof Region.ghost
+            | [] -> Token.mk_eof Region.ghost
           in Stdlib.Ok token
         else
           let lex_units = Scan.LexUnits.from_lexbuf lexbuf
@@ -162,7 +162,7 @@ module Make (Config      : CONFIG)
         match Preproc.preprocess () with
           Stdlib.Error _ -> () (* Already printed *)
         | Ok (buffer, _deps) ->
-            (* Module dependencies are dropped. *)
+            (* Module dependencies [_deps] are dropped. *)
             let string = Buffer.contents buffer in
             let lexbuf = Lexing.from_string string in
             Scan.Tokens.from_lexbuf lexbuf |> print_error

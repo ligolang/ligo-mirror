@@ -9,7 +9,7 @@ module Region = Simple_utils.Region
 module Config        = Preprocessing_jsligo.Config
 module Token         = Lexing_jsligo.Token
 module Self_tokens   = Lexing_jsligo.Self_tokens
-module CST           = Cst.Jsligo
+module CST           = Cst_jsligo.CST
 module ParErr        = Parser_msg
 module ParserMainGen = Parsing_shared.ParserMainGen
 

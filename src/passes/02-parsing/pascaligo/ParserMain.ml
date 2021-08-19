@@ -9,7 +9,7 @@ module Region = Simple_utils.Region
 module Config        = Preprocessing_pascaligo.Config
 module Token         = Lexing_pascaligo.Token
 module Self_tokens   = Lexing_pascaligo.Self_tokens
-module CST           = Cst.Pascaligo
+module CST           = Cst_pascaligo.CST
 module ParErr        = Parser_msg
 module ParserMainGen = Parsing_shared.ParserMainGen
 

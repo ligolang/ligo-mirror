@@ -18,6 +18,8 @@ let type_variable_of_yojson var = Var.of_yojson var
 type module_variable = string
 let module_variable_to_yojson var = `String var
 let module_variable_of_yojson var = `String var
+let compare_module_variable = String.compare
+let equal_module_variable = String.equal
 
 type label = Label of string
 let label_to_yojson (Label l) = `List [`String "Label"; `String l]
@@ -59,6 +61,12 @@ type 'a module_access = {
 }
 
 (* Type level types *)
+type 'ty_exp abstraction = {
+  ty_binder : type_variable Location.wrap ; 
+  kind : unit ;
+  type_ : 'ty_exp ;
+}
+
 type 'ty_exp rows = {
   fields     : 'ty_exp row_element label_map;
   attributes : string list ;

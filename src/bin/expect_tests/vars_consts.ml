@@ -116,16 +116,13 @@ let%expect_test _ =
 let%expect_test _ =
   run_ligo_bad [ "print-ast-core" ; (bad_test "capture_var_params.mligo") ] ;
   [%expect{|
-    File "../../test/contracts/negative/vars_consts/capture_var_params.mligo", line 5, characters 50-51:
-      4 |       x[@var], y ->
-      5 |         let bar : unit -> int = fun (_ : unit) -> x + y in
-      6 |         bar
-
-    Invalid capture of non-constant variable "x", declared at
-    File "../../test/contracts/negative/vars_consts/capture_var_params.mligo", line 4, characters 6-7:
+    File "../../test/contracts/negative/vars_consts/capture_var_params.mligo", line 4, characters 7-13:
       3 |     match p with
       4 |       x[@var], y ->
-      5 |         let bar : unit -> int = fun (_ : unit) -> x + y in |}]
+      5 |         let bar : unit -> int = fun (_ : unit) -> x + y in
+    Ill-formed pattern matching.
+    At this point, if the pattern is complete, an arrow '->' is expected,
+    followed by an expression. |}]
 
 let%expect_test _ =
   run_ligo_bad [ "print-ast-core" ; (bad_test "assign_const_param.jsligo") ] ;
@@ -232,6 +229,20 @@ let%expect_test _ =
       3 |     var (x, y) := (4, 5);
       4 |     function add(const _u : unit) is (x + y); |}]
 
+let%expect_test _ =
+  run_ligo_bad [ "print-ast-core" ; (bad_test "capture_assign.ligo") ] ;
+  [%expect{|
+    File "../../test/contracts/negative/vars_consts/capture_assign.ligo", line 5, characters 4-10:
+      4 |     const y = 0;
+      5 |     x := 6;
+      6 |   } with unit;
+
+    Invalid capture of non-constant variable "x", declared at
+    File "../../test/contracts/negative/vars_consts/capture_assign.ligo", line 2, characters 6-7:
+      1 | function foo(const _ : unit) is block {
+      2 |   var x := 42;
+      3 |   function bar(const _ : unit) is block { |}]
+
 (* Positives *)
 
 let%expect_test _ =
@@ -296,7 +307,7 @@ let%expect_test _ =
                                                  let i = binder#2.0.i in
                                                   match AND(LT(i , x) ,
                                                             GT(b , 0)) with
-                                                   | true () -> CONTINUE(let i =
+                                                   | True () -> CONTINUE(let i =
                                                                         ADD
                                                                         (i ,
                                                                         1) in
@@ -313,7 +324,7 @@ let%expect_test _ =
                                                                         let _ : unit =
                                                                         unit in
                                                                         binder#2)
-                                                   | false () -> STOP(binder#2) ,
+                                                   | False () -> STOP(binder#2) ,
                                                  env_rec#1) in
                                     let env_rec#1 = env_rec#1.0 in
                                     let i = env_rec#1.i in i |}]
@@ -347,3 +358,4 @@ let%expect_test _ =
                                                                  rec (add:unit -> int => lambda (_ : unit) : int return C_POLYMORPHIC_ADD(x ,
                                                                y) ) in
                                                                (add)@(unit) ) |}]
+

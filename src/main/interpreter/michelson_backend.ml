@@ -23,13 +23,13 @@ let clean_location_with v x =
 let clean_locations e t =
   clean_location_with () e, clean_location_with () t
 
-let simple_val_insertion ~raise ~loc michelson_ty michelson_value ligo_obj_ty : Ast_typed.expression =
+let simple_val_insertion ~raise ~loc ~calltrace michelson_ty michelson_value ligo_obj_ty : Ast_typed.expression =
   let open Tezos_micheline in
   let open Ast_typed in
   let cano (x: unit Tezos_utils.Michelson.michelson) =
     let x = Tezos_micheline.Micheline.strip_locations
               (clean_location_with 0 x) in
-    let x = Proto_alpha_utils.Trace.trace_alpha_tzresult ~raise (throw_obj_exc loc) @@
+    let x = Proto_alpha_utils.Trace.trace_alpha_tzresult ~raise (throw_obj_exc loc calltrace) @@
       Tezos_protocol_008_PtEdo2Zk.Protocol.Michelson_v1_primitives.prims_of_strings x (* feels wrong ... *)
     in
     x
@@ -106,7 +106,7 @@ let make_function in_ty out_ty arg_binder body subst_lst =
   let typed_exp' = add_ast_env subst_lst arg_binder body in
   Ast_typed.e_a_lambda {result=typed_exp'; binder=arg_binder} in_ty out_ty
 
-let compile_expression ~raise ~loc ~add_warning syntax exp_as_string source_file subst_lst =
+let compile_expression ~raise ~add_warning ~loc ~calltrace syntax exp_as_string source_file subst_lst =
   let open Ligo_compile in
   let options = Compiler_options.make () in
   let (decl_list,env) = match source_file with
@@ -131,7 +131,7 @@ let compile_expression ~raise ~loc ~add_warning syntax exp_as_string source_file
       let aux (s,(mv,mt,t)) exp : expression =
         let s = subst_vname s in
         let let_binder = Location.wrap @@ Var.of_name s in
-        let applied = simple_val_insertion ~raise ~loc mt mv t in
+        let applied = simple_val_insertion ~raise ~loc ~calltrace mt mv t in
         e_a_let_in let_binder applied exp false
       in
       let typed_exp' = List.fold_right ~f:aux ~init:typed_exp lst in
@@ -262,7 +262,7 @@ let rec val_to_ast ~raise ~loc ?(toplevel = true) : Ligo_interpreter.Types.value
 
 and make_ast_func ~raise ?(toplevel = true) ?name env arg body orig =
   let open Ast_typed in
-  let fv = Self_ast_typed.Helpers.get_fv body in
+  let fv = Self_ast_typed.Helpers.Free_variables.expression body in
   let env = make_subst_ast_env_exp ~raise ~toplevel env fv in
   let env = List.rev env in
   let typed_exp' = add_ast_env ?name:name env arg body in
@@ -328,7 +328,7 @@ and compile_simple_value ~raise ?ctxt ~loc ?(toplevel = true) : Ligo_interpreter
                        _ =
   fun v ty ->
   let typed_exp = val_to_ast ~raise ~loc ~toplevel v ty in
-  let () = Check.check_obj_ligo ~raise typed_exp in
+  let _ = trace ~raise Main_errors.self_ast_typed_tracer @@ Self_ast_typed.expression_obj typed_exp in
   let compiled_exp = compile_value ~raise typed_exp in
   let expr, _ = run_expression_unwrap ~raise ?ctxt ~loc compiled_exp in
   (* TODO-er: check the ignored second component: *)
@@ -344,7 +344,7 @@ and make_subst_ast_env_exp ~raise ?(toplevel = true) env fv =
   let op (evl, v : _ * Ligo_interpreter.Types.value_expr) (l,fv) =
     let loc = Location.get_location evl in
     let ev = Location.unwrap evl in
-    if not (List.mem fv evl ~equal:Self_ast_typed.Helpers.eq_vars)
+    if not (List.mem fv evl ~equal:(Location.equal_content ~equal:Var.equal))
        || List.mem (List.map ~f:fst l) (Var.to_name ev) ~equal:String.equal then
       (l, fv)
     else
@@ -352,7 +352,7 @@ and make_subst_ast_env_exp ~raise ?(toplevel = true) env fv =
       | { ast_type = Some ty } ->
          let expr = val_to_ast ~raise ~toplevel:false ~loc v.eval_term ty in
          let l = (Var.to_name ev, (expr,ty, None)) :: l in
-         let fv' = Self_ast_typed.Helpers.get_fv expr in
+         let fv' = Self_ast_typed.Helpers.Free_variables.expression expr in
          (l, fv @ fv')
       | _ ->
          (l, fv) in

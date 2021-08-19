@@ -68,7 +68,7 @@ module MakeParser
 
     let lift ~(raise:raise) = function
       Ok tree -> tree
-    | Error msg -> raise.raise @@ Errors.generic msg
+    | Error msg -> raise.raise @@ `Parsing msg
 
     (* Partially instantiating the final lexer *)
 

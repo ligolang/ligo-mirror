@@ -40,7 +40,6 @@ module Make (Token : Token.S) =
     type error =
       Unexpected_character of char
     | Non_canonical_zero
-    | Reserved_name of string
     | Invalid_symbol of string
     | Unsupported_nat_syntax
     | Unsupported_mutez_syntax
@@ -56,9 +55,6 @@ module Make (Token : Token.S) =
     | Non_canonical_zero ->
         "Non-canonical zero.\n\
          Hint: Use 0."
-    | Reserved_name s ->
-        sprintf "Reserved name: \"%s\".\n\
-                 Hint: Change the name." s
     | Invalid_symbol s ->
         sprintf "Invalid symbol: %S.\n\
                  Hint: Check the LIGO syntax you use." s
@@ -180,20 +176,17 @@ module Make (Token : Token.S) =
 
     let mk_ident state buffer =
       let State.{region; lexeme; state} = state#sync buffer in
-      match Token.mk_ident lexeme region with
-        Ok token ->
-          token, state
-      | Error Token.Reserved_name ->
-          fail region (Reserved_name lexeme)
+      let token = Token.mk_ident lexeme region
+      in token, state
 
     let mk_attr attr state buffer =
       let State.{region; state; _} = state#sync buffer in
       let token = Token.mk_attr attr region
       in token, state
 
-    let mk_constr state buffer =
+    let mk_uident state buffer =
       let State.{region; lexeme; state} = state#sync buffer in
-      let token = Token.mk_constr lexeme region
+      let token = Token.mk_uident lexeme region
       in token, state
 
     let mk_lang lang state buffer =
@@ -238,26 +231,27 @@ let capital    = ['A'-'Z']
 let letter     = small | capital
 let ident      = small (letter | '_' | digit)* |
                  '_' (letter | '_' (letter | digit) | digit)+
-let constr     = capital (letter | '_' | digit)*
+let uident    = capital (letter | '_' | digit)*
 let attr       = letter (letter | '_' | ':' | digit)*
 let hexa_digit = digit | ['A'-'F' 'a'-'f']
 let byte       = hexa_digit hexa_digit
 let byte_seq   = byte | byte (byte | '_')* byte
-let bytes      = "0x" (byte_seq? as seq)
+let bytes      = "0x" (byte_seq? as b)
 let string     = [^'"' '\\' '\n']*  (* For strings of #include *)
 let directive  = '#' (blank* as space) (small+ as id) (* For #include *)
 
 (* Symbols *)
 
-let common_sym     =   ';' | ',' | '(' | ')' | '[' | ']'  | '{' | '}'
-                     | '=' | ':' | '|' | '.' | '_' | '^'
-                     | '+' | '-' | '*' | '/' | '<' | "<=" | '>' | ">="
-let pascaligo_sym  = "->" | "=/=" | '#' | ":="
-let cameligo_sym   = "->" | "<>" | "::" | "||" | "&&"
-let reasonligo_sym = '!' | "=>" | "!=" | "==" | "++" | "..." | "||" | "&&"
-let jsligo_sym     = "++" | "--" | "..." | '?' | '&' | '!' | '~' | '%'
-                     | "<<<" | ">>>" | "==" | "!=" | "+=" | "-=" | "*="
-                     | "%=" | "<<<=" | ">>>=" | "&=" | "|=" | "^=" | "=>"
+let common_sym     =   ";" | "," | "(" | ")"  | "[" | "]"  | "{" | "}"
+                     | "=" | ":" | "|" | "." | "_" | "^"
+                     | "+" | "-" | "*" | "/"  | "<" | "<=" | ">" | ">="
+let pascaligo_sym  = "->" | "=/=" | "#" | ":="
+let cameligo_sym   = "->" | "<>" | "::" | "||" | "&&" | "'"
+let reasonligo_sym = "!" | "=>" | "!=" | "==" | "++" | "..." | "||" | "&&"
+let jsligo_sym     = "++" | "--" | "..." | "?" | "&" | "!" | "~" | "%"
+                     | "<<<" | "==" | "!=" | "+=" | "-=" | "*="
+                     | "%=" | "<<<=" | "&=" | "|="
+                     | "^=" | "=>" (* | ">>>" | ">>>=" *)
 
 let symbol =
   common_sym
@@ -272,20 +266,18 @@ let symbol =
    through recursive calls. *)
 
 rule scan state = parse
-  ident                  { mk_ident     state lexbuf }
-| constr                 { mk_constr    state lexbuf }
-| bytes                  { mk_bytes seq state lexbuf }
-| natural 'n'            { mk_nat       state lexbuf }
-| natural "mutez"        { mk_mutez     state lexbuf }
-| natural "tz"
-| natural "tez"          { mk_tez       state lexbuf }
-| decimal "tz"
-| decimal "tez"          { mk_tez_dec   state lexbuf }
-| natural                { mk_int       state lexbuf }
-| symbol                 { mk_sym       state lexbuf }
-| eof                    { mk_eof       state lexbuf }
-| "[@" (attr as a) "]"   { mk_attr    a state lexbuf }
-| "[%" (attr as l)       { mk_lang    l state lexbuf }
+  ident                  { mk_ident   state lexbuf }
+| uident                 { mk_uident  state lexbuf }
+| bytes                  { mk_bytes b state lexbuf }
+| natural "n"            { mk_nat     state lexbuf }
+| natural "mutez"        { mk_mutez   state lexbuf }
+| natural ("tz" | "tez") { mk_tez     state lexbuf }
+| decimal ("tz" | "tez") { mk_tez_dec state lexbuf }
+| natural                { mk_int     state lexbuf }
+| symbol                 { mk_sym     state lexbuf }
+| eof                    { mk_eof     state lexbuf }
+| "[@" (attr as a) "]"   { mk_attr  a state lexbuf }
+| "[%" (attr as l)       { mk_lang  l state lexbuf }
 
 | "`" | "{|" as lexeme {
     if lexeme = fst Token.verbatim_delimiters then
@@ -308,8 +300,7 @@ and scan_verbatim verbatim_end thread state = parse
   (blank+ ('1' | '2'))? blank* (nl | eof) {
     let _, state =
       state#mk_linemarker ~line ~file lexbuf
-    in scan_verbatim verbatim_end thread state lexbuf
-  }
+    in scan_verbatim verbatim_end thread state lexbuf }
 
 | nl as nl { let ()    = Lexing.new_line lexbuf
              and state = state#set_pos (state#pos#new_line nl) in
@@ -321,8 +312,7 @@ and scan_verbatim verbatim_end thread state = parse
       State.(thread, (state#sync lexbuf).state)
     else
       let State.{state; _} = state#sync lexbuf in
-      scan_verbatim verbatim_end (thread#push_string lexeme) state lexbuf
-  }
+      scan_verbatim verbatim_end (thread#push_string lexeme) state lexbuf }
 | _ as c { let State.{state; _} = state#sync lexbuf in
            scan_verbatim verbatim_end (thread#push_char c) state lexbuf }
 
