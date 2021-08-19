@@ -5,18 +5,11 @@
 
 (* Vendor dependencies *)
 
-<<<<<<< HEAD
-module Region = Simple_utils.Region
-module Unit   = LexerLib.Unit
-module Markup = LexerLib.Markup
-module Utils  = Simple_utils.Utils
-=======
 module Region    = Simple_utils.Region
 module Utils     = Simple_utils.Utils
-module Core      = LexerLib.Core
 module Markup    = LexerLib.Markup
 module Directive = LexerLib.Directive
->>>>>>> f3a1d941a08443d034a6c2e090b82ca5c28bdd86
+module Unit      = LexerLib.Unit
 
 (* Signature *)
 
@@ -165,8 +158,8 @@ let inject_zwsp lex_units =
   let open! Token in
   let rec aux acc = function
     [] -> List.rev acc
-  | (Core.Token GT _ as gt1)::(Core.Token GT reg :: _ as units) ->
-      aux (Core.Token (ZWSP reg) :: gt1 :: acc) units
+  | (`Token GT _ as gt1)::(`Token GT reg :: _ as units) ->
+      aux (`Token (ZWSP reg) :: gt1 :: acc) units
   | unit::units -> aux (unit::acc) units
   in aux [] lex_units
 
@@ -177,11 +170,11 @@ let inject_zwsp units = apply inject_zwsp units
 (* Printing lexical units *)
 
 let print_unit = function
-  Core.Token t ->
+  `Token t ->
     Printf.printf "%s\n" (Token.to_string ~offsets:true `Point t)
-| Core.Markup m ->
+| `Markup m ->
     Printf.printf "%s\n" (Markup.to_string ~offsets:true `Point m)
-| Core.Directive d ->
+| `Directive d ->
     Printf.printf "%s\n" (Directive.to_string ~offsets:true `Point d)
 
 let print_units units =

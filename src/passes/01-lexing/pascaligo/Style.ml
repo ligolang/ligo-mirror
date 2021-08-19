@@ -16,7 +16,7 @@ let rec next_token markup = function
     next_token markup units
 | [] -> None
 
-let next_token = next_token []
+let next_token units = next_token [] units
 
 (* Errors *)
 

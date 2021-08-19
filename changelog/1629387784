@@ -1,0 +1,6 @@
+---
+  title: "Running [make] now removes _opam and _build. Use [make mostlyclean] for the old behaviour."
+  merge_request: "1220"
+  author: "Christian Rinderknecht"
+  type: "internal"
+

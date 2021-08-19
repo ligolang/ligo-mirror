@@ -211,7 +211,7 @@ module Make (Token : Token.S) =
 
     let mk_eof state buffer =
       let State.{region; state; _} = state#sync buffer in
-      let token = Token.eof region
+      let token = Token.mk_eof region
       in token, state
 
 (* END HEADER *)

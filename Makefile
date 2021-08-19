@@ -31,9 +31,12 @@ test: build
 	eval $$(opam config env)
 	scripts/test_ligo.sh
 
-clean:
+mostlyclean:
 	dune clean
 	rm -fr _coverage_all _coverage_cli _coverage_ligo
+
+clean: mostlyclean
+	rm -fr _opam _build
 
 coverage:
 	eval $$(opam config env)

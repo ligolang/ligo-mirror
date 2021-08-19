@@ -72,7 +72,7 @@ let set_markup markup tokens =
       | Nat i -> Nat {i with region = set_markup i.region markup}
       | Mutez i -> Mutez {i with region = set_markup i.region markup}
       | Ident i -> Ident {i with region = set_markup i.region markup}
-      | Constr i -> Constr {i with region = set_markup i.region markup}
+      | UIdent i -> UIdent {i with region = set_markup i.region markup}
       | Lang i -> Lang {i with region = set_markup i.region markup}
       | Attr i -> Attr {i with region = set_markup i.region markup}
       | Directive (Linemarker d) ->
