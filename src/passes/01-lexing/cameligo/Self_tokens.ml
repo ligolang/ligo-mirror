@@ -28,4 +28,7 @@ type token = Token.t
 
 (* Exported *)
 
-let filter units = AttachComments.attach @@ Style.check units
+let filter units =
+     AttachComments.attach
+  @@ Style.check
+     units

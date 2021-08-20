@@ -6,7 +6,6 @@
 (* Vendor dependencies *)
 
 module Region    = Simple_utils.Region
-module Utils     = Simple_utils.Utils
 module Markup    = LexerLib.Markup
 module Directive = LexerLib.Directive
 module Unit      = LexerLib.Unit
@@ -24,8 +23,6 @@ module type S =
   end
 
 (* Utilities *)
-
-let (<@) = Utils.(<@)
 
 let ok x = Stdlib.Ok x
 
@@ -53,7 +50,7 @@ let tokens_of = function
 (* Automatic Semicolon Insertion *)
 
 let automatic_semicolon_insertion tokens =
-  let open Token in
+  let open! Token in
   let rec inner result = function
     (Directive _ as t) :: rest ->
     inner (t :: result) rest
@@ -105,18 +102,19 @@ let collect_attributes str =
   List.rev (List.fold_left (fun all x ->
     match x with
       Str.Text _ -> all
-    | Delim s -> s :: all
+    | Str.Delim s -> s :: all
   ) [] x)
 
 let attributes tokens =
-  let open Token in
+  let open! Token in
   let rec inner result = function
     LineCom c :: tl
   | BlockCom c :: tl ->
-      let attributes = collect_attributes c.value in
-      let attributes = List.map (fun e ->
-        Attr {value = e; region = c.region}) attributes in
-      inner (attributes @ result) tl
+      let attributes = collect_attributes c.Region.value in
+      let attributes =
+        List.map (fun value -> Attr Region.{value; region = c.region})
+                 attributes
+      in inner (attributes @ result) tl
   | hd :: tl -> inner (hd :: result) tl
   | [] -> List.rev result
   in inner [] tokens
@@ -167,34 +165,27 @@ let inject_zwsp units = apply inject_zwsp units
 
 (* DEBUG *)
 
-(* Printing lexical units *)
+let unit_to_string = function
+  `Token     t -> Token.to_string ~offsets:true `Point t
+| `Markup    m -> Markup.to_string ~offsets:true `Point m
+| `Directive d -> Directive.to_string ~offsets:true `Point d
 
-let print_unit = function
-  `Token t ->
-    Printf.printf "%s\n" (Token.to_string ~offsets:true `Point t)
-| `Markup m ->
-    Printf.printf "%s\n" (Markup.to_string ~offsets:true `Point m)
-| `Directive d ->
-    Printf.printf "%s\n" (Directive.to_string ~offsets:true `Point d)
+let print printer = apply (fun items -> List.iter printer items; items)
 
-let print_units units =
-  apply (fun units -> List.iter print_unit units; units) units
+let print_unit unit = Printf.printf "%s\n" (unit_to_string unit)
 
-(* Printing tokens *)
+let print_units units = print print_unit units
 
-let print_token token =
-  Printf.printf "%s\n" (Token.to_string ~offsets:true `Point token)
-
-let print_tokens tokens =
-  apply (fun tokens -> List.iter print_token tokens; tokens) tokens
+let print_tokens tokens = print (fun token -> print_unit (`Token token)) tokens
 
 (* COMPOSING FILTERS (exported) *)
 
-let filter =
-  attributes
-  <@ automatic_semicolon_insertion
-  (*  <@ print_tokens*)
-  <@ tokens_of
-  (*  <@ print_units*)
-  <@ inject_zwsp
-  <@ Style.check
+let filter units =
+     attributes
+  @@ automatic_semicolon_insertion
+  (*  @@ print_tokens *)
+  @@ tokens_of
+  (*  @@ print_units *)
+  @@ inject_zwsp
+  @@ Style.check
+     units

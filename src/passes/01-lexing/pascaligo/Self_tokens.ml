@@ -5,7 +5,6 @@
 
 module Region = Simple_utils.Region
 module Unit   = LexerLib.Unit
-module Utils  = Simple_utils.Utils
 
 (* Signature *)
 
@@ -39,4 +38,7 @@ let tokens_of = function
 
 (* Exported *)
 
-let filter = Utils.(tokens_of <@ Style.check)
+let filter units =
+     tokens_of
+  @@ Style.check
+     units
