@@ -1,0 +1,6 @@
+---
+  title: "Vendored and refactored the Getopt library."
+  merge_request: "1220"
+  author: "Christian Rinderknecht"
+  type: "internal"
+
