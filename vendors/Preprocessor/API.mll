@@ -95,7 +95,7 @@ module Make (Config : Config.S) (Options : Options.S) =
       let len   = List.length p in
       let bytes = Bytes.make len ' ' in
       let rec fill i = function
-          [] -> bytes
+             [] -> bytes
       | char::l -> Bytes.set bytes i char; fill (i-1) l
       in fill (len-1) p |> Bytes.to_string
 
@@ -138,11 +138,27 @@ module Make (Config : Config.S) (Options : Options.S) =
       Stdlib.Ok state  -> state
     | Stdlib.Error err -> fail state region err
 
+(*
+    (* Reading UTF-8 encoded characters *)
+
+    let scan_utf8_wrap scan_utf8 callback thread state lexbuf =
+      let ()             = rollback lexbuf in
+      let len            = thread#length in
+      let thread, status = scan_utf8 thread state lexbuf in
+      let delta          = thread#length - len in
+      let stop           = state#pos#shift_one_uchar delta in
+      match status with
+        Ok () -> callback thread (state#set_pos stop) lexbuf
+      | Stdlib.Error error ->
+          let region = Region.make ~start:state#pos ~stop
+          in fail state region error
+ *)
 (* END OF HEADER *)
 }
 
 (* REGULAR EXPRESSIONS *)
 
+let utf8_bom  = "\xEF\xBB\xBF" (* Byte Order Mark for UTF-8 *)
 let nl        = '\n' | '\r' | "\r\n"
 let blank     = ' ' | '\t'
 let digit     = ['0'-'9']
@@ -533,6 +549,29 @@ and in_line state = parse
 | eof { rollback lexbuf; state                  }
 | _   { state#copy lexbuf; in_line state lexbuf }
 
+(*
+and scan_char_in_block block thread state = parse
+  _ { let if_eof thread =
+        let err = Error.Unterminated_comment block#closing
+        in fail state thread#opening err in
+      let scan_utf8 = scan_utf8_char if_eof
+      and callback  = in_block block in
+      scan_utf8_wrap scan_utf8 callback thread state lexbuf }
+
+(* Scanning UTF-8 encoded characters *)
+
+and scan_utf8_char if_eof thread state = parse
+  eof { thread, if_eof thread }
+| _   { let lexeme = Lexing.lexeme lexbuf in
+        let thread = thread#push_string lexeme in
+        let () = state#supply (Bytes.of_string lexeme) 0 1 in
+        match Uutf.decode state#decoder with
+          `Uchar _     -> thread, Stdlib.Ok ()
+        | `Malformed _
+        | `End         -> thread, Stdlib.Error Invalid_utf8_sequence
+        | `Await       -> scan_utf8_char if_eof thread state lexbuf }
+ *)
+
 (* #include *)
 
 and scan_include state = parse
@@ -597,15 +636,21 @@ and in_string delimiter opening state = parse
          { stop state lexbuf (Error.Invalid_character_in_string c)     }
 | _      { state#copy lexbuf; in_string delimiter opening state lexbuf }
 
-(* Entry point *)
+(* Printing the first linemarker *)
 
-and preproc state = parse
+and linemarker state = parse
   eof { state }
 | _   { let ()   = rollback lexbuf in
         let name = Lexing.(lexbuf.lex_start_p.pos_fname) in
         let ()   = if name <> "" then
                      state#print (sprintf "# 1 %S\n" name)
         in scan state lexbuf }
+
+(* Entry point *)
+
+and preproc state = parse
+  utf8_bom { linemarker state lexbuf                  }
+| _        { rollback lexbuf; linemarker state lexbuf }
 
 {
 (* START OF TRAILER *)
@@ -618,7 +663,7 @@ and preproc state = parse
 
   let from_lexbuf buffer =
     let path = Lexing.(buffer.lex_curr_p.pos_fname) in
-    let state = State.empty path in
+    let state = State.empty ~file:path in
     match preproc state buffer with
       state ->
         List.iter close_in state#chans;

@@ -50,7 +50,8 @@ type state = <
   chans   : in_channel list;
   incl    : file_path list;
   imports : (file_path * module_name) list;
-
+  decoder : Uutf.decoder;
+  supply  : Bytes.t -> int -> int -> unit;
 
   (* DIRECTORIES *)
 
@@ -125,4 +126,4 @@ type state = <
 
 type t = state
 
-val empty : file_path -> state
+val empty : file:file_path -> state

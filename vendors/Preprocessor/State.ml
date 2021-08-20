@@ -28,6 +28,8 @@ type state = <
   chans   : in_channel list;
   incl    : file_path list;
   imports : (file_path * module_name) list;
+  decoder : Uutf.decoder;
+  supply  : Bytes.t -> int -> int -> unit;
 
   (* Directories *)
 
@@ -71,7 +73,8 @@ type state = <
 
 type t = state
 
-let empty file_path =
+let empty ~file =
+  let decoder = Uutf.decoder ~encoding:`UTF_8 `Manual in
   object (self)
     val env = Env.empty
     method env = env
@@ -88,11 +91,14 @@ let empty file_path =
     val chans = []
     method chans = chans
 
-    val incl = [Filename.dirname file_path]
+    val incl = [Filename.dirname file]
     method incl = incl
 
     val imports = []
     method imports = imports
+
+    method decoder = decoder
+    method supply  = Uutf.Manual.src decoder
 
     (* Directories *)
 
