@@ -7,6 +7,7 @@
 
 module Region = Simple_utils.Region
 module Pos    = Simple_utils.Pos
+module Lexbuf = Simple_utils.Lexbuf
 
 let (<@) f g x = f (g x)
 
@@ -15,49 +16,6 @@ let (<@) f g x = f (g x)
 let mk_token     (token,     state) = `Token     token,     state
 let mk_markup    (markup,    state) = `Markup    markup,    state
 let mk_directive (directive, state) = `Directive directive, state
-
-(* LEXER ENGINE *)
-
-(* Rolling back one lexeme _within the current semantic action_ *)
-
-let rollback lexbuf =
-  let open Lexing in
-  let len = String.length (lexeme lexbuf) in
-  let pos_cnum = lexbuf.lex_curr_p.pos_cnum - len in
-  lexbuf.lex_curr_pos <- lexbuf.lex_curr_pos - len;
-  lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_cnum}
-
-(* Resetting file name and line number in the lexing buffer
-
-   The call [reset ~file ~line lexbuf] modifies in-place the lexing
-   buffer [lexbuf] so the lexing engine records that the file
-   associated with [lexbuf] is named [file], and the current line is
-   [line]. *)
-
-let reset_file file lexbuf =
-  let open Lexing in
-  lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_fname = file}
-
-let reset_line line lexbuf =
-  assert (line >= 0);
-  let open Lexing in
-  lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_lnum = line}
-
-let reset_offset offset lexbuf =
-  assert (offset >= 0);
-  let open Lexing in
-  let bol = lexbuf.lex_curr_p.pos_bol in
-  lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_cnum = bol + offset}
-
-let reset ?file ?(line=1) ?offset lexbuf =
-  let () =
-    match file with
-      Some file -> reset_file file lexbuf
-    |      None -> () in
-  let () = reset_line line lexbuf in
-  match offset with
-    Some offset -> reset_offset offset lexbuf
-  |        None -> ()
 
 (* The functor return signature *)
 
@@ -179,6 +137,11 @@ module Make (Config  : Preprocessor.Config.S)
       window     : unit -> token State.window option
     }
 
+   (* The function [Lexbuf.reset] is useful when lexing a file that
+      has been previously preprocessed, in which case the argument
+      [file] is the name of the file that was preprocessed, _not_ the
+      preprocessed file (of which the user is not normally aware). *)
+
     let lexbuf_from_input = function
       String s ->
         Ok (Lexing.from_string s, fun () -> ())
@@ -189,7 +152,7 @@ module Make (Config  : Preprocessor.Config.S)
         let () =
           match Options.input with
             None | Some "" -> ()
-          | Some path -> reset ~file:path b
+          | Some path -> Lexbuf.reset ~file:path b
         in Ok (b, fun () -> ())
     | File "" ->
         Stdlib.Error (Region.wrap_ghost "File not found.")
@@ -198,7 +161,7 @@ module Make (Config  : Preprocessor.Config.S)
           let channel  = open_in path in
           let close () = close_in channel in
           let lexbuf   = Lexing.from_channel channel in
-          let ()       = reset ~file:path lexbuf
+          let ()       = Lexbuf.reset ~file:path lexbuf
           in Ok (lexbuf, close)
         with Sys_error msg -> Stdlib.Error (Region.wrap_ghost msg)
 
@@ -237,7 +200,7 @@ module Make (Config  : Preprocessor.Config.S)
     (* Reading UTF-8 encoded characters *)
 
     let scan_utf8_wrap scan_utf8 callback thread state lexbuf =
-      let ()             = rollback lexbuf in
+      let ()             = Lexbuf.rollback lexbuf in
       let len            = thread#length in
       let thread, status = scan_utf8 thread state lexbuf in
       let delta          = thread#length - len in
@@ -341,7 +304,7 @@ rule scan state = parse
         let thread, state = in_string lexeme thread state lexbuf
         in `Token (Client.mk_string thread), state
     | Some _ | None -> (* Not a string for this syntax *)
-        rollback lexbuf; Client.callback state lexbuf }
+        Lexbuf.rollback lexbuf; Client.callback state lexbuf }
 
   (* Comments *)
 
@@ -355,7 +318,7 @@ rule scan state = parse
         let thread, state = in_block block thread state lexbuf
         in `Markup (state#mk_block thread), state
     | Some _ | None -> (* Not a comment for this syntax *)
-        rollback lexbuf; Client.callback state lexbuf }
+        Lexbuf.rollback lexbuf; Client.callback state lexbuf }
 
 | line_comment_openings {
     let lexeme = Lexing.lexeme lexbuf in
@@ -367,7 +330,7 @@ rule scan state = parse
         let thread, state = in_line thread state lexbuf
         in `Markup (state#mk_line thread), state
     | Some _ | None -> (* Not a comment for this syntax *)
-        rollback lexbuf; Client.callback state lexbuf }
+        Lexbuf.rollback lexbuf; Client.callback state lexbuf }
 
   (* Linemarkers preprocessing directives (from #include) *)
 
@@ -378,7 +341,7 @@ rule scan state = parse
 
   (* Other tokens *)
 
-| eof | _ { rollback lexbuf; Client.callback state lexbuf }
+| eof | _ { Lexbuf.rollback lexbuf; Client.callback state lexbuf }
 
 (* Block comments
 
@@ -403,7 +366,7 @@ and in_block block thread state = parse
         in in_block block thread state lexbuf
     | Some _ | None ->
         begin
-          rollback lexbuf;
+          Lexbuf.rollback lexbuf;
           scan_char_in_block block thread state lexbuf
         end }
 
@@ -418,7 +381,7 @@ and in_block block thread state = parse
          let thread        = thread#set_opening opening
          in in_block block thread state lexbuf
     else begin
-           rollback lexbuf;
+           Lexbuf.rollback lexbuf;
            scan_char_in_block block thread state lexbuf
          end }
 
@@ -427,7 +390,7 @@ and in_block block thread state = parse
     if   block#closing = lexeme
     then thread#push_string lexeme, (state#sync lexbuf).state
     else begin
-           rollback lexbuf;
+           Lexbuf.rollback lexbuf;
            scan_char_in_block block thread state lexbuf
          end }
 
@@ -440,7 +403,7 @@ and in_block block thread state = parse
 | eof { let err = Error.Unterminated_comment block#closing
         in fail thread#opening err }
 
-| _ { rollback lexbuf;
+| _ { Lexbuf.rollback lexbuf;
       scan_char_in_block block thread state lexbuf }
 
 and scan_char_in_block block thread state = parse
@@ -509,15 +472,15 @@ and scan_escape delimiter thread state = parse
 | '\\' { let State.{state; lexeme; _} = state#sync lexbuf in
          let thread = thread#push_string lexeme in
          in_string delimiter thread state lexbuf }
-| _    { rollback lexbuf;
+| _    { Lexbuf.rollback lexbuf;
          let thread = thread#push_char '\\' in
          in_string delimiter thread state lexbuf }
 
 (* Scanner called first *)
 
 and init state = parse
-  utf8_bom { state#mk_bom lexbuf |> mk_markup    }
-| _        { rollback lexbuf; scan state lexbuf }
+  utf8_bom { state#mk_bom lexbuf |> mk_markup           }
+| _        { Lexbuf.rollback lexbuf; scan state lexbuf }
 
 (* END LEXER DEFINITION *)
 

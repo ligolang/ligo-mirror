@@ -4,6 +4,7 @@
 
 module Region = Simple_utils.Region
 module Trace  = Simple_utils.Trace
+module Lexbuf = Simple_utils.Lexbuf
 
 module type CONFIG  = Preprocessor.Config.S
 module type OPTIONS = ParserLib.Options.S
@@ -115,7 +116,7 @@ module MakeParser
         if Options.show_pp then
           Printf.printf "%s\n%!" string;
         let lexbuf = Lexing.from_string string in
-        let     () = LexerLib.API.reset ~file:file_path lexbuf in
+        let     () = Lexbuf.reset ~file:file_path lexbuf in
         let     () = MainLexer.clear () in
         let parser = MainParser.incr_from_lexbuf in
         parser (module ParErr: PAR_ERR) lexbuf

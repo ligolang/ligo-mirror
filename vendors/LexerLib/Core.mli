@@ -42,18 +42,3 @@ module Make (Config  : Preprocessor.Config.S)
             (Token   : Token.S)
             (Client  : Client.S with type token = Token.token)
        : S with type token = Token.t
-
-(* LEXER ENGINE *)
-
-(* Resetting file name and/or line number and/or offset in a lexing
-   buffer. This function is useful when lexing a file that has been
-   previously preprocessed, in which case the argument [file] is the
-   name of the file that was preprocessed, _not_ the preprocessed file
-   (of which the user is not normally aware). *)
-
-val reset :
-  ?file:string ->
-  ?line:int ->
-  ?offset:int ->
-  Lexing.lexbuf ->
-  unit

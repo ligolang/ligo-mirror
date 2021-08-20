@@ -7,6 +7,7 @@
 
 module Region = Simple_utils.Region
 module Pos    = Simple_utils.Pos
+module Lexbuf = Simple_utils.Lexbuf
 
 (* Utilities *)
 
@@ -72,15 +73,6 @@ module Make (Config : Config.S) (Options : Options.S) =
       and stop  = Lexing.lexeme_end_p buffer |> Pos.from_byte
       in Region.make ~start ~stop
 
-    (* Rolling back one lexeme _within the current semantic action_ *)
-
-    let rollback buffer =
-      let open Lexing in
-      let len = String.length (lexeme buffer) in
-      let pos_cnum = buffer.lex_curr_p.pos_cnum - len in
-      buffer.lex_curr_pos <- buffer.lex_curr_pos - len;
-      buffer.lex_curr_p <- {buffer.lex_curr_p with pos_cnum}
-
     (* Utility functions *)
 
     let sprintf = Printf.sprintf
@@ -142,7 +134,7 @@ module Make (Config : Config.S) (Options : Options.S) =
     (* Reading UTF-8 encoded characters *)
 
     let scan_utf8_wrap scan_utf8 callback thread state lexbuf =
-      let ()             = rollback lexbuf in
+      let ()             = Lexbuf.rollback lexbuf in
       let len            = thread#length in
       let thread, status = scan_utf8 thread state lexbuf in
       let delta          = thread#length - len in
@@ -502,14 +494,14 @@ and symbol state = parse
 
 and skip_line state = parse
   nl  { state#proc_nl lexbuf   }
-| eof { rollback lexbuf        }
+| eof { Lexbuf.rollback lexbuf }
 | _   { skip_line state lexbuf }
 
 (* For #error *)
 
 and message acc = parse
   nl     { Lexing.new_line lexbuf; mk_str acc }
-| eof    { rollback lexbuf; mk_str acc        }
+| eof    { Lexbuf.rollback lexbuf; mk_str acc }
 | blank* { message acc lexbuf                 }
 | _ as c { message (c::acc) lexbuf            }
 
@@ -546,7 +538,7 @@ and in_block block opening state = parse
 
 and in_line state = parse
   nl  { state#proc_nl lexbuf; state             }
-| eof { rollback lexbuf; state                  }
+| eof { Lexbuf.rollback lexbuf; state           }
 | _   { state#copy lexbuf; in_line state lexbuf }
 
 (*
@@ -640,7 +632,7 @@ and in_string delimiter opening state = parse
 
 and linemarker state = parse
   eof { state }
-| _   { let ()   = rollback lexbuf in
+| _   { let ()   = Lexbuf.rollback lexbuf in
         let name = Lexing.(lexbuf.lex_start_p.pos_fname) in
         let ()   = if name <> "" then
                      state#print (sprintf "# 1 %S\n" name)
@@ -649,8 +641,8 @@ and linemarker state = parse
 (* Entry point *)
 
 and preproc state = parse
-  utf8_bom { linemarker state lexbuf                  }
-| _        { rollback lexbuf; linemarker state lexbuf }
+  utf8_bom { linemarker state lexbuf                         }
+| _        { Lexbuf.rollback lexbuf; linemarker state lexbuf }
 
 {
 (* START OF TRAILER *)

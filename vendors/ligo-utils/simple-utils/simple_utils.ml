@@ -25,3 +25,4 @@ module Region = Region
 module Utils  = Utils
 module FQueue = FQueue
 module Argv   = Argv
+module Lexbuf = Lexbuf

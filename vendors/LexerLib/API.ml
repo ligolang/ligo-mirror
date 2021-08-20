@@ -116,39 +116,3 @@ module Make (Config  : Preprocessor.Config.S)
         let from_file        src = from_file        src |> scan_all_units
       end
   end
-
-(* LEXER ENGINE *)
-
-(* Resetting file name and line number in the lexing buffer
-
-   The call [reset ~file ~line lexbuf] modifies in-place the lexing
-   buffer [lexbuf] so the lexing engine records that the file
-   associated with [lexbuf] is named [file], and the current line is
-   [line]. *)
-
-type file_path = string
-
-let reset_file file lexbuf =
-  let open Lexing in
-  lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_fname = file}
-
-let reset_line line lexbuf =
-  assert (line >= 0);
-  let open Lexing in
-  lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_lnum = line}
-
-let reset_offset offset lexbuf =
-  assert (offset >= 0);
-  let open Lexing in
-  let bol = lexbuf.lex_curr_p.pos_bol in
-  lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_cnum = bol + offset }
-
-let reset ?file ?(line=1) ?offset lexbuf =
-  let () =
-    match file with
-      Some file -> reset_file file lexbuf
-    |      None -> () in
-  let () = reset_line line lexbuf in
-  match offset with
-    Some offset -> reset_offset offset lexbuf
-  |        None -> ()
