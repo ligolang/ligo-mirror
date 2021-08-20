@@ -12,4 +12,4 @@ module type PARAMETERS =
 (* The instantiation of functor [Make] reads the command line
    interface. *)
 
-module Make (PreParams: LexerLib.CLI.PARAMETERS) : PARAMETERS
+module Make (LexerParams: LexerLib.CLI.PARAMETERS) : PARAMETERS

@@ -5,13 +5,27 @@
 
 module Region = Simple_utils.Region
 
+module type CONFIG  = Preprocessor.Config.S
+module type OPTIONS = LexerLib.Options.S
+
+(* Internal dependencies *)
+
+module type TOKEN = Token.S
+
 (* The functor *)
 
-module Make (Comments : Comments.S)
-            (File     : File.S)
-            (Token    : Token.S)
-            (CLI      : LexerLib.CLI.S) =
+module Make (Config  : CONFIG)
+            (Options : OPTIONS)
+            (Token   : TOKEN) =
   struct
+    (* Reading the preprocessor CLI *)
+
+    module PreParams = Preprocessor.CLI.Make (Config)
+
+    (* Reading the lexer CLI *)
+
+    module Parameters = LexerLib.CLI.Make (PreParams)
+
     (* All exits *)
 
     let print_in_red msg = Printf.eprintf "\027[31m%s\027[0m%!" msg
@@ -34,13 +48,7 @@ module Make (Comments : Comments.S)
       | `Version      ver -> print_and_quit (ver ^ "\n")
       | `Conflict (o1,o2) ->
            cli_error (Printf.sprintf "Choose either %s or %s." o1 o2)
-      | `Done ->
-           match CLI.Preproc_CLI.extension with
-             Some ext when ext <> File.extension ->
-               let msg =
-                 Printf.sprintf "Expected extension %s." File.extension
-               in cli_error msg
-           | _ -> ()
+      | `Done -> ()
 
     (* Instantiations *)
 

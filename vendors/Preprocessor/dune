@@ -6,8 +6,8 @@
   (libraries
     ;; Vendor
     simple-utils
+    GetoptLib
     ;; Third party
-    getopt
     str
     uutf)
   (modules Thread Boolean Status Config Options Error State Version

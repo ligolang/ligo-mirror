@@ -2,7 +2,10 @@
 
 (* Vendor dependencies *)
 
-module Argv = Simple_utils.Argv
+module Argv   = Simple_utils.Argv
+module Getopt = GetoptLib.Getopt
+
+(* Lexer parameters *)
 
 module type PARAMETERS =
   sig
@@ -13,7 +16,7 @@ module type PARAMETERS =
 
 (* Parsing the command line options *)
 
-module Make (PreParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
+module Make (PreprocParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
   struct
     (* Auxiliary functions and modules *)
 
@@ -172,11 +175,11 @@ module Make (PreParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
     let () = Argv.filter ~opt_wo_arg ~opt_with_arg
 
     type status = [
-      PreParams.Status.t
+      PreprocParams.Status.t
     | `Conflict of string * string
     ]
 
-    let status = (PreParams.Status.status :> status)
+    let status = (PreprocParams.Status.status :> status)
 
     let status =
       try
@@ -235,11 +238,11 @@ module Make (PreParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
 
     (* Packaging *)
 
-    module Config = PreParams.Config
+    module Config = PreprocParams.Config
 
     module Options =
       struct
-        include PreParams.Options
+        include PreprocParams.Options
         let preprocess = preprocess
         let mode       = mode
         let command    = command

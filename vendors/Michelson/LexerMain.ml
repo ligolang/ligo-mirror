@@ -1,18 +1,18 @@
 (* Driver for the Michelson lexer *)
 
 (* Vendor dependencies *)
+
 module Region = Simple_utils.Region
 
 (* Internal dependencies *)
 
-module Comments = Michelson.Comments
-module File     = Michelson.File
-module Token    = Michelson.Token
+module Config = Michelson.Config
+module Token  = Michelson.Token
 
 (* Reading the CLI *)
 
-module Preproc_CLI = Preprocessor.CLI.Make (Comments)
-module CLI   = LexerLib.CLI.Make (Preproc_CLI)
+module PreprocParams = Preprocessor.CLI.Make (Config)
+module LexerParams   = LexerLib.CLI.Make (PreprocParams)
 
 (* All exits *)
 
@@ -36,13 +36,7 @@ let check_cli () =
   | `Version      ver -> print_and_quit (ver ^ "\n")
   | `Conflict (o1,o2) ->
        cli_error (Printf.sprintf "Choose either %s or %s." o1 o2)
-  | `Done ->
-       match CLI.Preproc_CLI.extension with
-         Some ext when ext <> File.extension ->
-           let msg =
-             Printf.sprintf "Expected extension %s." File.extension
-           in cli_error msg
-       | _ -> ()
+  | `Done -> ()
 
 (* Instantiation of the Michelson lexer *)
 

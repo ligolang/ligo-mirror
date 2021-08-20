@@ -18,11 +18,11 @@ module Make (Config      : CONFIG)
   struct
     (* Reading the preprocessor CLI *)
 
-    module PreParams = Preprocessor.CLI.Make (Config)
+    module PreprocParams = Preprocessor.CLI.Make (Config)
 
     (* Reading the lexer CLI *)
 
-    module Parameters = LexerLib.CLI.Make (PreParams)
+    module Parameters = LexerLib.CLI.Make (PreprocParams)
 
     (* All exits *)
 
@@ -151,7 +151,7 @@ module Make (Config      : CONFIG)
 
     (* Scanning all tokens with or without a preprocessor *)
 
-    module Preproc = Preprocessor.PreprocMainGen.Make (PreParams)
+    module Preproc = Preprocessor.PreprocMainGen.Make (PreprocParams)
 
     let print_error = function
       Stdlib.Error msg -> print_in_red msg

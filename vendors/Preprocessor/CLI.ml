@@ -2,7 +2,8 @@
 
 (* Vendor dependencies *)
 
-module Argv = Simple_utils.Argv (* Filters the command line *)
+module Argv   = Simple_utils.Argv  (* Filters the command line *)
+module Getopt = GetoptLib.Getopt   (* GNU Getopt *)
 
 (* Configuration, options and the parsing status of the latter *)
 
@@ -131,7 +132,7 @@ module Make (Config : Config.S) : PARAMETERS =
          - [(None, None)]: not allowed *)
 
     let specs =
-      let open Getopt in [
+      Getopt.[
         'I',     nolong,    None, Some (add_path dirs);
         noshort, "columns", set columns true, None;
         noshort, "show-pp", set show_pp true, None;

@@ -2,7 +2,10 @@
 
 (* Vendor dependencies *)
 
-module Argv = Simple_utils.Argv
+module Argv   = Simple_utils.Argv
+module Getopt = GetoptLib.Getopt
+
+(* Parser parameters *)
 
 module type PARAMETERS =
   sig
@@ -13,7 +16,7 @@ module type PARAMETERS =
 
 (* Parsing the command line options *)
 
-module Make (PreParams: LexerLib.CLI.PARAMETERS) : PARAMETERS =
+module Make (LexerParams: LexerLib.CLI.PARAMETERS) : PARAMETERS =
   struct
     (* Auxiliary functions *)
 
@@ -168,9 +171,9 @@ module Make (PreParams: LexerLib.CLI.PARAMETERS) : PARAMETERS =
 
     let () = Argv.filter ~opt_wo_arg ~opt_with_arg
 
-    type status = PreParams.Status.t
+    type status = LexerParams.Status.t
 
-    let status = PreParams.Status.status
+    let status = LexerParams.Status.status
 
     let status =
       try
@@ -231,11 +234,11 @@ module Make (PreParams: LexerLib.CLI.PARAMETERS) : PARAMETERS =
 
     (* Packaging *)
 
-    module Config = PreParams.Config
+    module Config = LexerParams.Config
 
     module Options =
       struct
-        include PreParams.Options
+        include LexerParams.Options
         let mono       = mono
         let pretty     = pretty
         let cst        = cst
