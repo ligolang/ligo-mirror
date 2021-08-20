@@ -237,6 +237,7 @@ module Make (Config : Config.S) : PARAMETERS =
 
     let () =
       (* Options "help", "version" and "cli" are not given. *)
+      (* Do not change the spacing before "=" *)
       let options = [
         "CLI options";
         sprintf "input      = %s" (string_of_opt (fun x -> x) !input);

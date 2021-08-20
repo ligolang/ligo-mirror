@@ -171,39 +171,39 @@ let directive = '#' blank* (small+ as id)
 
 (* Comment delimiters *)
 
-let pascaligo_block_comment_opening = "(*"
-let pascaligo_block_comment_closing = "*)"
-let pascaligo_line_comment          = "//"
+let pascaligo_block_comment_opening  = "(*"
+let pascaligo_block_comment_closing  = "*)"
+let pascaligo_line_comment_opening   = "//"
 
-let cameligo_block_comment_opening = "(*"
-let cameligo_block_comment_closing = "*)"
-let cameligo_line_comment          = "//"
+let cameligo_block_comment_opening   = "(*"
+let cameligo_block_comment_closing   = "*)"
+let cameligo_line_comment_opening    = "//"
 
 let reasonligo_block_comment_opening = "/*"
 let reasonligo_block_comment_closing = "*/"
-let reasonligo_line_comment          = "//"
+let reasonligo_line_comment_opening  = "//"
 
-let michelson_block_comment_opening = "/*"
-let michelson_block_comment_closing = "*/"
-let michelson_line_comment          = "#"
+let michelson_block_comment_opening  = "/*"
+let michelson_block_comment_closing  = "*/"
+let michelson_line_comment_opening   = "#"
 
-let block_comment_openings =
+let block_comment_opening =
   pascaligo_block_comment_opening
 | cameligo_block_comment_opening
 | reasonligo_block_comment_opening
 | michelson_block_comment_opening
 
-let block_comment_closings =
+let block_comment_closing =
   pascaligo_block_comment_closing
 | cameligo_block_comment_closing
 | reasonligo_block_comment_closing
 | michelson_block_comment_closing
 
-let line_comments =
-  pascaligo_line_comment
-| cameligo_line_comment
-| reasonligo_line_comment
-| michelson_line_comment
+let line_comment_opening =
+  pascaligo_line_comment_opening
+| cameligo_line_comment_opening
+| reasonligo_line_comment_opening
+| michelson_line_comment_opening
 
 (* String delimiters *)
 
@@ -213,7 +213,7 @@ let reasonligo_string_delimiter = "\""
 let michelson_string_delimiter  = "\""
 let jsligo_string_delimiter     = "\""
 
-let string_delimiters =
+let string_delimiter =
   pascaligo_string_delimiter
 | cameligo_string_delimiter
 | reasonligo_string_delimiter
@@ -240,7 +240,7 @@ rule scan state = parse
 
   (* Strings *)
 
-| string_delimiters {
+| string_delimiter {
     state#copy lexbuf;
     let lexeme = Lexing.lexeme lexbuf in
     match Config.string with
@@ -251,7 +251,7 @@ rule scan state = parse
 
   (* Comments *)
 
-| block_comment_openings {
+| block_comment_opening {
     state#copy lexbuf;
     let lexeme = Lexing.lexeme lexbuf in
     match Config.block with
@@ -260,7 +260,7 @@ rule scan state = parse
         in scan state lexbuf
     | Some _ | None -> scan state lexbuf }
 
-| line_comments {
+| line_comment_opening {
     state#copy lexbuf;
     let lexeme = Lexing.lexeme lexbuf in
     match Config.line with
@@ -516,7 +516,7 @@ and message acc = parse
 (* Comments *)
 
 and in_block block opening state = parse
-  string_delimiters {
+  string_delimiter {
     state#copy lexbuf;
     let lexeme = Lexing.lexeme lexbuf in
     match Config.string with
@@ -525,7 +525,7 @@ and in_block block opening state = parse
         in in_block block opening state lexbuf
     | Some _ | None -> in_block block opening state lexbuf }
 
-| block_comment_openings {
+| block_comment_opening {
     state#copy lexbuf;
     let lexeme = Lexing.lexeme lexbuf in
     if block#opening = lexeme then
@@ -533,7 +533,7 @@ and in_block block opening state = parse
       in in_block block opening state lexbuf
     else in_block block opening state lexbuf }
 
-| block_comment_closings {
+| block_comment_closing {
     state#copy lexbuf;
     let lexeme = Lexing.lexeme lexbuf in
     if block#closing = lexeme then state
@@ -625,7 +625,7 @@ and end_module opening closing imp_path acc state = parse
 | _      { stop state lexbuf Error.Unexpected_argument          }
 
 and in_string delimiter opening state = parse
-  string_delimiters {
+  string_delimiter {
            state#copy lexbuf;
            let lexeme = Lexing.lexeme lexbuf in
            if lexeme = delimiter then state
