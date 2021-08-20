@@ -263,11 +263,12 @@ rule scan state = parse
 | "[%" (attr as l)       { mk_lang  l state lexbuf }
 
 | "`" | "{|" as lexeme {
-    if lexeme = fst Token.verbatim_delimiters then
+    let verb_open, verb_close = Token.verbatim_delimiters in
+    if lexeme = verb_open then
       let State.{region; state; _} = state#sync lexbuf in
       let thread = Thread.make ~opening:region
-      in scan_verbatim (snd Token.verbatim_delimiters)
-                       thread state lexbuf |> mk_verbatim
+      in scan_verbatim verb_close thread state lexbuf
+         |> mk_verbatim
     else
       let State.{region; _} = state#sync lexbuf
       in fail region (Unexpected_character lexeme.[0]) }
@@ -275,29 +276,34 @@ rule scan state = parse
 | _ as c { let State.{region; _} = state#sync lexbuf
            in fail region (Unexpected_character c) }
 
-(* Scanning verbatim strings *)
+(* Scanning verbatim strings with or without inclusion of Michelson code *)
 
-and scan_verbatim verbatim_end thread state = parse
-  (* Inclusion of Michelson code *)
+and scan_verbatim verb_close thread state = parse
   '#' blank* (natural as line) blank+ '"' (string as file) '"'
   (blank+ ('1' | '2'))? blank* (nl | eof) {
-    let _, state =
-      state#mk_linemarker ~line ~file lexbuf
-    in scan_verbatim verbatim_end thread state lexbuf }
+    let _, state = state#mk_linemarker ~line ~file lexbuf
+    in scan_verbatim verb_close thread state lexbuf }
 
-| nl as nl { let ()    = Lexing.new_line lexbuf
-             and state = state#set_pos (state#pos#new_line nl) in
-             scan_verbatim verbatim_end (thread#push_string nl) state lexbuf }
-| eof      { fail thread#opening Unterminated_verbatim }
+| "`" | "|}" as lexeme {
+        if verb_close = lexeme then
+          State.(thread, (state#sync lexbuf).state)
+        else
+          let State.{state; _} = state#sync lexbuf
+          and thread = thread#push_string lexeme in
+          scan_verbatim verb_close thread state lexbuf }
 
-| "`" | "|}" as lexeme  {
-    if verbatim_end = lexeme then
-      State.(thread, (state#sync lexbuf).state)
-    else
-      let State.{state; _} = state#sync lexbuf in
-      scan_verbatim verbatim_end (thread#push_string lexeme) state lexbuf }
-| _ as c { let State.{state; _} = state#sync lexbuf in
-           scan_verbatim verbatim_end (thread#push_char c) state lexbuf }
+| nl  { let nl = Lexing.lexeme lexbuf in
+        let ()     = Lexing.new_line lexbuf
+        and state  = state#set_pos (state#pos#new_line nl)
+        and thread = thread#push_string nl in
+        scan_verbatim verb_close thread state lexbuf }
+
+| eof { fail thread#opening Unterminated_verbatim }
+
+| _   { let lexeme = Lexing.lexeme lexbuf in
+        let State.{state; _} = state#sync lexbuf
+        and thread = thread#push_string lexeme in
+        scan_verbatim verb_close thread state lexbuf }
 
 (* END LEXER DEFINITION *)
 
