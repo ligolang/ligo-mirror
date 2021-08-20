@@ -32,8 +32,6 @@
 
 (* The functorised interface *)
 
-module State  = LexerLib.State
-module Thread = LexerLib.Thread
 module Client = LexerLib.Client
 
 module Make (Token : Token.S) : Client.S with type token = Token.t
