@@ -128,10 +128,7 @@ module Make (Config  : Preprocessor.Config.S)
     module Client =
       struct
         let mk_string = Client.mk_string
-
         let callback state = mk_token <@ (drop @@ Client.callback state)
-
-        let is_string_delimiter = Client.is_string_delimiter
       end
 
     (* Pretty-printing a lexical unit *)
@@ -337,12 +334,14 @@ rule scan state = parse
 
 | string_delimiters {
     let lexeme = Lexing.lexeme lexbuf in
-    if Client.is_string_delimiter lexeme then
-      let State.{region; state; _} = state#sync lexbuf in
-      let thread = Thread.make ~opening:region in
-      let thread, state = in_string lexeme thread state lexbuf
-      in `Token (Client.mk_string thread), state
-    else (rollback lexbuf; Client.callback state lexbuf) }
+    match Config.string with
+      Some delimiter when delimiter = lexeme ->
+        let State.{region; state; _} = state#sync lexbuf in
+        let thread = Thread.make ~opening:region in
+        let thread, state = in_string lexeme thread state lexbuf
+        in `Token (Client.mk_string thread), state
+    | Some _ | None -> (* Not a string for this syntax *)
+        rollback lexbuf; Client.callback state lexbuf }
 
   (* Comments *)
 
@@ -392,19 +391,21 @@ rule scan state = parse
 and in_block block thread state = parse
   string_delimiters {
     let lexeme = Lexing.lexeme lexbuf in
-    if   Client.is_string_delimiter lexeme
-    then let opening       = thread#opening in
-         let State.{region; state; _} = state#sync lexbuf in
-         let thread        = thread#push_string lexeme in
-         let thread        = thread#set_opening region in
-         let thread, state = in_string lexeme thread state lexbuf in
-         let thread        = thread#push_string lexeme in
-         let thread        = thread#set_opening opening
-         in in_block block thread state lexbuf
-    else begin
-           rollback lexbuf;
-           scan_char_in_block block thread state lexbuf
-         end }
+    match Config.string with
+      Some delimiter when delimiter = lexeme ->
+        let opening       = thread#opening in
+        let State.{region; state; _} = state#sync lexbuf in
+        let thread        = thread#push_string lexeme in
+        let thread        = thread#set_opening region in
+        let thread, state = in_string lexeme thread state lexbuf in
+        let thread        = thread#push_string lexeme in
+        let thread        = thread#set_opening opening
+        in in_block block thread state lexbuf
+    | Some _ | None ->
+        begin
+          rollback lexbuf;
+          scan_char_in_block block thread state lexbuf
+        end }
 
 | block_comment_openings {
     let lexeme = Lexing.lexeme lexbuf in

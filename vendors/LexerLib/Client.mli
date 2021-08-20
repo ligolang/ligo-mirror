@@ -9,7 +9,6 @@ module type S =
       Lexing.lexbuf ->
       (token * token State.t, message) Stdlib.result
 
-    val mk_string           : Thread.t -> token
-    val callback            : lexer
-    val is_string_delimiter : string -> bool
+    val mk_string : Thread.t -> token
+    val callback  : lexer
   end

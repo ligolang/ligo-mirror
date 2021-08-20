@@ -10,22 +10,7 @@
 module Region = Simple_utils.Region
 module State  = LexerLib.State
 module Thread = LexerLib.Thread
-
-module type CLIENT =
-  sig
-    type token
-
-    type message = string Simple_utils.Region.reg
-
-    type lexer =
-      token State.t ->
-      Lexing.lexbuf ->
-      (token * token State.t, message) Stdlib.result
-
-    val mk_string           : Thread.t -> token
-    val callback            : lexer
-    val is_string_delimiter : string -> bool
-  end
+module Client = LexerLib.Client
 
 let (<@) f g x = f (g x)
 
@@ -77,8 +62,6 @@ module Make (Token : Token.S) =
     let fail region error =
       let msg = error_to_string error in
       raise (Error Region.{value=msg;region})
-
-    let is_string_delimiter = Token.is_string_delimiter
 
     (* TOKENS *)
 
@@ -337,7 +320,6 @@ and scan_verbatim verbatim_end thread state = parse
 
     let mk_string = mk_string
     let callback  : lexer = lift <@ scan
-    let is_string_delimiter = is_string_delimiter
 
   end (* of functor [Make] in HEADER *)
 (* END TRAILER *)

@@ -549,8 +549,6 @@ module T =
 
     let is_eof = function EOF _ -> true | _ -> false
 
-    let is_string_delimiter s = (s = "\"")
-
     let verbatim_delimiters = ("{|", "|}")
   end
 
