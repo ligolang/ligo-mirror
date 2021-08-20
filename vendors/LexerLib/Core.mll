@@ -189,11 +189,11 @@ module Make (Config  : Preprocessor.Config.S)
         let close () = close_in chan in
         Ok (Lexing.from_channel chan, close)
     | Buffer b ->
-       let () =
-         match Options.input with
-           None | Some "" -> ()
-         | Some path -> reset ~file:path b
-       in Ok (b, fun () -> ())
+        let () =
+          match Options.input with
+            None | Some "" -> ()
+          | Some path -> reset ~file:path b
+        in Ok (b, fun () -> ())
     | File "" ->
         Stdlib.Error (Region.wrap_ghost "File not found.")
     | File path ->
@@ -211,14 +211,8 @@ module Make (Config  : Preprocessor.Config.S)
       let log       = output_unit stdout
       and file_path = match Options.input with
                         Some path -> path
-                      | _ -> ""
-      and   decoder = Uutf.decoder ~encoding:`UTF_8 `Manual in
-      let    supply = Uutf.Manual.src decoder in
-      let     state = ref (State.make
-                             ~window:None
-                             ~pos:(Pos.min ~file:file_path)
-                             ~decoder
-                             ~supply) in
+                      | _ -> "" in
+      let     state = ref (State.empty ~file:file_path) in
       let window () = !state#window in
 
       let read_unit lexbuf =

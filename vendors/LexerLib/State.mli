@@ -43,9 +43,4 @@ and 'token sync = {
 
 type 'token t = 'token state
 
-val make:
-  window:  'token window option ->
-  pos:     Pos.t ->
-  decoder: Uutf.decoder ->
-  supply:  (Bytes.t -> int -> int -> unit) ->
-  'token state
+val empty : file:string -> 'token state

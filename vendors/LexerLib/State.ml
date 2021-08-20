@@ -41,14 +41,15 @@ and 'token sync = {
 
 type 'token t = 'token state
 
-let make ~window ~pos ~decoder ~supply : 'token state =
+let empty ~file =
+  let decoder = Uutf.decoder ~encoding:`UTF_8 `Manual in
   object (self)
-    val window     = window
+    val window     = None
     method window  = window
-    val pos        = pos
+    val pos        = Pos.min ~file
     method pos     = pos
     method decoder = decoder
-    method supply  = supply
+    method supply  = Uutf.Manual.src decoder
 
     method set_pos pos = {< pos = pos >}
 
