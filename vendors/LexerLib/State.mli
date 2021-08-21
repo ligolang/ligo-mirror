@@ -22,6 +22,7 @@ type 'token state = <
   sync          : Lexing.lexbuf -> 'token sync;
   decoder       : Uutf.decoder;
   supply        : Bytes.t -> int -> int -> unit;
+  newline       : Lexing.lexbuf -> 'token state;
   mk_line       :      Thread.t -> Markup.t;
   mk_block      :      Thread.t -> Markup.t;
   mk_newline    : Lexing.lexbuf -> Markup.t * 'token state;

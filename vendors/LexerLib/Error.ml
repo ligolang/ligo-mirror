@@ -2,7 +2,7 @@
 
 type error =
   Invalid_utf8_sequence
-| Unterminated_comment of string
+| Unterminated_comment
 | Unterminated_string
 | Newline_in_string
 | Invalid_character_in_string of char
@@ -21,9 +21,8 @@ let to_string = function
 | Unterminated_string ->
     "Unterminated string.\n\
      Hint: Close with double quotes."
-| Unterminated_comment ending ->
-    sprintf "Unterminated comment.\n\
-             Hint: Close with %S." ending
+| Unterminated_comment ->
+    sprintf "Unterminated comment."
 | Newline_in_string ->
     "The string starting here is interrupted by a line break.\n\
      Hint: Remove the break, close the string before or insert a \

@@ -119,7 +119,7 @@ module MakeParser
         let     () = Lexbuf.reset ~file:file_path lexbuf in
         let     () = MainLexer.clear () in
         let parser = MainParser.incr_from_lexbuf in
-        parser (module ParErr: PAR_ERR) lexbuf
+        parser (module ParErr : PAR_ERR) lexbuf
       in lift ~raise tree
 
     let parse_file = from_file
@@ -143,7 +143,7 @@ module MakeParser
         let lexbuf = Lexing.from_string string in
         let     () = MainLexer.clear () in
         let parser = MainParser.incr_from_lexbuf in
-        parser (module ParErr: PAR_ERR) lexbuf
+        parser (module ParErr : PAR_ERR) lexbuf
       in lift ~raise tree
 
     let parse_string = from_string

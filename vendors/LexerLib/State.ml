@@ -20,6 +20,7 @@ type 'token state = <
   sync          : Lexing.lexbuf -> 'token sync;
   decoder       : Uutf.decoder;
   supply        : Bytes.t -> int -> int -> unit;
+  newline       : Lexing.lexbuf -> 'token state;
   mk_line       :      Thread.t -> Markup.t;
   mk_block      :      Thread.t -> Markup.t;
   mk_newline    : Lexing.lexbuf -> Markup.t * 'token state;
@@ -52,6 +53,11 @@ let empty ~file =
     method supply  = Uutf.Manual.src decoder
 
     method set_pos pos = {< pos = pos >}
+
+    method newline lexbuf =
+      let () = Lexing.new_line lexbuf in
+      let nl = Lexing.lexeme lexbuf in
+      self#set_pos (self#pos#new_line nl)
 
     (* The call [state#slide_window token] pushes the token [token] in
        the buffer [lexbuf]. If the buffer is full, that is, it is [Two
