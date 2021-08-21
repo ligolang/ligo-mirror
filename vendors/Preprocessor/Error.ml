@@ -12,10 +12,11 @@ type error =
 | Invalid_symbol                      (* #define and #undef *)
 | File_not_found of string            (* #include *)
 | Missing_filename                    (* #include *)
-| Unterminated_comment of string      (* #include and #import *)
+| Missing_module                      (* #include *)
+| Unterminated_comment of string
 | Unexpected_argument                 (* #include and #import *)
 | Newline_in_string                   (* #include and #import *)
-| Unterminated_string                 (* #include and #import *)
+| Unterminated_string                 (* #include and #import and strings *)
 | Invalid_character_in_string of char
 | Invalid_character of char           (* #if and #elif *)
 | Parse_error                         (* #if and #elif *)
@@ -61,7 +62,9 @@ let to_string = function
     sprintf "Unterminated comment.\n\
              Hint: Close with %S." ending
 | Missing_filename ->
-    sprintf "Filename expected in a string literal."
+    sprintf "File name expected in a string literal."
+| Missing_module ->
+    sprintf "Module name expected in a string literal."
 | Unexpected_argument ->
     sprintf "Unexpected argument."
 | Invalid_character_in_string c ->

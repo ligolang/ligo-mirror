@@ -68,10 +68,15 @@ module Make (Config : Config.S) (Options : Options.S) =
 
     (* Extracting the region matched in a lexing buffer *)
 
-    let mk_reg buffer =
+    let mk_region buffer =
       let start = Lexing.lexeme_start_p buffer |> Pos.from_byte
       and stop  = Lexing.lexeme_end_p buffer |> Pos.from_byte
       in Region.make ~start ~stop
+
+    (* The call [close opening lexbuf] is a region covering [opening]
+       and the region matched in the lexing buffer [lexbuf]. *)
+
+    let close opening = Region.cover opening <@ mk_region
 
     (* Utility functions *)
 
@@ -79,11 +84,11 @@ module Make (Config : Config.S) (Options : Options.S) =
 
     (* STRING PROCESSING *)
 
-    (* The value of [mk_str p] ("make string") is a string containing
-       the characters in the list [p], in reverse order. For instance,
-       [mk_str ['c';'b';'a'] = "abc"]. *)
+    (* The value of [mk_string p] ("make string") is a string
+       containing the characters in the list [p], in reverse
+       order. For instance, [mk_string ['c';'b';'a'] = "abc"]. *)
 
-    let mk_str (p: char list) : string =
+    let mk_string (p: char list) : string =
       let len   = List.length p in
       let bytes = Bytes.make len ' ' in
       let rec fill i = function
@@ -96,9 +101,9 @@ module Make (Config : Config.S) (Options : Options.S) =
     (* IMPORTANT : Make sure the functions [fail] and [expr] remain the only
        ones raising [Error]. *)
 
-    exception Error of (Buffer.t * string Region.reg)
+    exception Error of (Buffer.t * message)
 
-    let format_error  ~msg (region: Region.t) =
+    let format_error ~msg (region: Region.t) =
       let file  = Options.input <> None in
       let reg   = region#to_string
                     ~file
@@ -113,7 +118,7 @@ module Make (Config : Config.S) (Options : Options.S) =
       in List.iter close_in state#chans;
          raise (Error (state#out, msg))
 
-    let stop state buffer = fail state (mk_reg buffer)
+    let stop state buffer = fail state (mk_region buffer)
 
     let find dir file region state =
       match find dir file state with
@@ -237,7 +242,7 @@ rule scan state = parse
     let lexeme = Lexing.lexeme lexbuf in
     match Config.string with
       Some delimiter when delimiter = lexeme ->
-        let state = in_string delimiter (mk_reg lexbuf) state lexbuf
+        let state = in_string (mk_region lexbuf) state lexbuf
         in scan state lexbuf
     | Some _ | None -> scan state lexbuf }
 
@@ -248,7 +253,7 @@ rule scan state = parse
     let lexeme = Lexing.lexeme lexbuf in
     match Config.block with
       Some block when block#opening = lexeme ->
-        let state = in_block block (mk_reg lexbuf) state lexbuf
+        let state = in_block block (mk_region lexbuf) state lexbuf
         in scan state lexbuf
     | Some _ | None -> scan state lexbuf }
 
@@ -263,7 +268,7 @@ rule scan state = parse
 (* Directives *)
 
 | '#' blank* (small+ as id) {
-    let region = mk_reg lexbuf in
+    let dir_region = mk_region lexbuf in
     match id with
       "include" ->
         (* We first extract info about the current file so we can
@@ -273,12 +278,14 @@ rule scan state = parse
         and base = Filename.basename Lexing.(lexbuf.lex_curr_p.pos_fname)
 
         (* We read the string containing the name of the file to
-           include. Note the first component [reg], which is the
-           region in the file corresponding to the string, in case we
-           will need to format an error message when the file is not
-           found on the filesystem. *)
+           include. Note the first component [incl_region] which is
+           the region in the file corresponding to the string, in case
+           we will need to format an error message when the file is
+           not found on the filesystem. Note how [scan_include] does
+           not return a new state because only the field [out] of the
+           state is modified and by a side-effect. *)
 
-        and reg, incl_file = scan_include state lexbuf in
+        and incl_region, incl_file = scan_include state lexbuf in
 
         if state#is_copy then
           (* If in copy mode, we establish the directory where the
@@ -307,7 +314,8 @@ rule scan state = parse
              close it when done. Finally, the last component is the
              new state to thread along. *)
 
-          let incl_path, incl_chan, state = find path incl_file reg state in
+          let incl_path, incl_chan, state =
+            find path incl_file incl_region state in
 
           (* We are ready now to output the linemarker before
              including the file (as the rightmost flag [1] states). Of
@@ -389,12 +397,14 @@ rule scan state = parse
         else scan state lexbuf
 
     | "import" ->
-        let reg, import_file, imported_module = scan_import state lexbuf in
+        let import_region, import_file, module_name =
+          scan_import state lexbuf in
         let state =
           if state#is_copy then
             let path = state#path in
-            let import_path, _, state = find path import_file reg state
-            in state#push_import import_path imported_module
+            let import_path, _, state =
+              find path import_file import_region state
+            in state#push_import import_path module_name
           else state
         in (state#proc_nl lexbuf; scan state lexbuf)
 
@@ -403,7 +413,7 @@ rule scan state = parse
           try Boolean.expr (if_expr state) lexbuf state#env with
             Boolean.Error -> stop state lexbuf Error.Parse_error in
         let mode  = if state#is_copy then mode else State.Skip in
-        let state = extend state (State.If state#mode) mode region
+        let state = extend state (State.If state#mode) mode dir_region
         in scan state lexbuf
 
     | "else" ->
@@ -411,27 +421,27 @@ rule scan state = parse
         let mode  = match state#mode with
                       State.Copy -> State.Skip
                     | State.Skip -> state#last_mode in
-        let state = extend state State.Else mode region
+        let state = extend state State.Else mode dir_region
         in scan state lexbuf
 
     | "elif" ->
         let mode =
           try Boolean.expr (if_expr state) lexbuf state#env with
-            Boolean.Error -> stop state lexbuf Parse_error in
+            Boolean.Error -> stop state lexbuf Error.Parse_error in
         let open State in
         let state =
           match state#mode with
             Copy ->
-              extend state (Elif Skip) Skip region
+              extend state (Elif Skip) Skip dir_region
           | Skip ->
               let old_mode = state#last_mode in
               let new_mode = if old_mode = Copy then mode else Skip
-              in extend state (Elif old_mode) new_mode region
+              in extend state (Elif old_mode) new_mode dir_region
         in scan state lexbuf
 
     | "endif" ->
         skip_line state lexbuf;
-        scan (reduce_cond state region) lexbuf
+        scan (reduce_cond state dir_region) lexbuf
 
     | "define" ->
         let id, _ = variable state lexbuf in
@@ -446,7 +456,8 @@ rule scan state = parse
         else scan state lexbuf
 
     | "error" ->
-        fail state region (Error.Error_directive (message [] lexbuf))
+        let msg = message [] state lexbuf in
+        fail state dir_region (Error.Error_directive msg)
 
     | _ -> state#copy lexbuf; scan state lexbuf }
 
@@ -487,7 +498,7 @@ and variable state = parse
            in skip_line state lexbuf; id }
 
 and symbol state = parse
-  ident as id { id, mk_reg lexbuf                      }
+  ident as id { id, mk_region lexbuf                   }
 | _           { stop state lexbuf Error.Invalid_symbol }
 
 (* Skipping all characters until the end of line or end of file. *)
@@ -499,11 +510,11 @@ and skip_line state = parse
 
 (* For #error *)
 
-and message acc = parse
-  nl     { Lexing.new_line lexbuf; mk_str acc }
-| eof    { Lexbuf.rollback lexbuf; mk_str acc }
-| blank* { message acc lexbuf                 }
-| _ as c { message (c::acc) lexbuf            }
+and message acc state = parse
+  nl     { state#proc_nl lexbuf; mk_string acc }
+| eof    { mk_string acc                       }
+| blank* { message acc state lexbuf            }
+| _ as c { message (c::acc) state lexbuf       }
 
 (* Comments *)
 
@@ -513,7 +524,7 @@ and in_block block opening state = parse
     let lexeme = Lexing.lexeme lexbuf in
     match Config.string with
       Some delimiter when delimiter = lexeme ->
-        let state = in_string delimiter (mk_reg lexbuf) state lexbuf
+        let state = in_string (mk_region lexbuf) state lexbuf
         in in_block block opening state lexbuf
     | Some _ | None -> in_block block opening state lexbuf }
 
@@ -521,7 +532,7 @@ and in_block block opening state = parse
     state#copy lexbuf;
     let lexeme = Lexing.lexeme lexbuf in
     if block#opening = lexeme then
-      let state = in_block block (mk_reg lexbuf) state lexbuf
+      let state = in_block block (mk_region lexbuf) state lexbuf
       in in_block block opening state lexbuf
     else in_block block opening state lexbuf }
 
@@ -567,66 +578,66 @@ and scan_utf8_char if_eof thread state = parse
 (* #include *)
 
 and scan_include state = parse
-  blank+ { scan_include state lexbuf                  }
-| '"'    { in_include (mk_reg lexbuf) [] state lexbuf }
-| _      { stop state lexbuf Error.Missing_filename   }
+  blank+ { scan_include state lexbuf                     }
+| '"'    { in_include (mk_region lexbuf) [] state lexbuf }
+| _      { stop state lexbuf Error.Missing_filename      }
 
 and in_include opening acc state = parse
-  '"'    { let region = Region.cover opening (mk_reg lexbuf)
-           in region, end_include acc state lexbuf           }
-| nl     { stop state lexbuf Error.Newline_in_string         }
-| eof    { fail state opening Error.Unterminated_string      }
-| _ as c { in_include opening (c::acc) state lexbuf          }
+  '"'    { let region   = close opening lexbuf in
+           let ()       = clear_line state lexbuf
+           and filename = mk_string acc
+           in region, filename                          }
+| nl     { stop state lexbuf Error.Newline_in_string    }
+| eof    { fail state opening Error.Unterminated_string }
+| _ as c { in_include opening (c::acc) state lexbuf     }
 
-and end_include acc state = parse
-  nl     { Lexing.new_line lexbuf; mk_str acc          }
-| eof    { mk_str acc                                  }
-| blank+ { end_include acc state lexbuf                }
+and clear_line state = parse
+  nl     { state#proc_nl lexbuf                        }
+| eof    { ()                                          }
+| blank+ { clear_line state lexbuf                     }
 | _      { stop state lexbuf Error.Unexpected_argument }
 
 (* #import *)
 
 and scan_import state = parse
-  blank+ { scan_import state lexbuf                    }
-| '"'    { in_import (mk_reg lexbuf) [] state lexbuf   }
-| _      { stop state lexbuf Error.Missing_filename    }
+  blank+ { scan_import state lexbuf                   }
+| '"'    { in_path (mk_region lexbuf) [] state lexbuf }
+| _      { stop state lexbuf Error.Missing_filename   }
 
-and in_import opening acc state = parse
-  '"'    { let imp_path = mk_str acc
-           in scan_module opening imp_path state lexbuf }
+and in_path opening acc state = parse
+  '"'    { let region      = close opening lexbuf in
+           let module_name = scan_module state lexbuf
+           and filename    = mk_string acc
+           in region, filename, module_name              }
+| nl     { stop state lexbuf Error.Newline_in_string     }
+| eof    { fail state opening Error.Unterminated_string  }
+| _ as c { in_path opening (c::acc) state lexbuf         }
+
+and scan_module state = parse
+  blank+ { scan_module state lexbuf                     }
+| '"'    { in_module (mk_region lexbuf) [] state lexbuf }
+| _      { stop state lexbuf Error.Missing_module       }
+
+and in_module opening acc state = parse
+  '"'    { clear_line state lexbuf; mk_string acc       }
 | nl     { stop state lexbuf Error.Newline_in_string    }
 | eof    { fail state opening Error.Unterminated_string }
-| _ as c { in_import opening (c::acc) state lexbuf      }
+| _ as c { in_module opening (c::acc) state lexbuf      }
 
-and scan_module opening imp_path state = parse
-  blank+ { scan_module opening imp_path state lexbuf    }
-| '"'    { in_module opening imp_path [] state lexbuf }
-| _      { stop state lexbuf Error.Missing_filename     }
+(* Strings *)
 
-and in_module opening imp_path acc state = parse
-  '"'    { end_module opening (mk_reg lexbuf) imp_path acc state lexbuf }
-| nl     { stop state lexbuf Error.Newline_in_string                    }
-| eof    { fail state opening Error.Unterminated_string                 }
-| _ as c { in_module opening imp_path (c::acc) state lexbuf             }
-
-and end_module opening closing imp_path acc state = parse
-  nl     { state#proc_nl lexbuf;
-           Region.cover opening closing, imp_path, mk_str acc   }
-| eof    { Region.cover opening closing, imp_path, mk_str acc   }
-| blank+ { end_module opening closing imp_path acc state lexbuf }
-| _      { stop state lexbuf Error.Unexpected_argument          }
-
-and in_string delimiter opening state = parse
+and in_string opening state = parse
   string_delimiter {
-           state#copy lexbuf;
-           let lexeme = Lexing.lexeme lexbuf in
-           if lexeme = delimiter then state
-           else in_string delimiter opening state lexbuf               }
-| nl     { fail state opening Error.Newline_in_string                  }
-| eof    { fail state opening Error.Unterminated_string                }
+        state#copy lexbuf;
+        let lexeme = Lexing.lexeme lexbuf in
+        match Config.string with
+          Some delimiter when delimiter = lexeme -> state
+        | Some _ | None -> in_string opening state lexbuf       }
+| nl  { fail state opening Error.Newline_in_string              }
+| eof { fail state opening Error.Unterminated_string            }
 | ['\000' - '\031'] as c
-         { stop state lexbuf (Error.Invalid_character_in_string c)     }
-| _      { state#copy lexbuf; in_string delimiter opening state lexbuf }
+      { stop state lexbuf (Error.Invalid_character_in_string c) }
+| _   { state#copy lexbuf; in_string opening state lexbuf       }
 
 (* Printing the first linemarker *)
 
@@ -674,11 +685,8 @@ and preproc state = parse
   let from_file name =
     try
       let lexbuf = open_in name |> Lexing.from_channel in
-      let open Lexing in
-        begin
-          lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_fname=name};
-          from_lexbuf lexbuf
-        end
+      let () = Lexbuf.reset_file name lexbuf
+      in from_lexbuf lexbuf
     with Sys_error msg ->
       Stdlib.Error (None, Region.wrap_ghost msg)
 
