@@ -1,3 +1,10 @@
+
+(* Extracting information *)
+
+let current_linenum lexbuf = Lexing.(lexbuf.lex_curr_p.pos_lnum)
+
+let current_filename lexbuf = Lexing.(lexbuf.lex_curr_p.pos_fname)
+
 (* Rolling back one lexeme _within the current semantic action_ *)
 
 let rollback lexbuf =
@@ -16,9 +23,10 @@ let rollback lexbuf =
 
 let reset_file file lexbuf =
   let open Lexing in
+  lexbuf.lex_curr_p <- {lexbuf.lex_start_p with pos_fname = file};
   lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_fname = file}
 
-let reset_line line lexbuf =
+  let reset_line line lexbuf =
   assert (line >= 0);
   let open Lexing in
   lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_lnum = line}

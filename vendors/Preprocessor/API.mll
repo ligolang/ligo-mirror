@@ -262,7 +262,7 @@ rule scan state = parse
     let lexeme = Lexing.lexeme lexbuf in
     match Config.line with
       Some line when line = lexeme ->
-        scan (in_line state lexbuf) lexbuf
+        in_line state lexbuf; scan state lexbuf
     | Some _ | None -> scan state lexbuf }
 
 (* Directives *)
@@ -274,8 +274,8 @@ rule scan state = parse
         (* We first extract info about the current file so we can
            restore it after the #include is complete. *)
 
-        let line = Lexing.(lexbuf.lex_curr_p.pos_lnum)
-        and base = Filename.basename Lexing.(lexbuf.lex_curr_p.pos_fname)
+        let line = Lexbuf.current_linenum lexbuf
+        and base = Filename.basename Lexbuf.(current_filename lexbuf)
 
         (* We read the string containing the name of the file to
            include. Note the first component [incl_region] which is
@@ -548,8 +548,8 @@ and in_block block opening state = parse
 | _   { state#copy lexbuf; in_block block opening state lexbuf    }
 
 and in_line state = parse
-  nl  { state#proc_nl lexbuf; state             }
-| eof { Lexbuf.rollback lexbuf; state           }
+  nl  { state#proc_nl lexbuf                    }
+| eof { Lexbuf.rollback lexbuf                  }
 | _   { state#copy lexbuf; in_line state lexbuf }
 
 (*
@@ -593,7 +593,7 @@ and in_include opening acc state = parse
 
 and clear_line state = parse
   nl     { state#proc_nl lexbuf                        }
-| eof    { ()                                          }
+| eof    { Lexbuf.rollback lexbuf                      }
 | blank+ { clear_line state lexbuf                     }
 | _      { stop state lexbuf Error.Unexpected_argument }
 
@@ -644,7 +644,7 @@ and in_string opening state = parse
 and linemarker state = parse
   eof { state }
 | _   { let ()   = Lexbuf.rollback lexbuf in
-        let name = Lexing.(lexbuf.lex_start_p.pos_fname) in
+        let name = Lexbuf.current_filename lexbuf in
         let ()   = if name <> "" then
                      state#print (sprintf "# 1 %S\n" name)
         in scan state lexbuf }
@@ -664,10 +664,10 @@ and preproc state = parse
 
   (* Preprocessing from various sources *)
 
-  let from_lexbuf buffer =
-    let path = Lexing.(buffer.lex_curr_p.pos_fname) in
+  let from_lexbuf lexbuf =
+    let path  = Lexbuf.current_filename lexbuf in
     let state = State.empty ~file:path in
-    match preproc state buffer with
+    match preproc state lexbuf with
       state ->
         List.iter close_in state#chans;
         Stdlib.Ok (state#out, state#imports)
