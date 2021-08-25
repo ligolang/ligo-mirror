@@ -251,20 +251,20 @@ let preprocess =
       Api.Print.preprocess source_file syntax display_format in
   let term = Term.(const f $ source_file 0 $ syntax $ display_format) in
   let cmdname = "preprocess" in
-  let doc = "Subcommand: Preprocess the source file.\nWarning: Intended for development of LIGO and can break at any time." in
+  let doc = "Subcommand: Preprocess the source file." in
   let man = [`S Manpage.s_description;
-             `P "This sub-command runs the pre-processor on a LIGO \
+             `P "This sub-command runs the preprocessor on a LIGO \
                  source file and outputs the result. The directive \
-                 `#include` directly inlines the included file and \
+                 #include directly inlines the included file and \
                  therefore its content appears in the output. In \
-                 contrast, the directive `#import` includes the file \
-                 as a module and therefore the content of the imported \
+                 contrast, the directive #import includes the file \
+                 as a module and therefore the contents of the imported \
                  file is not printed by this sub-command."]
   in (Term.ret term, Term.info ~man ~doc cmdname)
 
 let pretty_print =
   let f source_file syntax display_format =
-    return_result @@ 
+    return_result @@
     Api.Print.pretty_print source_file syntax display_format in
   let term = Term.(const f $ source_file 0 $ syntax $ display_format) in
   let cmdname = "pretty-print" in
@@ -616,9 +616,9 @@ let test =
                  under development, there are features that are work \
                  in progress and are subject to change. No real test \
                  procedure should rely on this sub-command alone.";
-             (* 
+             (*
              TODO: correct text below
-             
+
              `S "EXTRA PRIMITIVES FOR TESTING";
              `P "Test.originate c st : binds contract c with the \
                  address addr which is returned, st as the initial \

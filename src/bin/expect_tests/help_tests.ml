@@ -72,8 +72,7 @@ let%expect_test _ =
                Subcommand: Return a mutated version for a given file.
 
            preprocess
-               Subcommand: Preprocess the source file. Warning: Intended for
-               development of LIGO and can break at any time.
+               Subcommand: Preprocess the source file.
 
            pretty-print
                Subcommand: Pretty-print the source file.
@@ -206,8 +205,7 @@ let%expect_test _ =
                Subcommand: Return a mutated version for a given file.
 
            preprocess
-               Subcommand: Preprocess the source file. Warning: Intended for
-               development of LIGO and can break at any time.
+               Subcommand: Preprocess the source file.
 
            pretty-print
                Subcommand: Pretty-print the source file.

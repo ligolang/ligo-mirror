@@ -105,8 +105,7 @@ let make ~byte ~point_num ~point_bol =
       else
         let offset = self#offset mode in
         let horizontal, value =
-          if offsets then
-            "character", offset
+          if offsets then "character", offset
           else "column", offset + 1 in
         if file && self#file <> "" then
           sprintf "File %S, line %i, %s %i"

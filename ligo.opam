@@ -1,12 +1,12 @@
-name: "ligo"
-opam-version: "2.0"
-maintainer: "Galfour <contact@ligolang.org>"
-authors: [ "Galfour" ]
-homepage: "https://gitlab.com/ligolang/tezos"
-bug-reports: "https://gitlab.com/ligolang/tezos/issues"
-synopsis: "A high-level language which compiles to Michelson"
-dev-repo: "git+https://gitlab.com/ligolang/tezos.git"
-license: "MIT"
+name         : "ligo"
+opam-version : "2.0"
+maintainer   : "Galfour <contact@ligolang.org>"
+authors      : [ "Gabriel Alfour" "Christian Rinderknecht"]
+homepage     : "https://gitlab.com/ligolang/tezos"
+bug-reports  : "https://gitlab.com/ligolang/tezos/issues"
+synopsis     : "A high-level language which compiles to Michelson"
+dev-repo     : "git+https://gitlab.com/ligolang/tezos.git"
+license      : "MIT"
 # If you change the dependencies, run `opam lock` in the root
 depends: [
   "odoc" { build }
@@ -27,6 +27,7 @@ depends: [
   "pprint"
   "linenoise"
   "qcheck"
+  "uutf"
   # work around upstream in-place update
   "ocaml-migrate-parsetree" { = "2.1.0" }
   # work around tezos' failure to constrain

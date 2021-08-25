@@ -1,0 +1,6 @@
+---
+  title: "Fixed a bug in the display of the invalid code snippet when the region is empty."
+  merge_request: "1220"
+  author: "Christian Rinderknecht"
+  type: "fixed"
+

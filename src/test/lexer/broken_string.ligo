@@ -1,4 +1,4 @@
 const a: string = "broken
-over 
+over
 multiple
 lines";

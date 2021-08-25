@@ -1,0 +1,6 @@
+---
+  title: "The subcommand [preprocessor] is no longer described as experimental in the man page and help."
+  merge_request: "1220"
+  author: "Christian Rinderknecht"
+  type: "fixed"
+

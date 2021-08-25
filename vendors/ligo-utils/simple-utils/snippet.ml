@@ -1,83 +1,99 @@
-(* used to show code snippets in error messages *)
+(* Strings containing OCaml code need to be escaped before printed out
+   to the terminal, but OCaml escaping function for strings escapes
+   the double quotes, so we need to unescape those. *)
 
-let print_code ppf (l:Region.t) (input_line: unit -> string) =
-  let dumb = Unix.getenv "TERM" = "dumb" in
-  let start = l#start#line in
-  let start_column = l#start#offset `Byte in
-  let stop = l#stop#line in
-  let stop_column = l#stop#offset `Byte in
-  let rec loop_lines curr start stop =
-    try (
-      let curr = curr + 1 in
-      let line = input_line () in
-      let line_length = String.length line in
-      (if curr >= start - 1 && curr < stop + 2 then (
-        let _ = Format.fprintf ppf "%3i" curr in
-        if curr >= start && curr <= stop then (
-          if curr > start && curr < stop then
-            Format.fprintf ppf  (
-              if dumb then
-                " | %s%!"
-              else
-                " | \027[1m\027[31m%s\027[0m%!")
-              (line  ^ "\n")
-          else if curr = start then (
-            let before = String.sub line 0 start_column in
-            Format.fprintf ppf " | %s" before;
-            if curr = stop then (
-              let between = String.sub line start_column (stop_column - start_column) in
-              let after = String.sub line stop_column (line_length - stop_column) in
-              Format.fprintf ppf (
-                if dumb then
-                  "%s%!%s\n"
-                else
-                  "\027[1m\027[31m%s\027[0m%!%s\n")
-                between
-                after
-            ) else (
-              let after = String.sub line start_column (line_length - start_column) in
-              if dumb then
-                Format.fprintf ppf "%s%!\n" after
-              else
-                Format.fprintf ppf "\027[1m\027[31m%s\027[0m%!\n" after
-            )
-          )
-          else if curr = stop then (
-            let before = String.sub line 0 stop_column in
-            let after = String.sub line stop_column (line_length - stop_column) in
-            Format.fprintf ppf " | ";
-            if dumb then
-              Format.fprintf ppf "%s%!%s\n" before after
-            else
-              Format.fprintf ppf "\027[1m\027[31m%s\027[0m%!%s\n" before after
-          )
-        )
-        else
-          Format.fprintf ppf "%s" (" | " ^ line ^ "\n"));
-        );
-        if curr < stop + 2 then
-          loop_lines curr start stop
-        ) with
-      | _ -> ()
-    in
-    loop_lines 0 start stop
+let escape s =
+  let escaped = String.escaped s in
+  let regexp = Str.regexp "\\\\\"" in
+  Str.global_replace regexp "\"" escaped
 
-let regexp = Str.regexp "\n"
+(* Displaying code snippets in error messages *)
 
-let pp ppf (loc: Location.t) =
-  match loc with
-  | File l -> (
-    if l#file <> "" then
-      Format.fprintf ppf "%s:\n" (l#to_string `Byte);
+let fprintf = Format.fprintf
+
+let print_code ppf (region : Region.t) (input_line : unit -> string) =
+  let is_dumb    = match Sys.getenv_opt "TERM" with
+                     Some value -> value = "dumb"
+                   | None -> false
+  and start      = region#start#line
+  and start_offs = region#start#offset `Byte
+  and stop       = region#stop#line
+  and stop_offs  = region#stop#offset `Byte in
+  let rec loop_over_lines current start stop =
     try
-      let in_ = open_in l#file in
-      let result = print_code ppf l (fun () -> input_line in_) in
-      close_in in_;
-      result
-    with | _ ->
-      ())
-  | _ ->
-    Location.pp ppf loc
+      let current = current + 1
+      and line    = input_line () in
+      let width   = String.length line in
+      let () =
+        if start - 1 <= current && current < stop + 2 then
+         let () = fprintf ppf "%3i" current in
+         if start <= current && current <= stop then
+           if start < current && current < stop then
+             fprintf
+               ppf
+               (if is_dumb then " | %s\n%!"
+                else " | \027[1m\027[31m%s\027[0m\n%!")
+               line
+           else
+             if current = start then
+               let before = String.sub line 0 start_offs in
+               fprintf ppf " | %s" before;
+               if current = stop then
+                 let between =
+                   if start_offs = stop_offs then
+                     String.sub line start_offs 1
+                   else
+                     String.sub line start_offs (stop_offs - start_offs) in
+                 let between = escape between
+                 and after =
+                   if start_offs = stop_offs then
+                     String.sub line (stop_offs + 1) (width - stop_offs -1)
+                   else
+                     String.sub line stop_offs (width - stop_offs) in
+                 let after = escape after
+                 in fprintf
+                      ppf
+                      (if is_dumb then "%s%!%s\n"
+                       else "\027[1m\027[31m%s\027[0m%!%s\n")
+                      between
+                      after
+               else
+                 let after =
+                   String.sub line start_offs (width - start_offs) in
+                 let after = escape after in
+                 if is_dumb then
+                   fprintf ppf "%s%!\n" after
+                 else
+                   fprintf ppf "\027[1m\027[31m%s\027[0m%!\n" after
+             else
+               if current = stop then
+                 let before = String.sub line 0 stop_offs |> escape in
+                 let after  = String.sub line stop_offs (width - stop_offs) in
+                 let after  = escape after in
+                 fprintf ppf " | ";
+                 if is_dumb then
+                   fprintf ppf "%s%!%s\n" before after
+                 else
+                   fprintf ppf "\027[1m\027[31m%s\027[0m%!%s\n" before after
+               else ()
+           else fprintf ppf " | %s\n" line
+      in if current < stop + 2 then
+          loop_over_lines current start stop
+    with Stdlib.Invalid_argument _msg -> () (* TODO: Report to maintainers? *)
+       | Stdlib.End_of_file -> () (* Normal exit *)
+    in loop_over_lines 0 start stop
 
-let lift : Region.region -> Location.t = fun x -> File x
-let pp_lift = fun ppf r -> pp ppf @@ lift r
+let pp ppf : Location.t -> unit = function
+  Virtual _ as loc ->
+    Location.pp ppf loc
+| File region ->
+    if region#file <> "" then
+      fprintf ppf "%s:\n" (region#to_string `Byte);
+    try
+      let in_chan = open_in region#file in
+      let result = print_code ppf region (fun () -> input_line in_chan) in
+      close_in in_chan;
+      result
+    with Sys_error _msg -> () (* TODO: Report to maintainers? *)
+
+let pp_lift ppf r = pp ppf (File r)

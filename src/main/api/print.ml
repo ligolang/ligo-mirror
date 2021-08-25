@@ -4,7 +4,7 @@ module Helpers   = Ligo_compile.Helpers
 
 let pretty_print ?werror source_file syntax display_format =
     format_result ?werror ~display_format (Parsing.Formatter.ppx_format) (fun _ -> []) @@
-    fun ~raise -> 
+    fun ~raise ->
     let options = Compiler_options.make () in
     let meta = Compile.Of_source.extract_meta ~raise syntax source_file in
     Compile.Utils.pretty_print ~raise ~options ~meta source_file
@@ -19,10 +19,9 @@ let dependency_graph source_file syntax display_format =
 let preprocess source_file syntax display_format =
     format_result ~display_format Parsing.Formatter.ppx_format (fun _ -> []) @@
     fun ~raise ->
-    fst @@
-    let options   = Compiler_options.make () in
+    let options = Compiler_options.make () in
     let meta = Compile.Of_source.extract_meta ~raise syntax source_file in
-    Compile.Of_source.compile ~raise ~options ~meta source_file
+    fst @@ Compile.Of_source.compile ~raise ~options ~meta source_file
 
 let cst source_file syntax display_format =
     format_result ~display_format (Parsing.Formatter.ppx_format) (fun _ -> []) @@

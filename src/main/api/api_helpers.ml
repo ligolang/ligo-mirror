@@ -25,7 +25,7 @@ let toplevel : ?werror:bool -> display_format:ex_display_format -> displayable -
     let warns = List.map warns ~f:(fun value ->
       match t with
         ( Human_readable | Dev) as s -> convert ~display_format:s (Displayable {value;format=Main_warnings.format})
-        | Json -> Yojson.Safe.pretty_to_string @@ convert ~display_format:t (Displayable {value;format=Main_warnings.format})) in        
+        | Json -> Yojson.Safe.pretty_to_string @@ convert ~display_format:t (Displayable {value;format=Main_warnings.format})) in
     let warns_str = String.concat "\n" warns in
     if not (List.is_empty warns) && werror then
         Error (warns_str,warns_str)

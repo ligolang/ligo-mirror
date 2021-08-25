@@ -34,11 +34,11 @@ type t = <
   markup     : markup list;
 >
 
-and markup = 
+and markup =
   BlockCom of string reg * comment_position
 | LineCom of string reg * comment_position
 
-and comment_position = 
+and comment_position =
   Before
 | After
 | Inline
@@ -115,18 +115,18 @@ let make ~markup ~(start: Pos.t) ~(stop: Pos.t) =
       method compact ?(file=true) ?(offsets=true) mode =
         if start#is_ghost || stop#is_ghost then "ghost"
         else
-          let prefix    = if file then
+          let file_opt  = if file then
                             Filename.basename start#file ^ ":"
                           else ""
           and start_str = start#compact ~file:false ~offsets mode
           and stop_str  = stop#compact ~file:false ~offsets mode in
           if start#file = stop#file then
             if start#line = stop#line then
-              sprintf "%s%s-%i" prefix start_str
+              sprintf "%s%s-%i" file_opt start_str
                       (if offsets then stop#offset mode
                        else stop#column mode)
             else
-              sprintf "%s%s-%s" prefix start_str stop_str
+              sprintf "%s%s-%s" file_opt start_str stop_str
           else sprintf "%s:%s-%s:%s"
                        start#file start_str stop#file stop_str
 

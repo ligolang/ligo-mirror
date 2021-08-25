@@ -54,8 +54,10 @@ module Make (Config : Config.S) =
       Error (_, msg) ->
         Error (Errors.generic msg)
     | Ok (buffer, deps) ->
-        let string = Buffer.contents buffer in
-        if show_pp then Printf.printf "%s\n%!" string;
+        if show_pp then
+          let string = Buffer.contents buffer
+          in Printf.printf "%s\n%!" string
+        else ();
         Ok (buffer, deps)
 
     (* Preprocessing a file *)

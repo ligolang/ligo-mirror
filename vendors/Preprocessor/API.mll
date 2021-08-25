@@ -399,14 +399,13 @@ rule scan state = parse
     | "import" ->
         let import_region, import_file, module_name =
           scan_import state lexbuf in
-        let state =
-          if state#is_copy then
-            let path = state#path in
-            let import_path, _, state =
-              find path import_file import_region state
-            in state#push_import import_path module_name
-          else state
-        in (state#proc_nl lexbuf; scan state lexbuf)
+        if state#is_copy then
+          let path = state#path in
+          let import_path, _, state =
+            find path import_file import_region state in
+          let state = state#push_import import_path module_name
+          in scan state lexbuf
+        else scan state lexbuf
 
     | "if" ->
         let mode =
@@ -657,10 +656,6 @@ and preproc state = parse
 
 {
 (* START OF TRAILER *)
-
-  (* The function [preproc] is a wrapper of [scan], which also checks that
-     the trace is empty at the end.  Note that we discard the
-     state at the end. *)
 
   (* Preprocessing from various sources *)
 

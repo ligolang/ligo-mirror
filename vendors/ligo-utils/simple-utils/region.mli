@@ -83,11 +83,11 @@ type t = <
   markup    : markup list
 >
 
-and markup = 
+and markup =
   BlockCom of string reg * comment_position
 | LineCom of string reg * comment_position
 
-and comment_position = 
+and comment_position =
   Before
 | After
 | Inline

@@ -98,7 +98,7 @@ let error_jsonformat : abs_error -> Yojson.Safe.t = fun a ->
     let message = `String "Unsupported destructuring at top-level" in
     let content = `Assoc [
       ("message", message );
-      ("location", Location.to_yojson (Snippet.lift loc));] in
+      ("location", Location.(to_yojson (File loc)))] in
     json_error ~stage ~content
   | `Concrete_pascaligo_unknown_constant (s,loc) ->
     let message = `String ("Unknow constant: " ^ s) in

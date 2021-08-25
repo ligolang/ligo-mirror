@@ -1,0 +1,6 @@
+---
+  title: "Added escaping to invalid code snippets to avoid messing the terminal of the user."
+  merge_request: "1220"
+  author: "Christian Rinderknecht"
+  type: "fixed"
+

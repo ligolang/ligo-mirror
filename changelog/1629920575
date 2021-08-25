@@ -1,0 +1,6 @@
+---
+  title: "The [escape_verbatim] functions of all the Token.ml has been fixed."
+  merge_request: "1220"
+  author: "Christian Rinderknecht"
+  type: "fixed"
+

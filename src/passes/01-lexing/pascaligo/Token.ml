@@ -220,7 +220,7 @@ module T =
 
     let escape_verbatim s =
       let escaped = String.escaped s in
-      let regexp = Str.regexp "\\\"" in
+      let regexp = Str.regexp "\\\\\"" in
       Str.global_replace regexp "\"" escaped
 
     let proj_token = function

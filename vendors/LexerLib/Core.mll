@@ -435,32 +435,33 @@ and in_string thread state = parse
              let thread = thread#push_string lexeme in
              in_string thread state lexbuf }
 | '\\' { let State.{state; _} = state#sync lexbuf
-         in scan_escape thread state lexbuf            }
+         in unescape thread state lexbuf            }
 | nl   { fail thread#opening Error.Newline_in_string   }
 | eof  { fail thread#opening Error.Unterminated_string }
-| ['\000' - '\031'] as c
+| ['\000' - '\031'] as c (* Control characters *)
        { let State.{region; _} = state#sync lexbuf in
          fail region (Error.Invalid_character_in_string c)   }
 | _    { let State.{state; lexeme; _} = state#sync lexbuf in
          in_string (thread#push_string lexeme) state lexbuf  }
 
-and scan_escape thread state = parse
+and unescape thread state = parse
   string_delimiter {
          let State.{state; lexeme; _} = state#sync lexbuf in
-         let escaped_delimiter =
+         let interpretation =
            match Config.string with
-             Some delimiter when delimiter = lexeme -> lexeme
-           | Some _ | None -> "\\" ^ lexeme in
-         let thread = thread#push_string escaped_delimiter
+             Some delimiter when delimiter = lexeme ->
+               lexeme (* E.g. unescaped \" into " *)
+           | Some _ | None -> "\\" ^ lexeme (* verbatim *) in
+         let thread = thread#push_string interpretation
          in in_string thread state lexbuf }
 | 'n'  { let State.{state; _} = state#sync lexbuf
-         and thread = thread#push_char '\n'
+         and thread = thread#push_char '\n' (* Unescaped \n into \010 *)
          in in_string thread state lexbuf }
 | '\\' { let State.{state; lexeme; _} = state#sync lexbuf in
-         let thread = thread#push_string lexeme
+         let thread = thread#push_string lexeme (* Unescaped \\ into \ *)
          in in_string thread state lexbuf }
-| _    { Lexbuf.rollback lexbuf;
-         let thread = thread#push_char '\\'
+| _    { Lexbuf.rollback lexbuf; (* Not a valid escape sequence *)
+         let thread = thread#push_char '\\' (* verbatim *)
          in in_string thread state lexbuf }
 
 (* Scanner called first *)

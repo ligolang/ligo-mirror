@@ -1,0 +1,6 @@
+---
+  title: "Removed redundant \\n inserted after preprocessing #import."
+  merge_request: "1220"
+  author: "Christian Rinderknecht"
+  type: "fixed"
+
