@@ -22,6 +22,7 @@ type error       = Buffer.t option * message
 type result      = (success, error) Stdlib.result
 type 'src preprocessor = 'src -> result
 
+
 module type S =
   sig
     (* Preprocessing from various sources *)
@@ -31,6 +32,10 @@ module type S =
     val from_string  : string        preprocessor
     val from_file    : file_path     preprocessor
     val from_buffer  : Buffer.t      preprocessor
+
+    (* Formatting errors for display *)
+
+    val format_error : message -> string
   end
 
 module Make (Config : Config.S) (Options : Options.S) : S

@@ -13,6 +13,8 @@ module Lexbuf = Simple_utils.Lexbuf
 
 let (<@) f g x = f (g x)
 
+let sprintf = Printf.sprintf
+
 (* Functor *)
 
 type file_path   = string
@@ -35,6 +37,10 @@ module type S =
     val from_string  : string        preprocessor
     val from_file    : file_path     preprocessor
     val from_buffer  : Buffer.t      preprocessor
+
+    (* Formatting errors for display *)
+
+    val format_error : message -> string
   end
 
 module Make (Config : Config.S) (Options : Options.S) =
@@ -78,10 +84,6 @@ module Make (Config : Config.S) (Options : Options.S) =
 
     let close opening = Region.cover opening <@ mk_region
 
-    (* Utility functions *)
-
-    let sprintf = Printf.sprintf
-
     (* STRING PROCESSING *)
 
     (* The value of [mk_string p] ("make string") is a string
@@ -103,20 +105,11 @@ module Make (Config : Config.S) (Options : Options.S) =
 
     exception Error of (Buffer.t * message)
 
-    let format_error ~msg (region: Region.t) =
-      let file  = Options.input <> None in
-      let reg   = region#to_string
-                    ~file
-                    ~offsets:Options.offsets
-                    `Byte in
-      let value = sprintf "%s:\n%s\n" reg msg
-      in Region.{value; region}
-
     let fail state region error =
-      let msg = Error.to_string error in
-      let msg = format_error ~msg region
-      in List.iter close_in state#chans;
-         raise (Error (state#out, msg))
+      let value = Error.to_string error in
+      let msg = Region.{value; region} in
+      List.iter close_in state#chans;
+      raise (Error (state#out, msg))
 
     let stop state buffer = fail state (mk_region buffer)
 
@@ -134,6 +127,14 @@ module Make (Config : Config.S) (Options : Options.S) =
       match state#extend cond mode with
       Stdlib.Ok state  -> state
     | Stdlib.Error err -> fail state region err
+
+    let format_error (msg : message) : string =
+      let Region.{value; region} = msg in
+      let header = region#to_string
+                     ~file:(Options.input <> None)
+                     ~offsets:Options.offsets
+                     `Byte
+      in sprintf "%s:\n%s\n" header value
 
 (*
     (* Reading UTF-8 encoded characters *)

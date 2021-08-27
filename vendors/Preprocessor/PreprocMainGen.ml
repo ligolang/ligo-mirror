@@ -3,10 +3,6 @@
    internally used by PreprocMain.ml with default settings, for
    testing purposes. *)
 
-(* Vendor dependencies *)
-
-module Region = Simple_utils.Region
-
 (* All exits *)
 
 let red_exit msg =
@@ -29,8 +25,7 @@ module Make (Parameters : CLI.PARAMETERS) =
     (* Checking for errors and valid exits *)
 
     let check_cli () =
-      let open Parameters in
-      match Status.status with
+      match Parameters.Status.status with
         `SyntaxError  msg
       | `WrongFileExt msg
       | `FileNotFound msg -> cli_error msg
@@ -51,11 +46,13 @@ module Make (Parameters : CLI.PARAMETERS) =
           Stdlib.Ok (buffer, _) ->
             if Options.show_pp then
               Printf.printf "%s\n%!" (Buffer.contents buffer)
-        | Error (Some buffer, Region.{value; _}) ->
+        | Error (Some buffer, msg) ->
             if Options.show_pp then
               Printf.printf "%s\n%!" (Buffer.contents buffer);
-            Printf.eprintf "\027[31m%s\027[0m%!" value
-        | Error (None, Region.{value; _}) ->
-            Printf.eprintf "\027[31m%s\027[0m%!" value
+            let out = Scan.format_error msg in
+            Printf.eprintf "\027[31m%s\027[0m%!" out
+        | Error (None, msg) ->
+            let out = Scan.format_error msg in
+            Printf.eprintf "\027[31m%s\027[0m%!" out
       in preprocessed
   end
