@@ -27,7 +27,6 @@ COPY vendors/ParserLib/ParserLib.opam /ligo/vendors/ParserLib/ParserLib.opam
 COPY vendors/Red-Black_Trees/RedBlackTrees.opam /ligo/vendors/Red-Black_Trees/RedBlackTrees.opam
 COPY vendors/UnionFind/UnionFind.opam /ligo/vendors/UnionFind/UnionFind.opam
 COPY vendors/Preprocessor/Preprocessor.opam /ligo/vendors/Preprocessor/Preprocessor.opam
-COPY vendors/Michelson/Michelson.opam /ligo/vendors/Michelson/Michelson.opam
 COPY vendors/LexerLib/LexerLib.opam /ligo/vendors/LexerLib/LexerLib.opam
 COPY vendors/ligo-utils/proto-alpha-utils/proto-alpha-utils.opam /ligo/vendors/ligo-utils/proto-alpha-utils/proto-alpha-utils.opam
 COPY vendors/ligo-utils/tezos-utils/tezos-utils.opam /ligo/vendors/ligo-utils/tezos-utils/tezos-utils.opam
