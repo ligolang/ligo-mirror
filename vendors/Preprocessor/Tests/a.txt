@@ -1,3 +1,0 @@
-Start of "a.txt"
-#include "b.txt"
-End of "a.txt"

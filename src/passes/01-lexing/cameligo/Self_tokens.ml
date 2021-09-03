@@ -29,6 +29,6 @@ type token = Token.t
 (* Exported *)
 
 let filter units =
-     AttachComments.attach
+     AttachComments.attach (* TODO: Should return lexical units *)
   @@ Style.check
      units

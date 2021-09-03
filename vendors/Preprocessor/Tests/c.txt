@@ -1,2 +1,0 @@
-Start of "c.txt"
-End of "c.txt"

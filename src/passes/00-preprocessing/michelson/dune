@@ -1,0 +1,20 @@
+;; Build of the preprocessor of Michelson as a library
+
+(library
+  (name preprocessing_michelson)
+  (public_name ligo.preprocessing.michelson)
+  (instrumentation (backend bisect_ppx))
+  (libraries
+     ;; Vendors
+     Preprocessor)
+  (modules Config))
+
+;; Build of a standalone preprocessor for PascaLIGO
+
+(executable
+  (name PreprocMain)
+  (libraries
+    ;; LIGO
+    preprocessing_michelson
+    preprocessing_shared)
+  (modules PreprocMain))

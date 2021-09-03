@@ -1,9 +1,5 @@
 (* Definition of the state threaded along the scanning functions of API *)
 
-(* Internal dependencies *)
-
-open Error
-
 (* The type [mode] defines the two scanning modes of the preprocessor:
    either we copy the current characters or we skip them. *)
 
@@ -114,18 +110,18 @@ let empty ~file =
 
     method reduce_cond =
       let rec reduce = function
-                    [] -> Stdlib.Error Dangling_endif
+                    [] -> Stdlib.Error Error.Dangling_endif
       | If mode::trace -> Stdlib.Ok {< mode; trace >}
       |       _::trace -> reduce trace
       in reduce trace
 
     method extend cond mode =
       match cond, trace with
-        If _,   Elif _::_ -> Stdlib.Error If_follows_elif
-      | Else,     Else::_ -> Stdlib.Error Else_follows_else
-      | Else,          [] -> Stdlib.Error Dangling_else
-      | Elif _,   Else::_ -> Stdlib.Error Elif_follows_else
-      | Elif _,        [] -> Stdlib.Error Dangling_elif
+        If _,   Elif _::_ -> Stdlib.Error Error.If_follows_elif
+      | Else,     Else::_ -> Stdlib.Error Error.Else_follows_else
+      | Else,          [] -> Stdlib.Error Error.Dangling_else
+      | Elif _,   Else::_ -> Stdlib.Error Error.Elif_follows_else
+      | Elif _,        [] -> Stdlib.Error Error.Dangling_elif
       | hd,            tl -> Stdlib.Ok {< trace = hd::tl; mode >}
 
     method set_trace trace = {< trace >}

@@ -433,12 +433,12 @@ and in_string thread state = parse
              thread#set_closing region, state
          | Some _ | None -> (* Still inside the string *)
              let thread = thread#push_string lexeme in
-             in_string thread state lexbuf }
+             in_string thread state lexbuf                   }
 | '\\' { let State.{state; _} = state#sync lexbuf
-         in unescape thread state lexbuf            }
-| nl   { fail thread#opening Error.Newline_in_string   }
-| eof  { fail thread#opening Error.Unterminated_string }
-| ['\000' - '\031'] as c (* Control characters *)
+         in unescape thread state lexbuf                     }
+| nl   { fail thread#opening Error.Newline_in_string         }
+| eof  { fail thread#opening Error.Unterminated_string       }
+| ['\000' - '\031'] as c  (* Control characters *)
        { let State.{region; _} = state#sync lexbuf in
          fail region (Error.Invalid_character_in_string c)   }
 | _    { let State.{state; lexeme; _} = state#sync lexbuf in

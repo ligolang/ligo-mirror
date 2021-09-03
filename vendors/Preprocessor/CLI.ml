@@ -257,7 +257,7 @@ module Make (Config : Config.S) : PARAMETERS =
       let actual = Filename.extension file_path in
       match Config.file_ext with
         Some expected when expected <> actual ->
-          let msg = sprintf "Expected file extension .%S." expected
+          let msg = sprintf "Expected file extension %S." expected
           in `WrongFileExt msg
       | Some _ | None ->
           if   Sys.file_exists file_path

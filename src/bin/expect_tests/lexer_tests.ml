@@ -1,196 +1,171 @@
 open Cli_expect
 
 let%expect_test _ =
-    run_ligo_bad [ "compile-contract" ; "../../test/lexer/broken_string.ligo" ; "main" ] ;
+
+  (* PascaLIGO *)
+
+  run_ligo_bad [ "compile-contract";
+                 "../../test/lexer/pascaligo/broken_string.ligo";
+                 "main"];
   [%expect {|
-File "../../test/lexer/broken_string.ligo", line 1, characters 18-19:
+File "../../test/lexer/pascaligo/broken_string.ligo", line 1, characters 18-19:
   1 | const a: string = "broken
   2 | over
-File "../../test/lexer/broken_string.ligo", line 1, characters 18-19:
 The string starting here is interrupted by a line break.
 Hint: Remove the break or close the string before.
- |} ];
+ |}];
 
-    run_ligo_bad [ "compile-contract" ; "../../test/lexer/broken_string.mligo" ; "main" ] ;
+  run_ligo_bad ["compile-contract";
+                "../../test/lexer/pascaligo/unexpected_character.ligo";
+                "main"];
   [%expect {|
-File "../../test/lexer/broken_string.mligo", line 1, characters 8-9:
-  1 | let a = "broken
-  2 | over
-File "../../test/lexer/broken_string.mligo", line 1, characters 8-9:
-The string starting here is interrupted by a line break.
-Hint: Remove the break or close the string before.
- |} ];
-
- run_ligo_bad [ "compile-contract" ; "../../test/lexer/broken_string.religo" ; "main" ] ;
-  [%expect {|
-File "../../test/lexer/broken_string.religo", line 1, characters 8-9:
-  1 | let a = "broken
-  2 | over
-File "../../test/lexer/broken_string.religo", line 1, characters 8-9:
-The string starting here is interrupted by a line break.
-Hint: Remove the break or close the string before.
- |} ];
-
-(*
-run_ligo_bad [ "compile-contract" ; "../../test/lexer/negative_byte_sequence.ligo" ; "main" ] ;
-  [%expect {|
-File "../../test/lexer/negative_byte_sequence.ligo", line 1, characters 18-31:
-  1 | const a: string = - (**) 0x2222
-Negative byte sequence.
-Hint: Remove the leading minus sign.
- |} ];
-
-run_ligo_bad [ "compile-contract" ; "../../test/lexer/negative_byte_sequence.mligo" ; "main" ] ;
-  [%expect {|
-File "../../test/lexer/negative_byte_sequence.mligo", line 1, characters 8-21:
-  1 | let a = - (**) 0x2222
-Negative byte sequence.
-Hint: Remove the leading minus sign.
- |} ];
-
-run_ligo_bad [ "compile-contract" ; "../../test/lexer/negative_byte_sequence.religo" ; "main" ] ;
-  [%expect {|
-File "../../test/lexer/negative_byte_sequence.religo", line 1, characters 8-21:
-  1 | let a = - /**/ 0x2222;
-Negative byte sequence.
-Hint: Remove the leading minus sign.
- |} ];
-
-
- run_ligo_bad [ "compile-contract" ; "../../test/lexer/reserved_name.ligo" ; "main" ] ;
-  [%expect {|
-ligo: : Lexical error in file "reserved_name.ligo", line 1, characters 4-13:
-      Reserved name: "arguments".
-      Hint: Change the name.
-       {}
-
- If you're not sure how to fix this error, you can
- do one of the following:
-
-* Visit our documentation: https://ligolang.org/docs/intro/introduction
-* Ask a question on our Discord: https://discord.gg/9rhYaEt
-* Open a gitlab issue: https://gitlab.com/ligolang/ligo/issues/new
-* Check the changelog by running 'ligo changelog'
- |} ];
-
-run_ligo_bad [ "compile-contract" ; "../../test/lexer/reserved_name.religo" ; "main" ] ;
-  [%expect {|
-File "../../test/lexer/reserved_name.religo", line 1, characters 4-7:
-  1 | let end = 1;
-Reserved name: "end".
-Hint: Change the name.
- |} ];
-
-run_ligo_bad [ "compile-contract" ; "../../test/lexer/reserved_name.mligo" ; "main" ] ;
-  [%expect {|
-File "../../test/lexer/reserved_name.mligo", line 1, characters 4-10:
-  1 | let object = 1;
-Reserved name: "object".
-Hint: Change the name.
- |} ];
-  *)
-
-run_ligo_bad [ "compile-contract" ; "../../test/lexer/unexpected_character.ligo" ; "main" ] ;
-  [%expect {|
-File "../../test/lexer/unexpected_character.ligo", line 1, characters 18-19:
+File "../../test/lexer/pascaligo/unexpected_character.ligo", line 1, characters 18-19:
   1 | const x: string = \239\191\189\239\191\189\239\191\189;
 Unexpected character '\239'.
- |} ];
+ |}];
 
- run_ligo_bad [ "compile-contract" ; "../../test/lexer/unexpected_character.mligo" ; "main" ] ;
+  run_ligo_bad ["compile-contract";
+                "../../test/lexer/pascaligo/invalid_symbol.ligo";
+                "main"];
   [%expect {|
-File "../../test/lexer/unexpected_character.mligo", line 1, characters 8-9:
-  1 | let x = \239\191\189\239\191\189\239\191\189;
-Unexpected character '\239'.
- |} ];
-
- run_ligo_bad [ "compile-contract" ; "../../test/lexer/unexpected_character.religo" ; "main" ] ;
-  [%expect {|
-File "../../test/lexer/unexpected_character.religo", line 1, characters 8-9:
-  1 | let x = \239\191\189\239\191\189\239\191\189;
-Unexpected character '\239'.
- |} ];
-
- run_ligo_bad [ "compile-contract" ; "../../test/lexer/unterminated_comment.mligo" ; "main" ] ;
-  [%expect {|
-File "../../test/lexer/unterminated_comment.mligo", line 1, characters 0-2:
-  1 | (* not closed
-File "../../test/lexer/unterminated_comment.mligo", line 1, characters 0-2:
-Unterminated comment.
-Hint: Close with "*)".
- |} ];
-
-run_ligo_bad [ "compile-contract" ; "../../test/lexer/invalid_symbol.ligo" ; "main" ] ;
-  [%expect {|
-File "../../test/lexer/invalid_symbol.ligo", line 1, characters 17-20:
+File "../../test/lexer/pascaligo/invalid_symbol.ligo", line 1, characters 17-20:
   1 | const b: int = 1 ... 10;
 Invalid symbol: "...".
 Hint: Check the LIGO syntax you use.
- |} ];
+ |}];
 
-run_ligo_bad [ "compile-contract" ; "../../test/lexer/invalid_symbol.mligo" ; "main" ] ;
+  run_ligo_bad ["compile-contract";
+                "../../test/lexer/pascaligo/missing_break.ligo";
+                "main"];
   [%expect {|
-File "../../test/lexer/invalid_symbol.mligo", line 1, characters 10-13:
-  1 | let b = 1 ... 10;
-Invalid symbol: "...".
-Hint: Check the LIGO syntax you use.
- |} ];
-
-run_ligo_bad [ "compile-contract" ; "../../test/lexer/invalid_symbol.religo" ; "main" ] ;
-  [%expect {|
-File "../../test/lexer/invalid_symbol.religo", line 1, characters 10-11:
-  1 | let b = 1 # 10;
-Invalid symbol: "#".
-Hint: Check the LIGO syntax you use.
- |} ];
-
- run_ligo_bad [ "compile-contract" ; "../../test/lexer/missing_break.ligo" ; "main" ] ;
-  [%expect {|
-File "../../test/lexer/missing_break.ligo", line 1, character 18:
+File "../../test/lexer/pascaligo/missing_break.ligo", line 1, character 18:
   1 | const a: int = 300zennies;
 Missing break.
 Hint: Insert some space.
- |} ];
+ |}];
 
- run_ligo_bad [ "compile-contract" ; "../../test/lexer/missing_break.mligo" ; "main" ] ;
+  run_ligo_bad ["compile-contract";
+                "../../test/lexer/pascaligo/invalid_character_in_string.ligo";
+                "main"];
   [%expect {|
-File "../../test/lexer/missing_break.mligo", line 1, character 11:
-  1 | let a = 300zennies;
-Missing break.
-Hint: Insert some space.
- |} ];
-
- run_ligo_bad [ "compile-contract" ; "../../test/lexer/missing_break.religo" ; "main" ] ;
-  [%expect {|
-File "../../test/lexer/missing_break.religo", line 1, character 11:
-  1 | let a = 300zennies;
-Missing break.
-Hint: Insert some space.
- |} ];
-
-run_ligo_bad [ "compile-contract" ; "../../test/lexer/invalid_character_in_string.ligo" ; "main" ] ;
-  [%expect {|
-File "../../test/lexer/invalid_character_in_string.ligo", line 1, characters 19-20:
+File "../../test/lexer/pascaligo/invalid_character_in_string.ligo", line 1, characters 19-20:
   1 | const z: string = "\t";
-File "../../test/lexer/invalid_character_in_string.ligo", line 1, characters 19-20:
 Invalid character "\\t" in string.
 Hint: Remove or replace the character.
- |} ];
+ |}];
 
-run_ligo_bad [ "compile-contract" ; "../../test/lexer/invalid_character_in_string.mligo" ; "main" ] ;
-  [%expect {|
-File "../../test/lexer/invalid_character_in_string.mligo", line 1, characters 9-10:
-  1 | let z = "\t";
-File "../../test/lexer/invalid_character_in_string.mligo", line 1, characters 9-10:
-Invalid character "\\t" in string.
-Hint: Remove or replace the character.
- |} ];
+  (* CameLIGO *)
 
-run_ligo_bad [ "compile-contract" ; "../../test/lexer/invalid_character_in_string.religo" ; "main" ] ;
+  run_ligo_bad ["compile-contract";
+                "../../test/lexer/cameligo/broken_string.mligo";
+                "main" ];
   [%expect {|
-File "../../test/lexer/invalid_character_in_string.religo", line 1, characters 9-10:
+File "../../test/lexer/cameligo/broken_string.mligo", line 1, characters 8-9:
+  1 | let a = "broken
+  2 | over
+The string starting here is interrupted by a line break.
+Hint: Remove the break or close the string before.
+ |}];
+
+  run_ligo_bad ["compile-contract";
+                "../../test/lexer/cameligo/unexpected_character.mligo";
+                "main"];
+  [%expect {|
+File "../../test/lexer/cameligo/unexpected_character.mligo", line 1, characters 8-9:
+  1 | let x = \239\191\189\239\191\189\239\191\189;
+Unexpected character '\239'.
+ |}];
+
+  run_ligo_bad ["compile-contract";
+                "../../test/lexer/cameligo/unterminated_comment.mligo";
+                "main"];
+  [%expect {|
+File "../../test/lexer/cameligo/unterminated_comment.mligo", line 1, characters 0-2:
+  1 | (* not closed
+The comment starting here is not closed.
+Hint: Close it with "*)".
+ |}];
+
+  run_ligo_bad ["compile-contract";
+                "../../test/lexer/cameligo/invalid_symbol.mligo";
+                "main"];
+  [%expect {|
+File "../../test/lexer/cameligo/invalid_symbol.mligo", line 1, characters 10-13:
+  1 | let b = 1 ... 10;
+Invalid symbol: "...".
+Hint: Check the LIGO syntax you use.
+ |}];
+
+  run_ligo_bad ["compile-contract";
+                "../../test/lexer/cameligo/missing_break.mligo";
+                "main"];
+  [%expect {|
+File "../../test/lexer/cameligo/missing_break.mligo", line 1, character 11:
+  1 | let a = 300zennies;
+Missing break.
+Hint: Insert some space.
+ |}];
+
+  run_ligo_bad ["compile-contract";
+                "../../test/lexer/cameligo/invalid_character_in_string.mligo";
+                "main"];
+  [%expect {|
+File "../../test/lexer/cameligo/invalid_character_in_string.mligo", line 1, characters 9-10:
   1 | let z = "\t";
-File "../../test/lexer/invalid_character_in_string.religo", line 1, characters 9-10:
 Invalid character "\\t" in string.
 Hint: Remove or replace the character.
- |} ]
+ |}];
+
+  (* ReasonLIGO *)
+
+  run_ligo_bad ["compile-contract";
+                "../../test/lexer/reasonligo/broken_string.religo";
+                "main"];
+  [%expect {|
+File "../../test/lexer/reasonligo/broken_string.religo", line 1, characters 8-9:
+  1 | let a = "broken
+  2 | over
+The string starting here is interrupted by a line break.
+Hint: Remove the break or close the string before.
+ |}];
+
+  run_ligo_bad ["compile-contract";
+                "../../test/lexer/reasonligo/unexpected_character.religo";
+                "main"];
+  [%expect {|
+File "../../test/lexer/reasonligo/unexpected_character.religo", line 1, characters 8-9:
+  1 | let x = \239\191\189\239\191\189\239\191\189;
+Unexpected character '\239'.
+ |}];
+
+  run_ligo_bad ["compile-contract";
+                "../../test/lexer/reasonligo/invalid_symbol.religo";
+                "main"];
+  [%expect {|
+File "../../test/lexer/reasonligo/invalid_symbol.religo", line 1, characters 10-11:
+  1 | let b = 1 # 10;
+Invalid symbol: "#".
+Hint: Check the LIGO syntax you use.
+ |}];
+
+  run_ligo_bad ["compile-contract";
+                "../../test/lexer/reasonligo/missing_break.religo";
+                "main"];
+  [%expect {|
+File "../../test/lexer/reasonligo/missing_break.religo", line 1, character 11:
+  1 | let a = 300zennies;
+Missing break.
+Hint: Insert some space.
+ |}];
+
+  run_ligo_bad ["compile-contract";
+                "../../test/lexer/reasonligo/invalid_character_in_string.religo";
+                "main"];
+  [%expect {|
+File "../../test/lexer/reasonligo/invalid_character_in_string.religo", line 1, characters 9-10:
+  1 | let z = "\t";
+Invalid character "\\t" in string.
+Hint: Remove or replace the character.
+ |}]
+
+ (* JsLIGO *)

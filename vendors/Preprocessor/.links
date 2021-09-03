@@ -1,3 +1,4 @@
-$HOME/git/OCaml-build/Makefile
+$HOME/git/ligo/vendors/OCaml-build/Makefile
+$HOME/git/ligo/vendors/OCaml-build/Makefile.cfg
 
 ./Stubs/Preprocessor.ml

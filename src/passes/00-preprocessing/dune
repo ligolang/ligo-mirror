@@ -13,6 +13,13 @@
     preprocessing_pascaligo
     preprocessing_cameligo
     preprocessing_reasonligo
-    preprocessing_jsligo)
+    preprocessing_jsligo
+    preprocessing_michelson)
   (modules
-     Preprocessing Errors Pascaligo Cameligo Reasonligo Jsligo))
+     Preprocessing
+     Errors
+     Pascaligo
+     Cameligo
+     Reasonligo
+     Jsligo
+     Michelson))

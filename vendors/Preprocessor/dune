@@ -13,7 +13,7 @@
   (modules Thread Boolean Status Config Options Error State Version
            CLI Env API PreprocMainGen)
   (modules_without_implementation Config Options Status)
-  (private_modules Version Error Boolean))
+  (private_modules Version Boolean))
 
 ;; Building the lexers of the preprocessor
 

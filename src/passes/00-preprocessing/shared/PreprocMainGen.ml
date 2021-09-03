@@ -2,11 +2,11 @@
 
 (* Vendors dependencies *)
 
-module Config = Preprocessor.Config
+module type CONFIG = Preprocessor.Config.S
 
 (* The functor *)
 
-module Make (Config : Config.S) =
+module Make (Config : CONFIG) =
   struct
     module Parameters   = Preprocessor.CLI.Make (Config)
     module Main         = Preprocessor.PreprocMainGen
@@ -23,7 +23,7 @@ module Make (Config : Config.S) =
 
     let check_cli = Preprocessor.check_cli
 
-    let preproc () : unit =
+    let preprocess () : unit =
       match Preprocessor.preprocess () with
         Stdlib.Ok (buffer, _) ->
           Printf.printf "%s%!" (Buffer.contents buffer)

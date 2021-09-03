@@ -74,15 +74,21 @@ module Make (Config : Config.S) (Options : Options.S) =
 
     (* Extracting the region matched in a lexing buffer *)
 
-    let mk_region buffer =
-      let start = Lexing.lexeme_start_p buffer |> Pos.from_byte
-      and stop  = Lexing.lexeme_end_p buffer |> Pos.from_byte
+    let mk_region lexbuf =
+      let start = Lexing.lexeme_start_p lexbuf |> Pos.from_byte
+      and stop  = Lexing.lexeme_end_p lexbuf |> Pos.from_byte
       in Region.make ~start ~stop
+
+    (* The functin [mk_opening] is called to record the opening of a
+       compound structure, like a string and a block comment. *)
+
+    let mk_opening lexeme lexbuf =
+      Region.{value=lexeme; region = mk_region lexbuf}
 
     (* The call [close opening lexbuf] is a region covering [opening]
        and the region matched in the lexing buffer [lexbuf]. *)
 
-    let close opening = Region.cover opening <@ mk_region
+    let close opening = Region.(cover opening.region <@ mk_region)
 
     (* STRING PROCESSING *)
 
@@ -181,42 +187,49 @@ let reasonligo_block_comment_opening = "/*"
 let reasonligo_block_comment_closing = "*/"
 let reasonligo_line_comment_opening  = "//"
 
-let michelson_block_comment_opening  = "/*"
-let michelson_block_comment_closing  = "*/"
+let jsligo_block_comment_opening     = "/*"
+let jsligo_block_comment_closing     = "*/"
+let jsligo_line_comment_opening      = "//"
+
+let michelson_block_comment_opening  = ""
+let michelson_block_comment_closing  = ""
 let michelson_line_comment_opening   = "#"
 
 let block_comment_opening =
-  pascaligo_block_comment_opening
-| cameligo_block_comment_opening
+   pascaligo_block_comment_opening
+|   cameligo_block_comment_opening
 | reasonligo_block_comment_opening
-| michelson_block_comment_opening
+|     jsligo_block_comment_opening
+|  michelson_block_comment_opening
 
 let block_comment_closing =
-  pascaligo_block_comment_closing
-| cameligo_block_comment_closing
+   pascaligo_block_comment_closing
+|   cameligo_block_comment_closing
 | reasonligo_block_comment_closing
-| michelson_block_comment_closing
+|     jsligo_block_comment_closing
+|  michelson_block_comment_closing
 
 let line_comment_opening =
-  pascaligo_line_comment_opening
-| cameligo_line_comment_opening
+   pascaligo_line_comment_opening
+|   cameligo_line_comment_opening
 | reasonligo_line_comment_opening
-| michelson_line_comment_opening
+|     jsligo_line_comment_opening
+|  michelson_line_comment_opening
 
 (* String delimiters *)
 
-let pascaligo_string_delimiter  = "\""
-let cameligo_string_delimiter   = "\""
+let  pascaligo_string_delimiter = "\""
+let   cameligo_string_delimiter = "\""
 let reasonligo_string_delimiter = "\""
-let michelson_string_delimiter  = "\""
-let jsligo_string_delimiter     = "\""
+let     jsligo_string_delimiter = "\""
+let  michelson_string_delimiter = "\""
 
 let string_delimiter =
-  pascaligo_string_delimiter
-| cameligo_string_delimiter
+   pascaligo_string_delimiter
+|   cameligo_string_delimiter
 | reasonligo_string_delimiter
-| michelson_string_delimiter
-| jsligo_string_delimiter
+|     jsligo_string_delimiter
+|  michelson_string_delimiter
 
 (* RULES *)
 
@@ -233,8 +246,8 @@ let string_delimiter =
 rule scan state = parse
   nl? eof { if state#trace = [] then state
             else stop state lexbuf Error.Missing_endif }
-| nl      { state#proc_nl lexbuf; scan state lexbuf }
-| blank   { state#copy lexbuf; scan state lexbuf }
+| nl      { state#proc_nl lexbuf; scan state lexbuf    }
+| blank   { state#copy lexbuf; scan state lexbuf       }
 
   (* Strings *)
 
@@ -243,7 +256,8 @@ rule scan state = parse
     let lexeme = Lexing.lexeme lexbuf in
     match Config.string with
       Some delimiter when delimiter = lexeme ->
-        let state = in_string (mk_region lexbuf) state lexbuf
+        let opening = mk_opening lexeme lexbuf in
+        let state   = in_string opening state lexbuf
         in scan state lexbuf
     | Some _ | None -> scan state lexbuf }
 
@@ -456,7 +470,7 @@ rule scan state = parse
         else scan state lexbuf
 
     | "error" ->
-        let msg = message [] state lexbuf in
+        let msg = message state lexbuf in
         fail state dir_region (Error.Error_directive msg)
 
     | _ -> state#copy lexbuf; scan state lexbuf }
@@ -495,7 +509,8 @@ and if_expr_com state = parse
 
 and variable state = parse
   blank+ { let id = symbol state lexbuf
-           in skip_line state lexbuf; id }
+           in skip_line state lexbuf; id         }
+| _      { stop state lexbuf Error.Missing_space }
 
 and symbol state = parse
   ident as id { id, mk_region lexbuf                   }
@@ -510,11 +525,15 @@ and skip_line state = parse
 
 (* For #error *)
 
-and message acc state = parse
+and message state = parse
+  blank+ { in_message [] state lexbuf }
+| nl     { state#proc_nl lexbuf; ""   }
+| _      { ""                         }
+
+and in_message acc state = parse
   nl     { state#proc_nl lexbuf; mk_string acc }
 | eof    { mk_string acc                       }
-| blank* { message acc state lexbuf            }
-| _ as c { message (c::acc) state lexbuf       }
+| _ as c { in_message (c::acc) state lexbuf    }
 
 (* Comments *)
 
@@ -524,7 +543,8 @@ and in_block block opening state = parse
     let lexeme = Lexing.lexeme lexbuf in
     match Config.string with
       Some delimiter when delimiter = lexeme ->
-        let state = in_string (mk_region lexbuf) state lexbuf
+        let str_opening = mk_opening delimiter lexbuf in
+        let state       = in_string str_opening state lexbuf
         in in_block block opening state lexbuf
     | Some _ | None -> in_block block opening state lexbuf }
 
@@ -578,18 +598,20 @@ and scan_utf8_char if_eof thread state = parse
 (* #include *)
 
 and scan_include state = parse
-  blank+ { scan_include state lexbuf                     }
-| '"'    { in_include (mk_region lexbuf) [] state lexbuf }
-| _      { stop state lexbuf Error.Missing_filename      }
+  blank+ { scan_include state lexbuf                }
+| '"'    { let opening = mk_opening "\"" lexbuf
+           in in_include opening [] state lexbuf    }
+| _      { stop state lexbuf Error.Missing_filename }
 
 and in_include opening acc state = parse
   '"'    { let region   = close opening lexbuf in
            let ()       = clear_line state lexbuf
            and filename = mk_string acc
-           in region, filename                          }
-| nl     { stop state lexbuf Error.Newline_in_string    }
-| eof    { fail state opening Error.Unterminated_string }
-| _ as c { in_include opening (c::acc) state lexbuf     }
+           in region, filename                                      }
+| nl     { stop state lexbuf Error.Newline_in_string                }
+| eof    { let err = Error.Unterminated_string opening.Region.value
+           in fail state opening.Region.region err                  }
+| _ as c { in_include opening (c::acc) state lexbuf                 }
 
 and clear_line state = parse
   nl     { state#proc_nl lexbuf                        }
@@ -600,29 +622,33 @@ and clear_line state = parse
 (* #import *)
 
 and scan_import state = parse
-  blank+ { scan_import state lexbuf                   }
-| '"'    { in_path (mk_region lexbuf) [] state lexbuf }
-| _      { stop state lexbuf Error.Missing_filename   }
+  blank+ { scan_import state lexbuf                 }
+| '"'    { let opening = mk_opening "\"" lexbuf
+           in in_path opening [] state lexbuf       }
+| _      { stop state lexbuf Error.Missing_filename }
 
 and in_path opening acc state = parse
   '"'    { let region      = close opening lexbuf in
            let module_name = scan_module state lexbuf
            and filename    = mk_string acc
-           in region, filename, module_name              }
-| nl     { stop state lexbuf Error.Newline_in_string     }
-| eof    { fail state opening Error.Unterminated_string  }
-| _ as c { in_path opening (c::acc) state lexbuf         }
+           in region, filename, module_name                         }
+| nl     { stop state lexbuf Error.Newline_in_string                }
+| eof    { let err = Error.Unterminated_string opening.Region.value
+           in fail state opening.Region.region err                  }
+| _ as c { in_path opening (c::acc) state lexbuf                    }
 
 and scan_module state = parse
-  blank+ { scan_module state lexbuf                     }
-| '"'    { in_module (mk_region lexbuf) [] state lexbuf }
-| _      { stop state lexbuf Error.Missing_module       }
+  blank+ { scan_module state lexbuf               }
+| '"'    { let opening = mk_opening "\"" lexbuf
+           in in_module opening [] state lexbuf   }
+| _      { stop state lexbuf Error.Missing_module }
 
 and in_module opening acc state = parse
-  '"'    { clear_line state lexbuf; mk_string acc       }
-| nl     { stop state lexbuf Error.Newline_in_string    }
-| eof    { fail state opening Error.Unterminated_string }
-| _ as c { in_module opening (c::acc) state lexbuf      }
+  '"'    { clear_line state lexbuf; mk_string acc                   }
+| nl     { stop state lexbuf Error.Newline_in_string                }
+| eof    { let err = Error.Unterminated_string opening.Region.value
+           in fail state opening.Region.region err                  }
+| _ as c { in_module opening (c::acc) state lexbuf                  }
 
 (* Strings *)
 
@@ -632,12 +658,13 @@ and in_string opening state = parse
         let lexeme = Lexing.lexeme lexbuf in
         match Config.string with
           Some delimiter when delimiter = lexeme -> state
-        | Some _ | None -> in_string opening state lexbuf       }
-| nl  { fail state opening Error.Newline_in_string              }
-| eof { fail state opening Error.Unterminated_string            }
-| ['\000' - '\031'] as c
-      { stop state lexbuf (Error.Invalid_character_in_string c) }
-| _   { state#copy lexbuf; in_string opening state lexbuf       }
+        | Some _ | None -> in_string opening state lexbuf        }
+| nl  { fail state opening.Region.region Error.Newline_in_string }
+| eof { let err = Error.Unterminated_string opening.Region.value
+        in fail state opening.Region.region err                  }
+| ['\000' - '\031'] as c  (* Control characters *)
+      { stop state lexbuf (Error.Invalid_character_in_string c)  }
+| _   { state#copy lexbuf; in_string opening state lexbuf        }
 
 (* Printing the first linemarker *)
 

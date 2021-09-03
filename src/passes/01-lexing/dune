@@ -17,7 +17,16 @@
      preprocessing_reasonligo
      lexing_reasonligo
      preprocessing_jsligo
-     lexing_jsligo)
+     lexing_jsligo
+;;     preprocessing_michelson
+     ;;     lexing_michelson
+     )
   (modules
-     Lexing Errors Pascaligo Cameligo Reasonligo jsligo)
-)
+     Lexing
+     Errors
+     Pascaligo
+     Cameligo
+     Reasonligo
+     Jsligo
+     ;;     Michelson
+     ))

@@ -11,7 +11,7 @@ let escape s =
 
 let fprintf = Format.fprintf
 
-let print_code ppf (region : Region.t) (input_line : unit -> string) =
+let print_code ppf (region : Region.t) (in_chan : in_channel) =
   let is_dumb    = match Sys.getenv_opt "TERM" with
                      Some value -> value = "dumb"
                    | None -> false
@@ -22,64 +22,58 @@ let print_code ppf (region : Region.t) (input_line : unit -> string) =
   let rec loop_over_lines current start stop =
     try
       let current = current + 1
-      and line    = input_line () in
+      and line    = Stdlib.input_line in_chan (* Trailing "\n" removed *) in
       let width   = String.length line in
       let () =
         if start - 1 <= current && current < stop + 2 then
-         let () = fprintf ppf "%3i" current in
-         if start <= current && current <= stop then
-           if start < current && current < stop then
-             fprintf
-               ppf
-               (if is_dumb then " | %s\n%!"
-                else " | \027[1m\027[31m%s\027[0m\n%!")
-               line
-           else
-             if current = start then
-               let before = String.sub line 0 start_offs in
-               fprintf ppf " | %s" before;
-               if current = stop then
-                 let between =
-                   if start_offs = stop_offs then
-                     String.sub line start_offs 1
-                   else
-                     String.sub line start_offs (stop_offs - start_offs) in
-                 let between = escape between
-                 and after =
-                   if start_offs = stop_offs then
-                     String.sub line (stop_offs + 1) (width - stop_offs -1)
-                   else
-                     String.sub line stop_offs (width - stop_offs) in
-                 let after = escape after
-                 in fprintf
-                      ppf
-                      (if is_dumb then "%s%!%s\n"
-                       else "\027[1m\027[31m%s\027[0m%!%s\n")
-                      between
-                      after
-               else
-                 let after =
-                   String.sub line start_offs (width - start_offs) in
-                 let after = escape after in
-                 if is_dumb then
-                   fprintf ppf "%s%!\n" after
-                 else
-                   fprintf ppf "\027[1m\027[31m%s\027[0m%!\n" after
-             else
-               if current = stop then
-                 let before = String.sub line 0 stop_offs |> escape in
-                 let after  = String.sub line stop_offs (width - stop_offs) in
-                 let after  = escape after in
-                 fprintf ppf " | ";
-                 if is_dumb then
-                   fprintf ppf "%s%!%s\n" before after
-                 else
-                   fprintf ppf "\027[1m\027[31m%s\027[0m%!%s\n" before after
-               else ()
-           else fprintf ppf " | %s\n" line
+          let () = fprintf ppf "%3i" current in
+          if start <= current && current <= stop then
+            if start < current && current < stop then
+              let line = escape line in
+              if is_dumb then fprintf ppf " | %s\n%!" line
+              else fprintf ppf " | \027[1m\027[31m%s\027[0m\n%!" line
+            else
+              if current = start then
+                let before = String.sub line 0 start_offs |> escape in
+                fprintf ppf " | %s" before;
+                if current = stop then
+                  let between =
+                    if start_offs >= width then "\n" (* input_line removes \n *)
+                    else
+                      if start_offs = stop_offs then
+                        String.sub line start_offs 1
+                      else
+                        String.sub line start_offs (stop_offs - start_offs) in
+                  let between = escape between
+                  and after =
+                    if start_offs >= width then ""
+                    else
+                      if start_offs = stop_offs then
+                        String.sub line (stop_offs + 1) (width - stop_offs -1)
+                      else
+                        String.sub line stop_offs (width - stop_offs) in
+                  let after = escape after in
+                  if is_dumb then fprintf ppf "%s%!%s\n" between after
+                  else fprintf ppf "\027[1m\027[31m%s\027[0m%!%s\n" between after
+                else
+                  let after =
+                    String.sub line start_offs (width - start_offs) in
+                  let after = escape after in
+                  if is_dumb then fprintf ppf "%s%!\n" after
+                  else fprintf ppf "\027[1m\027[31m%s\027[0m%!\n" after
+              else
+                if current = stop then
+                  let before = String.sub line 0 stop_offs |> escape in
+                  let after  = String.sub line stop_offs (width - stop_offs) in
+                  let after  = escape after in
+                  fprintf ppf " | ";
+                  if is_dumb then fprintf ppf "%s%!%s\n" before after
+                  else fprintf ppf "\027[1m\027[31m%s\027[0m%!%s\n" before after
+                else ()
+          else fprintf ppf " | %s\n" (escape line)
       in if current < stop + 2 then
-          loop_over_lines current start stop
-    with Stdlib.Invalid_argument _msg -> () (* TODO: Report to maintainers? *)
+           loop_over_lines current start stop
+    with Stdlib.Invalid_argument _msg -> () (* TODO: How to report? *)
        | Stdlib.End_of_file -> () (* Normal exit *)
     in loop_over_lines 0 start stop
 
@@ -91,7 +85,7 @@ let pp ppf : Location.t -> unit = function
       fprintf ppf "%s:\n" (region#to_string `Byte);
     try
       let in_chan = open_in region#file in
-      let result = print_code ppf region (fun () -> input_line in_chan) in
+      let result = print_code ppf region in_chan in
       close_in in_chan;
       result
     with Sys_error _msg -> () (* TODO: Report to maintainers? *)
