@@ -220,6 +220,6 @@ let%expect_test _ =
       storage int ;
       code { CDR ; PUSH int 1 ; ADD ; NIL operation ; PAIR } } |}]
 
-let%expect_test _ = 
+let%expect_test _ =
   run_ligo_good [ "compile-expression" ; "--init-file" ; contract "C.mligo" ; "cameligo" ; "tata" ] ;
   [%expect {| 44 |}]
