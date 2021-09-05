@@ -23,13 +23,15 @@ module type S =
     | Channel of in_channel
     | Buffer  of Lexing.lexbuf
 
+    type tokens = token list
+    type units  = token Unit.t list
+
     type instance = {
-      input      : input;
-      read_token : Lexing.lexbuf -> (token, message) result;
-      read_unit  : Lexing.lexbuf -> (token Unit.t, message) result;
-      lexbuf     : Lexing.lexbuf;
-      close      : unit -> unit;
-      window     : unit -> token State.window option
+      input       : input;
+      read_tokens : Lexing.lexbuf -> (tokens, tokens * message) result;
+      read_units  : Lexing.lexbuf -> (units, units * message) result;
+      lexbuf      : Lexing.lexbuf;
+      close       : unit -> unit
     }
 
     val open_stream : input -> (instance, message) Stdlib.result

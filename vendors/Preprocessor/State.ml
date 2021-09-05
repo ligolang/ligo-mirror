@@ -1,4 +1,9 @@
-(* Definition of the state threaded along the scanning functions of API *)
+(* State threaded along the scanning functions of API *)
+
+(* Vendor dependencies *)
+
+module Region = Simple_utils.Region
+module Pos    = Simple_utils.Pos
 
 (* The type [mode] defines the two scanning modes of the preprocessor:
    either we copy the current characters or we skip them. *)
@@ -15,6 +20,7 @@ type trace = cond list
 
 type file_path = string
 type module_name = string
+type lexeme = string
 
 type state = <
   env     : Env.t;
@@ -26,6 +32,17 @@ type state = <
   imports : (file_path * module_name) list;
   decoder : Uutf.decoder;
   supply  : Bytes.t -> int -> int -> unit;
+  pos     : Pos.t;
+  set_pos : Pos.t -> state;
+  sync    : Lexing.lexbuf -> sync;
+
+  newline    : Lexing.lexbuf -> state;
+  mk_line    :      Thread.t -> Markup.t;
+  mk_block   :      Thread.t -> Markup.t;
+  mk_newline : Lexing.lexbuf -> Markup.t * state;
+  mk_space   : Lexing.lexbuf -> Markup.t * state;
+  mk_tabs    : Lexing.lexbuf -> Markup.t * state;
+  mk_bom     : Lexing.lexbuf -> Markup.t * state;
 
   (* Directories *)
 
@@ -67,6 +84,12 @@ type state = <
   push_import : file_path -> string -> state
 >
 
+and sync = {
+  region : Region.t;
+  lexeme : lexeme;
+  state  : state
+}
+
 type t = state
 
 let empty ~file =
@@ -95,6 +118,68 @@ let empty ~file =
 
     method decoder = decoder
     method supply  = Uutf.Manual.src decoder
+
+    val pos    = Pos.min ~file
+    method pos = pos
+
+    method set_pos pos = {< pos = pos >}
+
+    method sync lexbuf : sync =
+      let lexeme = Lexing.lexeme lexbuf in
+      let length = String.length lexeme
+      and start  = pos in
+      let stop   = start#shift_bytes length in
+      let state  = {< pos = stop >}
+      and region = Region.make ~start:pos ~stop
+      in {region; lexeme; state}
+
+    (* MARKUP *)
+
+    method newline lexbuf =
+      let () = Lexing.new_line lexbuf in
+      let nl = Lexing.lexeme lexbuf in
+      self#set_pos (self#pos#new_line nl)
+
+    (* Committing markup to the current logical state *)
+
+    method mk_newline lexbuf =
+      let ()     = Lexing.new_line lexbuf in
+      let value  = Lexing.lexeme lexbuf in
+      let start  = self#pos in
+      let stop   = start#new_line value in
+      let region = Region.make ~start ~stop in
+      let markup = Markup.Newline Region.{region; value}
+      in markup, self#set_pos stop
+
+    method mk_line thread =
+      let start  = thread#opening#start in
+      let region = Region.make ~start ~stop:self#pos
+      and value  = thread#to_string in
+      Markup.LineCom Region.{region; value}
+
+    method mk_block thread =
+      let start  = thread#opening#start in
+      let region = Region.make ~start ~stop:self#pos
+      and value  = thread#to_string in
+      Markup.BlockCom Region.{region; value}
+
+    method mk_space lexbuf =
+      let {region; lexeme; state} = self#sync lexbuf in
+      let value  = String.length lexeme in
+      let markup = Markup.Space Region.{region; value}
+      in markup, state
+
+    method mk_tabs lexbuf =
+      let {region; lexeme; state} = self#sync lexbuf in
+      let value  = String.length lexeme in
+      let markup = Markup.Tabs Region.{region; value}
+      in markup, state
+
+    method mk_bom lexbuf =
+      let {region; lexeme; state} = self#sync lexbuf in
+      let value  = lexeme in
+      let markup = Markup.BOM Region.{region; value}
+      in markup, state
 
     (* Directories *)
 

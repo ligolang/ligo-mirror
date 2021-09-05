@@ -13,20 +13,22 @@ module type S =
     type file_path = string
     type message   = string Region.reg
 
-    type ('src,'dst) lexer = 'src -> ('dst, message) Stdlib.result
-
     module Tokens :
-      sig
-        val from_lexbuf  : (Lexing.lexbuf, token list) lexer
-        val from_channel : (in_channel,    token list) lexer
-        val from_string  : (string,        token list) lexer
-        val from_buffer  : (Buffer.t,      token list) lexer
-        val from_file    : (file_path,     token list) lexer
+    sig
+        type tokens = token list
+        type 'src lexer = 'src -> (tokens, tokens * message) Stdlib.result
+
+        val from_lexbuf  : Lexing.lexbuf lexer
+        val from_channel : in_channel    lexer
+        val from_string  : string        lexer
+        val from_buffer  : Buffer.t      lexer
+        val from_file    : file_path     lexer
       end
 
     module LexUnits :
       sig
-        type nonrec 'src lexer = ('src, token Unit.t list) lexer
+        type units = token Unit.t list
+        type 'src lexer = 'src -> (units, units * message) Stdlib.result
 
         val from_lexbuf  : Lexing.lexbuf lexer
         val from_channel : in_channel    lexer

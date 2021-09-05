@@ -12,20 +12,22 @@ module type S =
     type file_path = string
     type message   = string Region.reg
 
-    type ('src,'dst) lexer = 'src -> ('dst, message) Stdlib.result
-
     module Tokens :
       sig
-        val from_lexbuf  : (Lexing.lexbuf, token list) lexer
-        val from_channel : (in_channel,    token list) lexer
-        val from_string  : (string,        token list) lexer
-        val from_buffer  : (Buffer.t,      token list) lexer
-        val from_file    : (file_path,     token list) lexer
+        type tokens = token list
+        type 'src lexer = 'src -> (tokens, tokens * message) Stdlib.result
+
+        val from_lexbuf  : Lexing.lexbuf lexer
+        val from_channel : in_channel    lexer
+        val from_string  : string        lexer
+        val from_buffer  : Buffer.t      lexer
+        val from_file    : file_path     lexer
       end
 
     module LexUnits :
       sig
-        type nonrec 'src lexer = ('src, token Unit.t list) lexer
+        type units = token Unit.t list
+        type 'src lexer = 'src -> (units, units * message) Stdlib.result
 
         val from_lexbuf  : Lexing.lexbuf lexer
         val from_channel : in_channel    lexer
@@ -49,8 +51,6 @@ module Make (Config  : Preprocessor.Config.S)
     type file_path = string
     type message   = string Region.reg
 
-    type ('src,'dst) lexer = 'src -> ('dst, message) Stdlib.result
-
     (* Generic lexer for all kinds of inputs *)
 
     let generic lexbuf_of source =
@@ -69,18 +69,15 @@ module Make (Config  : Preprocessor.Config.S)
 
     module Tokens =
       struct
+        type tokens = token list
+        type 'src lexer = 'src -> (tokens, tokens * message) Stdlib.result
+
         let scan_all_tokens = function
-          Stdlib.Error _ as err -> flush_all (); err
-        | Ok Core.{read_token; lexbuf; close; _} ->
-            let close_all () = flush_all (); close () in
-            let rec read_tokens tokens =
-              match read_token lexbuf with
-                Stdlib.Ok token ->
-                  if   Token.is_eof token
-                  then Stdlib.Ok (List.rev tokens)
-                  else read_tokens (token::tokens)
-              | Error _ as err -> err in
-            let result = read_tokens []
+          Stdlib.Error msg ->
+            flush_all (); Stdlib.Error ([], msg)
+        | Ok Core.{read_tokens; lexbuf; close; _} ->
+            let close_all () = flush_all (); close ()
+            and result = read_tokens lexbuf
             in close_all (); result
 
         let from_lexbuf   lexbuf = from_lexbuf   lexbuf |> scan_all_tokens
@@ -92,21 +89,15 @@ module Make (Config  : Preprocessor.Config.S)
 
     module LexUnits =
       struct
-        type nonrec 'src lexer = ('src, token Unit.t list) lexer
+        type units = token Unit.t list
+        type 'src lexer = 'src -> (units, units * message) Stdlib.result
 
         let scan_all_units = function
-          Stdlib.Error _ as err -> flush_all (); err
-        | Ok Core.{read_unit; lexbuf; close; _} ->
-            let close_all () = flush_all (); close () in
-            let rec read_units units =
-              match read_unit lexbuf with
-                Stdlib.Ok (`Token token as unit) ->
-                  if   Token.is_eof token
-                  then Stdlib.Ok (List.rev units)
-                  else read_units (unit::units)
-              | Ok unit -> read_units (unit::units)
-              | Error _ as err -> err in
-            let result = read_units []
+          Stdlib.Error msg ->
+            flush_all (); Stdlib.Error ([], msg)
+        | Ok Core.{read_units; lexbuf; close; _} ->
+            let close_all () = flush_all (); close ()
+            and result = read_units lexbuf
             in close_all (); result
 
         let from_lexbuf   lexbuf = from_lexbuf   lexbuf |> scan_all_units

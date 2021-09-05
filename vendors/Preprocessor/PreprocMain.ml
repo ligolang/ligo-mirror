@@ -8,10 +8,12 @@ module Config =
     type block_comment_delimiters = <opening : string; closing : string>
     type line_comment_delimiter   = string (* Opening of a line comment *)
     type string_delimiter         = string
+    type verbatim_delimiters      = <opening : string; closing : string>
 
     let block    = None
     let line     = None
     let string   = Some "\""
+    let verbatim = None
     let file_ext = None
   end
 

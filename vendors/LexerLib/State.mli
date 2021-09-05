@@ -9,31 +9,35 @@ module Pos    = Simple_utils.Pos
 
 type lexeme = string
 
-type 'token window = <
+(* type 'token window = <
   last_token    : 'token option;
   current_token : 'token           (* Including EOF *)
->
+> *)
 
 type 'token state = <
-  window        : 'token window option;
   pos           : Pos.t;
   set_pos       : Pos.t -> 'token state;
-  slide_window  : 'token -> 'token state;
   sync          : Lexing.lexbuf -> 'token sync;
   decoder       : Uutf.decoder;
   supply        : Bytes.t -> int -> int -> unit;
   newline       : Lexing.lexbuf -> 'token state;
-  mk_line       :      Thread.t -> Markup.t;
-  mk_block      :      Thread.t -> Markup.t;
-  mk_newline    : Lexing.lexbuf -> Markup.t * 'token state;
-  mk_space      : Lexing.lexbuf -> Markup.t * 'token state;
-  mk_tabs       : Lexing.lexbuf -> Markup.t * 'token state;
-  mk_bom        : Lexing.lexbuf -> Markup.t * 'token state;
-  mk_linemarker : line:string ->
-                  file:string ->
-                  ?flag:char ->
-                  Lexing.lexbuf ->
-                  Directive.t * 'token state
+
+  push_token    : 'token -> 'token state;
+
+  lexical_units : 'token Unit.t list;
+  push_unit     : 'token Unit.t -> 'token state;
+
+  push_line       :      Thread.t -> 'token state;
+  push_block      :      Thread.t -> 'token state;
+  push_newline    : Lexing.lexbuf -> 'token state;
+  push_space      : Lexing.lexbuf -> 'token state;
+  push_tabs       : Lexing.lexbuf -> 'token state;
+  push_bom        : Lexing.lexbuf -> 'token state;
+
+  push_linemarker : line:string   ->
+                    file:string   ->
+                    ?flag:char    ->
+                    Lexing.lexbuf -> 'token state
 >
 
 and 'token sync = {

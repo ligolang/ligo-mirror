@@ -1,4 +1,9 @@
-(* Definition of the state threaded along the scanning functions of API *)
+(* State threaded along the scanning functions of API *)
+
+(* Vendor dependencies *)
+
+module Region = Simple_utils.Region
+module Pos    = Simple_utils.Pos
 
 (* The type [mode] defines the two scanning modes of the preprocessor:
    either we copy the current characters or we skip them. *)
@@ -41,6 +46,7 @@ type trace = cond list
 
 type file_path = string
 type module_name = string
+type lexeme = string
 
 type state = <
   env     : Env.t;
@@ -52,6 +58,17 @@ type state = <
   imports : (file_path * module_name) list;
   decoder : Uutf.decoder;
   supply  : Bytes.t -> int -> int -> unit;
+  pos     : Pos.t;
+  set_pos : Pos.t -> state;
+  sync    : Lexing.lexbuf -> sync;
+
+  newline    : Lexing.lexbuf -> state;
+  mk_line    :      Thread.t -> Markup.t;
+  mk_block   :      Thread.t -> Markup.t;
+  mk_newline : Lexing.lexbuf -> Markup.t * state;
+  mk_space   : Lexing.lexbuf -> Markup.t * state;
+  mk_tabs    : Lexing.lexbuf -> Markup.t * state;
+  mk_bom     : Lexing.lexbuf -> Markup.t * state;
 
   (* DIRECTORIES *)
 
@@ -123,6 +140,12 @@ type state = <
   set_imports : (file_path * module_name) list -> state;
   push_import : file_path -> string -> state
 >
+
+and sync = {
+  region : Region.t;
+  lexeme : lexeme;
+  state  : state
+}
 
 type t = state
 

@@ -18,12 +18,11 @@ let rollback lexbuf =
 
    The call [reset ~file ~line lexbuf] modifies in-place the lexing
    buffer [lexbuf] so the lexing engine records that the file
-   associated with [lexbuf] is named [file], and the current line is
-   [line]. *)
+   associated with [lexbuf] is named [file] _at the current position_,
+   and the current line is [line]. *)
 
 let reset_file file lexbuf =
   let open Lexing in
-  lexbuf.lex_curr_p <- {lexbuf.lex_start_p with pos_fname = file};
   lexbuf.lex_curr_p <- {lexbuf.lex_curr_p with pos_fname = file}
 
   let reset_line line lexbuf =
