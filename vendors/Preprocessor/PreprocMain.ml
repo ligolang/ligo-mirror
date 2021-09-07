@@ -20,5 +20,12 @@ module Config =
 module Parameters = CLI.Make (Config)
 module Main = PreprocMainGen.Make (Parameters)
 
-let () = Main.check_cli ()
-let () = Main.preprocess () |> ignore
+let () =
+  let open Main in
+  match check_cli () with
+    Main.Ok ->
+      let {out; err}, _ = preprocess ()
+      in Printf.printf  "%s%!" out;
+         Printf.eprintf "%s%!" err
+  | Info  msg -> Printf.printf "%s\n%!" msg
+  | Error msg -> Printf.eprintf "%s\n%!" msg

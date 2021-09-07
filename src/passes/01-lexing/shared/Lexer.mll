@@ -10,9 +10,7 @@
 module Region = Simple_utils.Region
 module State  = LexerLib.State
 module Thread = LexerLib.Thread
-module Client = LexerLib.Client
-
-let (<@) f g x = f (g x)
+module Client = LexerLib.Client (* For the interface only *)
 
 (* The functorised interface *)
 
@@ -214,7 +212,7 @@ let capital    = ['A'-'Z']
 let letter     = small | capital
 let ident      = small (letter | '_' | digit)* |
                  '_' (letter | '_' (letter | digit) | digit)+
-let uident    = capital (letter | '_' | digit)*
+let uident     = capital (letter | '_' | digit)*
 let attr       = letter (letter | '_' | ':' | digit)*
 let hexa_digit = digit | ['A'-'F' 'a'-'f']
 let byte       = hexa_digit hexa_digit
@@ -225,23 +223,23 @@ let directive  = '#' (blank* as space) (small+ as id) (* For #include *)
 
 (* Symbols *)
 
-let common_sym     =   ";" | "," | "(" | ")"  | "[" | "]"  | "{" | "}"
+let     common_sym =   ";" | "," | "(" | ")"  | "[" | "]"  | "{" | "}"
                      | "=" | ":" | "|" | "." | "_" | "^"
                      | "+" | "-" | "*" | "/"  | "<" | "<=" | ">" | ">="
-let pascaligo_sym  = "->" | "=/=" | "#" | ":="
-let cameligo_sym   = "->" | "<>" | "::" | "||" | "&&" | "'"
+let  pascaligo_sym = "->" | "=/=" | "#" | ":="
+let   cameligo_sym = "->" | "<>" | "::" | "||" | "&&" | "'"
 let reasonligo_sym = "!" | "=>" | "!=" | "==" | "++" | "..." | "||" | "&&"
-let jsligo_sym     = "++" | "--" | "..." | "?" | "&" | "!" | "~" | "%"
+let     jsligo_sym = "++" | "--" | "..." | "?" | "&" | "!" | "~" | "%"
                      | "<<<" | "==" | "!=" | "+=" | "-=" | "*="
                      | "%=" | "<<<=" | "&=" | "|="
                      | "^=" | "=>" (* | ">>>" | ">>>=" *)
 
 let symbol =
-  common_sym
-| pascaligo_sym
-| cameligo_sym
+      common_sym
+|  pascaligo_sym
+|   cameligo_sym
 | reasonligo_sym
-| jsligo_sym
+|     jsligo_sym
 
 (* RULES *)
 
@@ -281,7 +279,7 @@ rule scan state = parse
 and scan_verbatim verb_close thread state = parse
   '#' blank* (natural as line) blank+ '"' (string as file) '"'
   (blank+ ('1' | '2'))? blank* (nl | eof) {
-    let _, state = state#mk_linemarker ~line ~file lexbuf
+    let state = state#push_linemarker ~line ~file lexbuf
     in scan_verbatim verb_close thread state lexbuf }
 
 | "`" | "|}" as lexeme {
@@ -292,7 +290,7 @@ and scan_verbatim verb_close thread state = parse
           and thread = thread#push_string lexeme in
           scan_verbatim verb_close thread state lexbuf }
 
-| nl  { let nl = Lexing.lexeme lexbuf in
+| nl  { let nl     = Lexing.lexeme lexbuf in
         let ()     = Lexing.new_line lexbuf
         and state  = state#set_pos (state#pos#new_line nl)
         and thread = thread#push_string nl in
@@ -315,17 +313,9 @@ and scan_verbatim verb_close thread state = parse
       Lexing.lexbuf ->
       (token * token State.t, message) Stdlib.result
 
-    (* Encoding a function call in exception-raising style (ERS) to
-       error-passing style (EPS) *)
-
-    let lift scanner lexbuf =
-      try Stdlib.Ok (scanner lexbuf) with
+    let callback state lexbuf =
+      try Stdlib.Ok (scan state lexbuf) with
         Error msg -> Stdlib.Error msg
-
-    (* Function [scan] is the main exported function *)
-
-    let mk_string = mk_string
-    let callback  : lexer = lift <@ scan
 
   end (* of functor [Make] in HEADER *)
 (* END TRAILER *)

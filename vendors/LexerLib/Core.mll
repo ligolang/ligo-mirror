@@ -75,14 +75,7 @@ module Make (Config  : Preprocessor.Config.S)
           let tokens = List.filter_map filter_token units
           in Stdlib.Error (tokens, msg)
 
-    (* Decoding a function call in EPS to ERS *)
-
-    let drop scanner lexbuf =
-      match scanner lexbuf with
-        Stdlib.Ok state -> state
-      | Error err -> raise (Error err)
-
-    (* Failing *)
+    (* Failure *)
 
     let fail state region error =
       let value = Error.to_string error in
@@ -98,7 +91,12 @@ module Make (Config  : Preprocessor.Config.S)
 
         let callback state lexbuf =
           let () = Lexbuf.rollback lexbuf in
-          let token, state = (drop @@ Client.callback state) lexbuf
+          let token, state =
+            match Client.callback state lexbuf with
+              Stdlib.Ok ok -> ok
+            | Stdlib.Error msg ->
+                let units = List.rev state#lexical_units
+                in raise (Error (units, msg))
           in state#push_token token
       end
 
@@ -265,40 +263,40 @@ let jsligo_block_comment_closing     = "*/"
 let jsligo_line_comment_opening      = "//"
 
 let block_comment_opening =
-  pascaligo_block_comment_opening
-| cameligo_block_comment_opening
+   pascaligo_block_comment_opening
+|   cameligo_block_comment_opening
 | reasonligo_block_comment_opening
-| michelson_block_comment_opening
-| jsligo_block_comment_opening
+|  michelson_block_comment_opening
+|     jsligo_block_comment_opening
 
 let block_comment_closing =
-  pascaligo_block_comment_closing
-| cameligo_block_comment_closing
+   pascaligo_block_comment_closing
+|   cameligo_block_comment_closing
 | reasonligo_block_comment_closing
-| michelson_block_comment_closing
-| jsligo_block_comment_opening
+|  michelson_block_comment_closing
+|     jsligo_block_comment_closing
 
 let line_comment_opening =
-  pascaligo_line_comment_opening
-| cameligo_line_comment_opening
+   pascaligo_line_comment_opening
+|   cameligo_line_comment_opening
 | reasonligo_line_comment_opening
-| michelson_line_comment_opening
-| jsligo_line_comment_opening
+|  michelson_line_comment_opening
+|     jsligo_line_comment_opening
 
 (* String delimiters *)
 
-let pascaligo_string_delimiter  = "\""
-let cameligo_string_delimiter   = "\""
+let  pascaligo_string_delimiter = "\""
+let   cameligo_string_delimiter = "\""
 let reasonligo_string_delimiter = "\""
-let michelson_string_delimiter  = "\""
-let jsligo_string_delimiter     = "\""
+let  michelson_string_delimiter = "\""
+let     jsligo_string_delimiter = "\""
 
 let string_delimiter =
-  pascaligo_string_delimiter
-| cameligo_string_delimiter
+   pascaligo_string_delimiter
+|   cameligo_string_delimiter
 | reasonligo_string_delimiter
-| michelson_string_delimiter
-| jsligo_string_delimiter
+|  michelson_string_delimiter
+|     jsligo_string_delimiter
 
 (* RULES (SCANNERS) *)
 
@@ -361,13 +359,7 @@ rule scan state = parse
 
 | eof | _ { scan (Client.callback state lexbuf) lexbuf }
 
-(* Block comments
-
-   (For Emacs: ("(*") The lexing of block comments must take care of
-   embedded block comments that may occur within, as well as strings,
-   so no substring "*/" or "*)" may inadvertently close the
-   block. This is the purpose of the first case of the scanner
-   [in_block]. *)
+(* Block comments *)
 
 and in_block block thread state = parse
   string_delimiter {

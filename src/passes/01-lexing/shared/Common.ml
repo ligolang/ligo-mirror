@@ -76,7 +76,7 @@ module Make (Config : CONFIG) (Token : Token.S) =
 
     let lift ~(raise:raise) = function
       Ok tokens -> tokens
-    | Error msg -> raise.raise @@ Errors.generic msg
+    | Error (_, msg) -> raise.raise @@ Errors.generic msg
     (* Lexing a file *)
 
     let from_file ~raise dirs file_path =

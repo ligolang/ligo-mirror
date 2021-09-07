@@ -142,7 +142,7 @@ module Make (Config : Config.S) (Options : Options.S) =
                      ~file:(Options.input <> None)
                      ~offsets:Options.offsets
                      `Byte
-      in sprintf "%s:\n%s\n" header value
+      in sprintf "%s:\n%s" header value
 
     (* Scanning #include at top-level and inside verbatim strings *)
 

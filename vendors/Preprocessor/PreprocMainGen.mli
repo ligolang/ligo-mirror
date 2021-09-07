@@ -7,6 +7,14 @@
 
 module Make (Parameters : CLI.PARAMETERS) :
   sig
-    val check_cli  : unit -> unit
-    val preprocess : unit -> API.result
+    type cli_status =
+      Ok
+    | Info  of string
+    | Error of string
+
+    val check_cli  : unit -> cli_status
+
+    type output = {out : string; err : string}
+
+    val preprocess : unit -> output * API.result
   end

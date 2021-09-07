@@ -1,18 +1,11 @@
 (* This module is meant to be used by clients of the library to create
    standalone preprocessors tailored to their conventions. It is also
    internally used by PreprocMain.ml with default settings, for
-   testing purposes. *)
+   testing purposes. All functions are pure. *)
 
-(* All exits *)
+(* CLI errors *)
 
-let red_exit msg =
-  Printf.eprintf "\027[31m%s\027[0m\n%!" msg; exit 1
-
-let cli_error msg =
-  red_exit (Printf.sprintf "Command-line error: %s" msg)
-
-let print_and_quit msg =
-  print_string msg; flush stdout; exit 0
+let cli_error msg = Printf.sprintf "\027[31m%s\027[0m" msg
 
 (* The functor *)
 
@@ -24,35 +17,55 @@ module Make (Parameters : CLI.PARAMETERS) =
 
     (* Checking for errors and valid exits *)
 
-    let check_cli () =
+    type cli_status =
+      Ok
+    | Info  of string
+    | Error of string
+
+    let check_cli () : cli_status =
       match Parameters.Status.status with
         `SyntaxError  msg
       | `WrongFileExt msg
-      | `FileNotFound msg -> cli_error msg
+      | `FileNotFound msg -> Error (cli_error msg)
       | `Help         buf
-      | `CLI          buf -> print_and_quit (Buffer.contents buf)
-      | `Version      ver -> print_and_quit (ver ^ "\n")
-      | `Done             -> ()
+      | `CLI          buf -> Info (Buffer.contents buf)
+      | `Version      ver -> Info (ver ^ "\n")
+      | `Done             -> Ok
 
     (* Calling the preprocessor on the input file *)
 
-    let preprocess () : API.result =
+    type output = {out : string; err : string}
+
+    let add_out out output =
+      if output.out = "" then {output with out}
+      else {output with out = output.out ^ "\n" ^ out}
+
+    let add_err err output =
+      if output.err = "" then {output with err}
+      else {output with err = output.err ^ "\n" ^ err}
+
+    let red string = Printf.sprintf "\027[31m%s\027[0m" string
+
+    let preprocess () : output * API.result =
       let preprocessed =
         match Options.input with
                None -> Scan.from_channel stdin
         | Some path -> Scan.from_file path in
-      let () =
+      let output = {out=""; err=""} in
+      let output =
         match preprocessed with
           Stdlib.Ok (buffer, _) ->
             if Options.show_pp then
-              Printf.printf "%s\n%!" (Buffer.contents buffer)
+              add_out (Buffer.contents buffer) output
+            else output
         | Error (Some buffer, msg) ->
-            if Options.show_pp then
-              Printf.printf "%s\n%!" (Buffer.contents buffer);
-            let out = Scan.format_error msg in
-            Printf.eprintf "\027[31m%s\027[0m%!" out
+            let output =
+              if Options.show_pp then
+                add_out (Buffer.contents buffer) output
+              else output in
+            add_err (red (Scan.format_error msg)) output
         | Error (None, msg) ->
-            let out = Scan.format_error msg in
-            Printf.eprintf "\027[31m%s\027[0m%!" out
-      in preprocessed
+            add_err (red (Scan.format_error msg)) output in
+      let output = add_out "" output |> add_err ""
+      in output, preprocessed
   end
