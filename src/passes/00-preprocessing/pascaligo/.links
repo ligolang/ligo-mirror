@@ -1,7 +1,5 @@
 $HOME/git/ligo/vendors/OCaml-build/Makefile
 $HOME/git/ligo/vendors/OCaml-build/Makefile.cfg
 
-../shared/PreprocMainGen.ml
-
 ./Stubs/Preprocessing_shared.ml
 ./Stubs/Preprocessing_pascaligo.ml

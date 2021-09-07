@@ -3,8 +3,15 @@
 module type CONFIG = Preprocessor.Config.S
 
 module Config : CONFIG = Preprocessing_reasonligo.Config
-module PreprocMainGen  = Preprocessing_shared.PreprocMainGen
-module PreprocMain     = PreprocMainGen.Make (Config)
+module Parameters = Preprocessor.CLI.Make (Config)
+module Main = Preprocessor.PreprocMainGen.Make (Parameters)
 
-let () = PreprocMain.check_cli ()
-let () = PreprocMain.preprocess ()
+let () =
+  let open Main in
+  match check_cli () with
+    Main.Ok ->
+      let {out; err}, _ = preprocess ()
+      in Printf.printf  "%s%!" out;
+         Printf.eprintf "%s%!" err
+  | Info  msg -> Printf.printf "%s\n%!" msg
+  | Error msg -> Printf.eprintf "%s\n%!" msg
