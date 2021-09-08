@@ -48,17 +48,14 @@ module Make (Config : Config.S) =
 
     type nonrec result = (API.success, Errors.t) result
 
-    (* Postlude *)
+    (* Postlude (THIS FUNCTION IS THE ONLY ONE IMPURE) *)
 
     let finalise show_pp = function
       Error (_, msg) ->
         Error (Errors.generic msg)
-    | Ok (buffer, deps) ->
-        if show_pp then
-          let string = Buffer.contents buffer
-          in Printf.printf "%s\n%!" string
-        else ();
-        Ok (buffer, deps)
+    | Ok (text, deps) ->
+        if show_pp then Printf.printf "%s\n%!" text else ();
+        Ok (text, deps)
 
     (* Preprocessing a file *)
 

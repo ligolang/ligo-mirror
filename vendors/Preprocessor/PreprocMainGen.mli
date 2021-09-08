@@ -3,10 +3,10 @@
    internally used by PreprocMain.ml with default settings, for
    testing purposes. *)
 
-(* The functor *)
-
 module Make (Parameters : CLI.PARAMETERS) :
   sig
+    (* Checking the CLI *)
+
     type cli_status =
       Ok
     | Info  of string
@@ -14,7 +14,9 @@ module Make (Parameters : CLI.PARAMETERS) :
 
     val check_cli  : unit -> cli_status
 
-    type output = {out : string; err : string}
+    (* Running the preprocessor *)
 
-    val preprocess : unit -> output * API.result
+    type std = {out : string; err : string}
+
+    val preprocess : unit -> std * API.result
   end

@@ -20,12 +20,13 @@ let sprintf = Printf.sprintf
 type file_path   = string
 type module_name = string
 type module_deps = (file_path * module_name) list
-type success     = Buffer.t * module_deps
 
+type text        = string
+type success     = text * module_deps
 type message     = string Region.reg
-type error       = Buffer.t option * message
-
+type error       = text option * message
 type result      = (success, error) Stdlib.result
+
 type 'src preprocessor = 'src -> result
 
 module type S =
@@ -800,9 +801,9 @@ and preproc state = parse
     match preproc state lexbuf with
       state ->
         List.iter close_in state#chans;
-        Stdlib.Ok (state#out, state#imports)
+        Stdlib.Ok (Buffer.contents state#out, state#imports)
     | exception Error (buffer, msg) ->
-        Stdlib.Error (Some buffer, msg)
+        Stdlib.Error (Some (Buffer.contents buffer), msg)
 
   let from_channel channel =
     Lexing.from_channel channel |> from_lexbuf

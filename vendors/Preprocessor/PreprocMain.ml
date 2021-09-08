@@ -27,5 +27,5 @@ let () =
       let {out; err}, _ = preprocess ()
       in Printf.printf  "%s%!" out;
          Printf.eprintf "%s%!" err
-  | Info  msg -> Printf.printf "%s\n%!" msg
+  | Info  msg -> Printf.printf "%s%!" msg (* Note the absence of "\n" *)
   | Error msg -> Printf.eprintf "%s\n%!" msg

@@ -3,8 +3,15 @@
 module type CONFIG = Preprocessor.Config.S
 
 module Config : CONFIG = Preprocessing_michelson.Config
-module PreprocMainGen  = Preprocessing_shared.PreprocMainGen
-module PreprocMain     = PreprocMainGen.Make (Config)
+module Parameters      = Preprocessor.CLI.Make (Config)
+module MainGen         = Preprocessor.PreprocMainGen.Make (Parameters)
 
-let () = PreprocMain.check_cli ()
-let () = PreprocMain.preprocess ()
+let () =
+  let open MainGen in
+  match check_cli () with
+    MainGen.Ok ->
+      let {out; err}, _ = preprocess ()
+      in Printf.printf  "%s%!" out;
+         Printf.eprintf "%s%!" err
+  | Info  msg -> Printf.printf "%s\n%!" msg
+  | Error msg -> Printf.eprintf "%s\n%!" msg

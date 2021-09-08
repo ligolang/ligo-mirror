@@ -34,38 +34,34 @@ module Make (Parameters : CLI.PARAMETERS) =
 
     (* Calling the preprocessor on the input file *)
 
-    type output = {out : string; err : string}
+    type std = {out : string; err : string}
 
-    let add_out out output =
-      if output.out = "" then {output with out}
-      else {output with out = output.out ^ "\n" ^ out}
+    let add_out out std =
+      if std.out = "" then {std with out}
+      else {std with out = std.out ^ "\n" ^ out}
 
-    let add_err err output =
-      if output.err = "" then {output with err}
-      else {output with err = output.err ^ "\n" ^ err}
+    let add_err err std =
+      if std.err = "" then {std with err}
+      else {std with err = std.err ^ "\n" ^ err}
 
     let red string = Printf.sprintf "\027[31m%s\027[0m" string
 
-    let preprocess () : output * API.result =
+    let preprocess () : std * API.result =
       let preprocessed =
         match Options.input with
                None -> Scan.from_channel stdin
         | Some path -> Scan.from_file path in
-      let output = {out=""; err=""} in
-      let output =
+      let std = {out=""; err=""} in
+      let std =
         match preprocessed with
-          Stdlib.Ok (buffer, _) ->
-            if Options.show_pp then
-              add_out (Buffer.contents buffer) output
-            else output
-        | Error (Some buffer, msg) ->
-            let output =
-              if Options.show_pp then
-                add_out (Buffer.contents buffer) output
-              else output in
-            add_err (red (Scan.format_error msg)) output
+          Stdlib.Ok (text, _) ->
+            if Options.show_pp then add_out text std else std
+        | Error (Some text, msg) ->
+            let std =
+              if Options.show_pp then add_out text std else std
+            in add_err (red (Scan.format_error msg)) std
         | Error (None, msg) ->
-            add_err (red (Scan.format_error msg)) output in
-      let output = add_out "" output |> add_err ""
-      in output, preprocessed
+            add_err (red (Scan.format_error msg)) std in
+      let std = add_out "" std |> add_err ""
+      in std, preprocessed
   end

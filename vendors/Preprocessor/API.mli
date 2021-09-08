@@ -14,14 +14,14 @@ module Region = Simple_utils.Region
 type file_path   = string
 type module_name = string
 type module_deps = (file_path * module_name) list
-type success     = Buffer.t * module_deps
 
+type text        = string
+type success     = text * module_deps
 type message     = string Region.reg
-type error       = Buffer.t option * message
-
+type error       = text option * message
 type result      = (success, error) Stdlib.result
-type 'src preprocessor = 'src -> result
 
+type 'src preprocessor = 'src -> result
 
 module type S =
   sig

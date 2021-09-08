@@ -291,7 +291,7 @@ module Make (Config : Config.S) : PARAMETERS =
     module Status =
       struct
         type t = status
-        type nonrec status = status
+        type status = t
         let status = status
       end
 
