@@ -1,6 +1,7 @@
 (* Standalone preprocessor with default settings *)
 
 module CLI = Preprocessor.CLI
+module Std = Simple_utils.Std
 module PreprocMainGen = Preprocessor.PreprocMainGen
 
 module Config =
@@ -24,7 +25,7 @@ let () =
   let open Main in
   match check_cli () with
     Main.Ok ->
-      let {out; err}, _ = preprocess ()
+      let Std.{out; err}, _ = preprocess ()
       in Printf.printf  "%s%!" out;
          Printf.eprintf "%s%!" err
   | Info  msg -> Printf.printf "%s%!" msg (* Note the absence of "\n" *)

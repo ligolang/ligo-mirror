@@ -3,6 +3,8 @@
    internally used by PreprocMain.ml with default settings, for
    testing purposes. *)
 
+module Std = Simple_utils.Std
+
 module Make (Parameters : CLI.PARAMETERS) :
   sig
     (* Checking the CLI *)
@@ -16,7 +18,5 @@ module Make (Parameters : CLI.PARAMETERS) :
 
     (* Running the preprocessor *)
 
-    type std = {out : string; err : string}
-
-    val preprocess : unit -> std * API.result
+    val preprocess : unit -> Std.t * API.result
   end

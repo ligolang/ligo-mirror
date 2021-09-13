@@ -1,5 +1,7 @@
 (* Driving the standalone preprocessor for Michelson *)
 
+module Std = Simple_utils.Std
+
 module type CONFIG = Preprocessor.Config.S
 
 module Config : CONFIG = Preprocessing_michelson.Config
@@ -10,7 +12,7 @@ let () =
   let open MainGen in
   match check_cli () with
     MainGen.Ok ->
-      let {out; err}, _ = preprocess ()
+      let Std.{out; err}, _ = preprocess ()
       in Printf.printf  "%s%!" out;
          Printf.eprintf "%s%!" err
   | Info  msg -> Printf.printf "%s\n%!" msg
