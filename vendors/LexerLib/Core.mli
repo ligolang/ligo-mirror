@@ -8,7 +8,7 @@ module Region = Simple_utils.Region
 
 module type S =
   sig
-    type token
+    type 'token lex_unit
 
     (* Utility types *)
 
@@ -23,24 +23,24 @@ module type S =
     | Channel of in_channel
     | Buffer  of Lexing.lexbuf
 
-    type tokens = token list
-    type units  = token Unit.t list
+    type 'token units = 'token lex_unit list
 
-    type instance = {
-      input       : input;
-      read_tokens : Lexing.lexbuf -> (tokens, tokens * message) result;
-      read_units  : Lexing.lexbuf -> (units, units * message) result;
-      lexbuf      : Lexing.lexbuf;
-      close       : unit -> unit
+    type 'token error = {
+      used_units : 'token units;
+      message    : message
     }
 
-    val open_stream : input -> (instance, message) Stdlib.result
+    type 'token instance = {
+      input      : input;
+      read_units : Lexing.lexbuf -> ('token units, 'token error) result;
+      lexbuf     : Lexing.lexbuf;
+      close      : unit -> unit
+    }
+
+    val open_stream : input -> ('token instance, message) result
   end
 
 (* THE FUNCTOR *)
 
-module Make (Config  : Preprocessor.Config.S)
-            (Options : Options.S)
-            (Token   : Token.S)
-            (Client  : Client.S with type token = Token.token)
-       : S with type token = Token.t
+module Make (Config : Preprocessor.Config.S) (Client : Client.S)
+       : S with type 'token lex_unit = 'token Client.State.Unit.t

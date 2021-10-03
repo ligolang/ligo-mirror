@@ -8,40 +8,29 @@ module Region = Simple_utils.Region
 
 module type S =
   sig
-    type token
+    type 'token lex_unit
 
     type file_path = string
     type message   = string Region.reg
 
-    module Tokens :
-    sig
-        type tokens = token list
-        type 'src lexer = 'src -> (tokens, tokens * message) Stdlib.result
+    type 'token units = 'token lex_unit list
 
-        val from_lexbuf  : Lexing.lexbuf lexer
-        val from_channel : in_channel    lexer
-        val from_string  : string        lexer
-        val from_buffer  : Buffer.t      lexer
-        val from_file    : file_path     lexer
-      end
+    type 'token error = {
+      used_units : 'token units;
+      message    : message
+    }
 
-    module LexUnits :
-      sig
-        type units = token Unit.t list
-        type 'src lexer = 'src -> (units, units * message) Stdlib.result
+    type ('token, 'src) lexer =
+      'src -> ('token units, 'token error) result
 
-        val from_lexbuf  : Lexing.lexbuf lexer
-        val from_channel : in_channel    lexer
-        val from_string  : string        lexer
-        val from_buffer  : Buffer.t      lexer
-        val from_file    : file_path     lexer
-      end
+    val from_lexbuf  : ('token, Lexing.lexbuf) lexer
+    val from_channel : ('token, in_channel)    lexer
+    val from_string  : ('token, string)        lexer
+    val from_buffer  : ('token, Buffer.t)      lexer
+    val from_file    : ('token, file_path)     lexer
   end
 
 (* THE FUNCTOR *)
 
-module Make (Config  : Preprocessor.Config.S)
-            (Options : Options.S)
-            (Token   : Token.S)
-            (Client  : Client.S with type token = Token.token)
-       : S with type token = Token.t
+module Make (Config : Preprocessor.Config.S) (Client : Client.S)
+       : S with type 'token lex_unit = 'token Client.State.Unit.t

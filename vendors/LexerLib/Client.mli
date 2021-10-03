@@ -1,14 +1,16 @@
+module Region = Simple_utils.Region
+
 module type S =
   sig
-    type token
+    module State : State.S
 
-    type message = string Simple_utils.Region.reg
+    type message = string Region.reg
 
-    type lexer =
-      token State.t ->
+    type 'token lexer =
+      'token State.t ->
       Lexing.lexbuf ->
-      (token * token State.t, message) Stdlib.result
+      ('token * 'token State.t, message) Stdlib.result
 
-    val mk_string : Thread.t -> token
-    val callback  : lexer
+    val mk_string : Thread.t -> 'token
+    val callback  : 'token lexer
   end

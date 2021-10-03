@@ -1,4 +1,5 @@
-(* Definition of the state threaded along the scanning functions of API *)
+(* Definition of the state threaded along the scanning functions of
+   API *)
 
 (* Vendor dependencies *)
 
@@ -9,43 +10,42 @@ module Pos    = Simple_utils.Pos
 
 type lexeme = string
 
-(* type 'token window = <
-  last_token    : 'token option;
-  current_token : 'token           (* Including EOF *)
-> *)
+module type S =
+  sig
+    module Unit : Unit.S
 
-type 'token state = <
-  pos           : Pos.t;
-  set_pos       : Pos.t -> 'token state;
-  sync          : Lexing.lexbuf -> 'token sync;
-  decoder       : Uutf.decoder;
-  supply        : Bytes.t -> int -> int -> unit;
-  newline       : Lexing.lexbuf -> 'token state;
+    type 'token state = <
+      pos            : Pos.t;
+      set_pos        : Pos.t -> 'token state;
+      sync           : Lexing.lexbuf -> 'token sync;
+      decoder        : Uutf.decoder;
+      supply         : Bytes.t -> int -> int -> unit;
+      newline        : Lexing.lexbuf -> 'token state;
+      lexical_units  : 'token Unit.lex_unit list;
 
-  push_token    : 'token -> 'token state;
+      push_token     :        'token -> 'token state;
+      push_directive :   Directive.t -> 'token state;
+      push_markup    :      Markup.t -> 'token state;
 
-  lexical_units : 'token Unit.t list;
-  push_unit     : 'token Unit.t -> 'token state;
+      push_line      :      Thread.t -> 'token state;
+      push_block     :      Thread.t -> 'token state;
+      push_newline   : Lexing.lexbuf -> 'token state;
+      push_space     : Lexing.lexbuf -> 'token state;
+      push_tabs      : Lexing.lexbuf -> 'token state;
+      push_bom       : Lexing.lexbuf -> 'token state;
+    >
 
-  push_line       :      Thread.t -> 'token state;
-  push_block      :      Thread.t -> 'token state;
-  push_newline    : Lexing.lexbuf -> 'token state;
-  push_space      : Lexing.lexbuf -> 'token state;
-  push_tabs       : Lexing.lexbuf -> 'token state;
-  push_bom        : Lexing.lexbuf -> 'token state;
+    and 'token sync = {
+      region : Region.t;
+      lexeme : lexeme;
+      state  : 'token state
+    }
 
-  push_linemarker : line:string   ->
-                    file:string   ->
-                    ?flag:char    ->
-                    Lexing.lexbuf -> 'token state
->
+    type 'token t = 'token state
 
-and 'token sync = {
-  region : Region.t;
-  lexeme : lexeme;
-  state  : 'token state
-}
+    val empty : file:string option -> 'token t
+  end
 
-type 'token t = 'token state
+(* Functor *)
 
-val empty : file:string -> 'token state
+module Make (Unit : Unit.S) : S with module Unit = Unit

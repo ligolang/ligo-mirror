@@ -7,103 +7,77 @@ module Utils  = Simple_utils.Utils
 
 module type S =
   sig
-    type token
+    type 'token lex_unit
 
     type file_path = string
     type message   = string Region.reg
 
-    module Tokens :
-      sig
-        type tokens = token list
-        type 'src lexer = 'src -> (tokens, tokens * message) Stdlib.result
+    type 'token units = 'token lex_unit list
 
-        val from_lexbuf  : Lexing.lexbuf lexer
-        val from_channel : in_channel    lexer
-        val from_string  : string        lexer
-        val from_buffer  : Buffer.t      lexer
-        val from_file    : file_path     lexer
-      end
+    type 'token error = {
+      used_units : 'token units;
+      message    : message
+    }
 
-    module LexUnits :
-      sig
-        type units = token Unit.t list
-        type 'src lexer = 'src -> (units, units * message) Stdlib.result
+    type ('token, 'src) lexer =
+      'src -> ('token units, 'token error) result
 
-        val from_lexbuf  : Lexing.lexbuf lexer
-        val from_channel : in_channel    lexer
-        val from_string  : string        lexer
-        val from_buffer  : Buffer.t      lexer
-        val from_file    : file_path     lexer
-      end
+    val from_lexbuf  : ('token, Lexing.lexbuf) lexer
+    val from_channel : ('token, in_channel)    lexer
+    val from_string  : ('token, string)        lexer
+    val from_buffer  : ('token, Buffer.t)      lexer
+    val from_file    : ('token, file_path)     lexer
   end
 
 (* THE FUNCTOR *)
 
-module Make (Config  : Preprocessor.Config.S)
-            (Options : Options.S)
-            (Token   : Token.S)
-            (Client  : Client.S with type token = Token.token) =
+module Make (Config : Preprocessor.Config.S) (Client : Client.S) =
   struct
-    module Core = Core.Make (Config) (Options) (Token) (Client)
+    module Core = Core.Make (Config) (Client)
 
-    type token = Token.t
+    type 'token lex_unit = 'token Core.lex_unit
+
+    type 'token units = 'token Core.units
 
     type file_path = string
     type message   = string Region.reg
+
+    type 'token error = 'token Core.error = {
+      used_units : 'token units;
+      message    : message
+    }
+
+    type ('token, 'src) lexer =
+      'src -> ('token units, 'token error) result
 
     (* Generic lexer for all kinds of inputs *)
 
     let generic lexbuf_of source =
       Core.(open_stream @@ Buffer (lexbuf_of source))
+    (* Getting lexer instances for various inputs *)
 
-    (* Lexing the input to recognise one token *)
+    let inst_from_lexbuf  lexbuf  = generic (fun x -> x) lexbuf
+    let inst_from_channel channel = generic Lexing.from_channel channel
+    let inst_from_string  string  = generic Lexing.from_string string
 
-    let from_lexbuf  = generic (fun x -> x)
-    let from_channel = generic Lexing.from_channel
-    let from_string  = generic Lexing.from_string
+    let inst_from_buffer buffer = inst_from_string @@ Buffer.contents buffer
+    let inst_from_file path = Core.(open_stream (File path))
 
-    let from_buffer buffer = from_string @@ Buffer.contents buffer
-    let from_file path = Core.(open_stream (File path))
+    (* Lexing the input given a lexer instance *)
 
-    (* Lexing the entire input *)
+    let scan_all_units = function
+      Stdlib.Error message ->
+        flush_all (); Error {used_units=[]; message}
+    | Ok Core.{read_units; lexbuf; close; _} ->
+        let close_all () = flush_all (); close ()
+        and result = read_units lexbuf
+        in close_all (); result
 
-    module Tokens =
-      struct
-        type tokens = token list
-        type 'src lexer = 'src -> (tokens, tokens * message) Stdlib.result
+    (* Lexing all lexical units from various sources *)
 
-        let scan_all_tokens = function
-          Stdlib.Error msg ->
-            flush_all (); Stdlib.Error ([], msg)
-        | Ok Core.{read_tokens; lexbuf; close; _} ->
-            let close_all () = flush_all (); close ()
-            and result = read_tokens lexbuf
-            in close_all (); result
-
-        let from_lexbuf   lexbuf = from_lexbuf   lexbuf |> scan_all_tokens
-        let from_channel channel = from_channel channel |> scan_all_tokens
-        let from_string   string = from_string   string |> scan_all_tokens
-        let from_buffer   buffer = from_buffer   buffer |> scan_all_tokens
-        let from_file        src = from_file        src |> scan_all_tokens
-      end
-
-    module LexUnits =
-      struct
-        type units = token Unit.t list
-        type 'src lexer = 'src -> (units, units * message) Stdlib.result
-
-        let scan_all_units = function
-          Stdlib.Error msg ->
-            flush_all (); Stdlib.Error ([], msg)
-        | Ok Core.{read_units; lexbuf; close; _} ->
-            let close_all () = flush_all (); close ()
-            and result = read_units lexbuf
-            in close_all (); result
-
-        let from_lexbuf   lexbuf = from_lexbuf   lexbuf |> scan_all_units
-        let from_channel channel = from_channel channel |> scan_all_units
-        let from_string   string = from_string   string |> scan_all_units
-        let from_buffer   buffer = from_buffer   buffer |> scan_all_units
-        let from_file        src = from_file        src |> scan_all_units
-      end
+    let from_lexbuf   lexbuf = inst_from_lexbuf   lexbuf |> scan_all_units
+    let from_channel channel = inst_from_channel channel |> scan_all_units
+    let from_string   string = inst_from_string   string |> scan_all_units
+    let from_buffer   buffer = inst_from_buffer   buffer |> scan_all_units
+    let from_file        src = inst_from_file        src |> scan_all_units
   end
