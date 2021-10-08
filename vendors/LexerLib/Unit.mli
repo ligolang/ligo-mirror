@@ -8,30 +8,37 @@
    richer signature: we need parametric polymorphism on values for the
    tokens here. *)
 
-module type S =
-  sig
-    module Options : Options.S
+type 'token lex_unit = [
+  `Token     of 'token
+| `Markup    of Markup.t
+| `Directive of Directive.t
+]
 
-    type 'token lex_unit = [
-      `Token     of 'token
-    | `Markup    of Markup.t
-    | `Directive of Directive.t
-    ]
+type 'token t = 'token lex_unit
 
-    type 'token t = 'token lex_unit
+(* Printing *)
 
-    (* Filtering tokens from a list of lexical units *)
+type 'token formatter =
+  offsets:bool -> [`Byte | `Point] -> 'token -> string
 
-    val filter_tokens : 'token t list -> 'token list
+val print_tokens :
+  offsets:bool ->
+  [`Byte | `Point] ->
+  token_to_string:('token formatter) ->
+  Buffer.t ->
+  'token t ->
+  unit
 
-    (* Printing *)
+val print_units :
+  offsets:bool ->
+  [`Byte | `Point] ->
+  token_to_string:('token formatter) ->
+  Buffer.t ->
+  'token t ->
+  unit
 
-    val print :
-      token_to_lexeme:('token -> string) ->
-      token_to_string:(offsets:bool -> [`Byte | `Point] -> 'token -> string) ->
-      Buffer.t ->
-      'token t ->
-      unit
-  end
-
-module Make (Options : Options.S) : S with module Options = Options
+val print_copy :
+  token_to_lexeme:('token -> string) ->
+  Buffer.t ->
+  'token t ->
+  unit

@@ -23,8 +23,9 @@ module type S =
 
          * [`Tokens]: the tokens only will be printed. *)
 
-    val preprocess : bool               (* --preprocess            *)
-    val mode       : [`Byte | `Point]   (* --bytes                 *)
-    val command    : [`Copy | `Units | `Tokens] option
-                                        (* --copy/--units/--tokens *)
+    val postprocess : int option         (* --post=<num>            *)
+    val preprocess  : bool               (* --pre                   *)
+    val mode        : [`Byte | `Point]   (* --bytes                 *)
+    val command     : [`Copy | `Units | `Tokens] option
+                                         (* --copy/--units/--tokens *)
   end

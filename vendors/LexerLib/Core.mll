@@ -13,7 +13,9 @@ module Lexbuf = Simple_utils.Lexbuf
 
 module type S =
   sig
-    type 'token lex_unit
+    (* Lexical units *)
+
+    type lex_unit
 
     (* Utility types *)
 
@@ -24,45 +26,41 @@ module type S =
 
     type input =
       File    of file_path
-    | String  of string
-    | Channel of in_channel
-    | Buffer  of Lexing.lexbuf
+    | String  of file_path * string
+    | Channel of file_path * in_channel
+    | Lexbuf  of file_path * Lexing.lexbuf
 
-    type 'token units  = 'token lex_unit list
+    type units = (*token*) lex_unit list
 
-    type 'token error = {
-      used_units : 'token units;
+    type error = {
+      used_units : units;
       message    : message
     }
 
-    type 'token instance = {
+    type instance = {
       input      : input;
-      read_units : Lexing.lexbuf -> ('token units, 'token error) result;
+      read_units : Lexing.lexbuf -> (units, error) result;
       lexbuf     : Lexing.lexbuf;
       close      : unit -> unit
     }
 
-    val open_stream : input -> ('token instance, message) result
+    val open_stream : input -> (instance, message) result
   end
 
 (* THE FUNCTOR *)
 
 module Make (Config : Preprocessor.Config.S) (Client : Client.S) =
   struct
-    module State   = Client.State
-    module Unit    = State.Unit
-    module Options = Unit.Options
+    type lex_unit = Client.token Unit.t
 
-    type 'token lex_unit = 'token Unit.t
+    type units = lex_unit list
 
-    type 'token units = 'token lex_unit list
-
-    (* Errors (NOT EXPORTED) *)
+    (* Errors *)
 
     type message = string Region.reg
 
-    type 'token error = {
-      used_units : 'token units;
+    type error = {
+      used_units : units;
       message    : message
     }
 
@@ -90,6 +88,8 @@ module Make (Config : Preprocessor.Config.S) (Client : Client.S) =
               in Error {used_units; message}
       end
 
+    (* Client callback with local continuation [scan] *)
+
     let callback_with_cont scan state lexbuf =
       match Client.callback state lexbuf with
         Ok state -> scan state lexbuf
@@ -101,13 +101,13 @@ module Make (Config : Preprocessor.Config.S) (Client : Client.S) =
 
     type input =
       File    of file_path
-    | String  of string
-    | Channel of in_channel
-    | Buffer  of Lexing.lexbuf
+    | String  of file_path * string
+    | Channel of file_path * in_channel
+    | Lexbuf  of file_path * Lexing.lexbuf
 
-    type 'token instance = {
+    type instance = {
       input      : input;
-      read_units : Lexing.lexbuf -> ('token units, 'token error) result;
+      read_units : Lexing.lexbuf -> (units, error) result;
       lexbuf     : Lexing.lexbuf;
       close      : unit -> unit
     }
@@ -118,17 +118,18 @@ module Make (Config : Preprocessor.Config.S) (Client : Client.S) =
       preprocessed file (of which the user is not normally aware). *)
 
     let lexbuf_from_input = function
-      String s ->
-        Ok (Lexing.from_string s, fun () -> ())
-    | Channel chan ->
-        let close () = close_in chan in
-        Ok (Lexing.from_channel chan, close)
-    | Buffer b ->
-        let () =
-          match Options.input with
-            None | Some "" -> ()
-          | Some path -> Lexbuf.reset ~file:path b
-        in Ok (b, fun () -> ())
+      String (file, string) ->
+        let lexbuf = Lexing.from_string string in
+        let () = Lexbuf.reset ~file lexbuf
+        in Ok (lexbuf, fun () -> ())
+    | Channel (file, in_chan) ->
+        let close () = close_in in_chan in
+        let lexbuf   = Lexing.from_channel in_chan in
+        let ()       = Lexbuf.reset ~file lexbuf
+        in Ok (lexbuf, close)
+    | Lexbuf (file, lexbuf) ->
+        let () = Lexbuf.reset ~file lexbuf
+        in Ok (lexbuf, fun () -> ())
     | File path ->
         try
           let channel  = open_in path in
@@ -142,9 +143,12 @@ module Make (Config : Preprocessor.Config.S) (Client : Client.S) =
 
     (* The main function *)
 
-    let open_stream scan input : ('token instance, message) result =
+    let open_stream scan input : (instance, message) result =
+      let file = match input with
+                   String (file, _) | Channel (file, _)
+                 | Lexbuf (file, _) | File file -> file in
       let read_units lexbuf =
-        let state = State.empty ~file:Options.input in
+        let state = State.empty ~file in
         match scan state lexbuf with
           Ok state -> Ok (List.rev state#lexical_units)
         | Error _ as err -> err in
@@ -465,7 +469,7 @@ and init state = parse
 {
 (* START TRAILER *)
 
-    let open_stream : input -> ('token instance, message) result =
+    let open_stream : input -> (instance, message) result =
       let first_call = ref true in
       let scan state =
         (if !first_call then (first_call := false; init) else scan) state

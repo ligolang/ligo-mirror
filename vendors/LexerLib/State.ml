@@ -7,157 +7,113 @@ module Pos    = Simple_utils.Pos
 
 type lexeme = string
 
-module type S =
-  sig
-    module Unit : Unit.S
+type 'token state = <
+  pos            : Pos.t;
+  set_pos        : Pos.t -> 'token state;
+  sync           : Lexing.lexbuf -> 'token sync;
+  decoder        : Uutf.decoder;
+  supply         : Bytes.t -> int -> int -> unit;
+  newline        : Lexing.lexbuf -> 'token state;
+  lexical_units  : 'token Unit.lex_unit list;
 
-    type 'token state = <
-      pos            : Pos.t;
-      set_pos        : Pos.t -> 'token state;
-      sync           : Lexing.lexbuf -> 'token sync;
-      decoder        : Uutf.decoder;
-      supply         : Bytes.t -> int -> int -> unit;
-      newline        : Lexing.lexbuf -> 'token state;
-      lexical_units  : 'token Unit.lex_unit list;
+  push_token     :        'token -> 'token state;
+  push_directive :   Directive.t -> 'token state;
+  push_markup    :      Markup.t -> 'token state;
 
-      push_token     :        'token -> 'token state;
-      push_directive :   Directive.t -> 'token state;
-      push_markup    :      Markup.t -> 'token state;
+  push_line      :      Thread.t -> 'token state;
+  push_block     :      Thread.t -> 'token state;
+  push_newline   : Lexing.lexbuf -> 'token state;
+  push_space     : Lexing.lexbuf -> 'token state;
+  push_tabs      : Lexing.lexbuf -> 'token state;
+  push_bom       : Lexing.lexbuf -> 'token state;
+>
 
-      push_line      :      Thread.t -> 'token state;
-      push_block     :      Thread.t -> 'token state;
-      push_newline   : Lexing.lexbuf -> 'token state;
-      push_space     : Lexing.lexbuf -> 'token state;
-      push_tabs      : Lexing.lexbuf -> 'token state;
-      push_bom       : Lexing.lexbuf -> 'token state;
-    >
+and 'token sync = {
+  region : Region.t;
+  lexeme : lexeme;
+  state  : 'token state
+}
 
-    and 'token sync = {
-      region : Region.t;
-      lexeme : lexeme;
-      state  : 'token state
-    }
+type 'token t = 'token state
 
-    type 'token t = 'token state
+let empty ~file : 'token t =
+  let decoder = Uutf.decoder ~encoding:`UTF_8 `Manual in
+  object (self)
+    val pos        = Pos.min ~file
+    method pos     = pos
+    method decoder = decoder
+    method supply  = Uutf.Manual.src decoder
 
-    val empty : file:string option -> 'token t
-  end
+    method set_pos pos = {< pos = pos >}
 
-module Make (Unit : Unit.S) =
-  struct
-    module Unit = Unit
+    val lexical_units = []
+    method lexical_units = lexical_units
 
-    type 'token state = <
-      pos            : Pos.t;
-      set_pos        : Pos.t -> 'token state;
-      sync           : Lexing.lexbuf -> 'token sync;
-      decoder        : Uutf.decoder;
-      supply         : Bytes.t -> int -> int -> unit;
-      newline        : Lexing.lexbuf -> 'token state;
-      lexical_units  : 'token Unit.lex_unit list;
+    method push_token token =
+      {< lexical_units = (`Token token) :: self#lexical_units >}
 
-      push_token     :        'token -> 'token state;
-      push_directive :   Directive.t -> 'token state;
-      push_markup    :      Markup.t -> 'token state;
+    method push_directive dir =
+      {< lexical_units = (`Directive dir) :: self#lexical_units >}
 
-      push_line      :      Thread.t -> 'token state;
-      push_block     :      Thread.t -> 'token state;
-      push_newline   : Lexing.lexbuf -> 'token state;
-      push_space     : Lexing.lexbuf -> 'token state;
-      push_tabs      : Lexing.lexbuf -> 'token state;
-      push_bom       : Lexing.lexbuf -> 'token state;
-    >
+    method push_markup mark =
+      {< lexical_units = (`Markup mark) :: self#lexical_units >}
 
-    and 'token sync = {
-      region : Region.t;
-      lexeme : lexeme;
-      state  : 'token state
-    }
+    method newline lexbuf =
+      let () = Lexing.new_line lexbuf in
+      let nl = Lexing.lexeme lexbuf in
+      self#set_pos (self#pos#new_line nl)
 
-    type 'token t = 'token state
+    method sync lexbuf : 'token sync =
+      let lexeme = Lexing.lexeme lexbuf in
+      let length = String.length lexeme
+      and start  = pos in
+      let stop   = start#shift_bytes length in
+      let state  = {< pos = stop >}
+      and region = Region.make ~start:pos ~stop
+      in {region; lexeme; state}
 
-    let empty ~file : 'token t =
-      let file = match file with
-                   Some path -> path
-                 | None -> "" in
-      let decoder = Uutf.decoder ~encoding:`UTF_8 `Manual in
-      object (self)
-        val pos        = Pos.min ~file
-        method pos     = pos
-        method decoder = decoder
-        method supply  = Uutf.Manual.src decoder
+    (* MARKUP *)
 
-        method set_pos pos = {< pos = pos >}
+    (* Committing markup to the current logical state *)
 
-        val lexical_units = []
-        method lexical_units = lexical_units
+    method push_newline lexbuf =
+      let ()     = Lexing.new_line lexbuf in
+      let value  = Lexing.lexeme lexbuf in
+      let start  = self#pos in
+      let stop   = start#new_line value in
+      let region = Region.make ~start ~stop in
+      let markup = Markup.Newline Region.{region; value}
+      in (self#push_markup markup)#set_pos pos
 
-        method push_token token =
-          {< lexical_units = (`Token token) :: self#lexical_units >}
+    method push_line thread =
+      let start  = thread#opening#start in
+      let region = Region.make ~start ~stop:self#pos
+      and value  = thread#to_string in
+      let markup = Markup.LineCom Region.{region; value}
+      in self#push_markup markup
 
-        method push_directive dir =
-          {< lexical_units = (`Directive dir) :: self#lexical_units >}
+    method push_block thread =
+      let start  = thread#opening#start in
+      let region = Region.make ~start ~stop:self#pos
+      and value  = thread#to_string in
+      let markup = Markup.BlockCom Region.{region; value}
+      in self#push_markup markup
 
-        method push_markup mark =
-          {< lexical_units = (`Markup mark) :: self#lexical_units >}
+    method push_space lexbuf =
+      let {region; lexeme; state} = self#sync lexbuf in
+      let value  = String.length lexeme in
+      let markup = Markup.Space Region.{region; value}
+      in state#push_markup markup
 
-        method newline lexbuf =
-          let () = Lexing.new_line lexbuf in
-          let nl = Lexing.lexeme lexbuf in
-          self#set_pos (self#pos#new_line nl)
+    method push_tabs lexbuf =
+      let {region; lexeme; state} = self#sync lexbuf in
+      let value  = String.length lexeme in
+      let markup = Markup.Tabs Region.{region; value}
+      in state#push_markup markup
 
-        method sync lexbuf : 'token sync =
-          let lexeme = Lexing.lexeme lexbuf in
-          let length = String.length lexeme
-          and start  = pos in
-          let stop   = start#shift_bytes length in
-          let state  = {< pos = stop >}
-          and region = Region.make ~start:pos ~stop
-          in {region; lexeme; state}
-
-        (* MARKUP *)
-
-        (* Committing markup to the current logical state *)
-
-        method push_newline lexbuf =
-          let ()     = Lexing.new_line lexbuf in
-          let value  = Lexing.lexeme lexbuf in
-          let start  = self#pos in
-          let stop   = start#new_line value in
-          let region = Region.make ~start ~stop in
-          let markup = Markup.Newline Region.{region; value}
-          in (self#push_markup markup)#set_pos pos
-
-        method push_line thread =
-          let start  = thread#opening#start in
-          let region = Region.make ~start ~stop:self#pos
-          and value  = thread#to_string in
-          let markup = Markup.LineCom Region.{region; value}
-          in self#push_markup markup
-
-        method push_block thread =
-          let start  = thread#opening#start in
-          let region = Region.make ~start ~stop:self#pos
-          and value  = thread#to_string in
-          let markup = Markup.BlockCom Region.{region; value}
-          in self#push_markup markup
-
-        method push_space lexbuf =
-          let {region; lexeme; state} = self#sync lexbuf in
-          let value  = String.length lexeme in
-          let markup = Markup.Space Region.{region; value}
-          in state#push_markup markup
-
-        method push_tabs lexbuf =
-          let {region; lexeme; state} = self#sync lexbuf in
-          let value  = String.length lexeme in
-          let markup = Markup.Tabs Region.{region; value}
-          in state#push_markup markup
-
-        method push_bom lexbuf =
-          let {region; lexeme; state} = self#sync lexbuf in
-          let value  = lexeme in
-          let markup = Markup.BOM Region.{region; value}
-          in state#push_markup markup
-      end
+    method push_bom lexbuf =
+      let {region; lexeme; state} = self#sync lexbuf in
+      let value  = lexeme in
+      let markup = Markup.BOM Region.{region; value}
+      in state#push_markup markup
   end

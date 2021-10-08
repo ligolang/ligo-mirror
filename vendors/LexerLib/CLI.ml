@@ -30,7 +30,8 @@ module Make (PreprocParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
         "  -u, --units      Print lexical units";
         "  -c, --copy       Print lexemes and markup";
         "      --bytes      Bytes for source locations";
-        "      --preprocess Run the preprocessor"
+        "      --pre        Run the preprocessor";
+        "      --post=<num> Run postprocessing up to pass <num>"
       ] in
       begin
         Buffer.add_string buffer (String.concat "\n" options);
@@ -44,7 +45,8 @@ module Make (PreprocParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
     and tokens     = ref false
     and units      = ref false
     and bytes      = ref false
-    and preprocess = ref false
+    and pre        = ref false
+    and post       = ref None
 
     and help       = ref false
     and version    = ref false
@@ -117,14 +119,21 @@ module Make (PreprocParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
 
          - [(None, None)]: not allowed *)
 
+    let post_arg arg =
+      if !post = None then
+        match Stdlib.int_of_string_opt arg with
+          None -> raise (Getopt.Error "Invalid pass number.")
+        | num -> post := num
+      else raise (Getopt.Error "Only one pass allowed.")
+
     let specs =
       Getopt.[
         noshort, "copy",       set copy true, None;
         noshort, "tokens",     set tokens true, None;
         noshort, "units",      set units true, None;
         noshort, "bytes",      set bytes true, None;
-        noshort, "preprocess", set preprocess true, None;
-
+        noshort, "pre",        set pre true, None;
+        noshort, "post",       None, Some post_arg;
         noshort, "cli",        set cli true, None;
         'h',     "help",       set help true, None;
         'v',     "version",    set version true, None
@@ -161,14 +170,17 @@ module Make (PreprocParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
       |> add "--copy"
       |> add "--tokens"
       |> add "--units"
-      |> add "--preprocess"
+      |> add "--pre"
 
-      (* The following options are present in all CLI *)
+      (* The following options are present in all CLIs *)
       |> add "--cli"
-      |> add "--help" |> add "-h"
+      |> add "--help"    |> add "-h"
       |> add "--version" |> add "-v"
 
-    let opt_with_arg = SSet.empty
+    let opt_with_arg =
+      let open SSet in
+      empty
+      |> add "--post"
 
     let argv_copy = Array.copy Sys.argv
 
@@ -193,22 +205,23 @@ module Make (PreprocParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
 
     (* Re-exporting immutable fields with their CLI value *)
 
-    let copy       = !copy
-    and tokens     = !tokens
-    and units      = !units
-    and mode       = if !bytes then `Byte else `Point
-    and preprocess = !preprocess
+    let copy        = !copy
+    and tokens      = !tokens
+    and units       = !units
+    and mode        = if !bytes then `Byte else `Point
+    and preprocess  = !pre
+    and postprocess = !post
 
     (* Re-exporting and printing on stdout the CLI options *)
 
     let make_cli buffer : Buffer.t =
       (* Options "help", "version" and "cli" are not given. *)
       let options = [
-        sprintf "copy       = %b" copy;
-        sprintf "tokens     = %b" tokens;
-        sprintf "units      = %b" units;
-        sprintf "bytes      = %b" !bytes;
-        sprintf "preprocess = %b" preprocess] in
+        sprintf "copy   = %b" copy;
+        sprintf "tokens = %b" tokens;
+        sprintf "units  = %b" units;
+        sprintf "bytes  = %b" !bytes;
+        sprintf "pre    = %b" preprocess] in
     begin
       Buffer.add_string buffer (String.concat "\n" options);
       Buffer.add_char   buffer '\n';
@@ -243,9 +256,10 @@ module Make (PreprocParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
     module Options =
       struct
         include PreprocParams.Options
-        let preprocess = preprocess
-        let mode       = mode
-        let command    = command
+        let postprocess = postprocess
+        let preprocess  = preprocess
+        let mode        = mode
+        let command     = command
       end
 
     module Status =

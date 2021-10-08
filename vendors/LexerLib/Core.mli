@@ -8,7 +8,9 @@ module Region = Simple_utils.Region
 
 module type S =
   sig
-    type 'token lex_unit
+    (* Lexical units *)
+
+    type lex_unit
 
     (* Utility types *)
 
@@ -19,28 +21,28 @@ module type S =
 
     type input =
       File    of file_path
-    | String  of string
-    | Channel of in_channel
-    | Buffer  of Lexing.lexbuf
+    | String  of file_path * string
+    | Channel of file_path * in_channel
+    | Lexbuf  of file_path * Lexing.lexbuf
 
-    type 'token units = 'token lex_unit list
+    type units = lex_unit list
 
-    type 'token error = {
-      used_units : 'token units;
+    type error = {
+      used_units : units;
       message    : message
     }
 
-    type 'token instance = {
+    type instance = {
       input      : input;
-      read_units : Lexing.lexbuf -> ('token units, 'token error) result;
+      read_units : Lexing.lexbuf -> (units, error) result;
       lexbuf     : Lexing.lexbuf;
       close      : unit -> unit
     }
 
-    val open_stream : input -> ('token instance, message) result
+    val open_stream : input -> (instance, message) result
   end
 
 (* THE FUNCTOR *)
 
 module Make (Config : Preprocessor.Config.S) (Client : Client.S)
-       : S with type 'token lex_unit = 'token Client.State.Unit.t
+       : S with type lex_unit = Client.token Unit.t
