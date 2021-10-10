@@ -167,7 +167,7 @@ let rec compile_type_expression ~raise : CST.type_expr -> AST.type_expression = 
     let (quoted_var,loc) = r_split var in
     let v = Var.of_name (quote_var quoted_var.name.value) in
     return @@ t_variable ~loc v
-  | TModA ma ->
+  | TModPath ma ->
     let (ma, loc) = r_split ma in
     let (module_name, _) = r_split ma.module_name in
     let element = self ma.field in
@@ -300,12 +300,12 @@ let rec compile_expression ~raise : CST.expr -> AST.expr = fun e ->
       return @@ List.fold_left ~f:(e_application ~loc) ~init:func @@ args
     )
   (*TODO: move to proper module*)
-  | ECall {value=(EModA {value={module_name;field};region=_},args);region} when
+  | ECall {value=(EModPath {value={module_name;field};region=_},args);region} when
     List.mem ~equal:Caml.(=) build_ins module_name.value ->
     let loc = Location.lift region in
     let fun_name = match field with
       EVar v -> v.value
-      | EModA _ -> raise.raise @@ unknown_constant module_name.value loc
+      | EModPath _ -> raise.raise @@ unknown_constant module_name.value loc
       |ECase _|ECond _|EAnnot _|EList _|EConstr _|EUpdate _|ELetIn _|EFun _|ESeq _|ECodeInj _
       |ELogic _|EArith _|EString _|ERecord _|EProj _|ECall _|EBytes _|EUnit _|ETypeIn _|EModIn _
       |EModAlias _|ETuple _|EPar _ -> failwith "Corner case : This couldn't be produce by the parser"
@@ -343,7 +343,7 @@ let rec compile_expression ~raise : CST.expr -> AST.expr = fun e ->
     let var  = e_variable_ez ~loc:loc_var var in
     let (sels, _) = List.unzip @@ List.map ~f:compile_selection @@ npseq_to_list proj.field_path in
     return @@ e_accessor ~loc var sels
-  | EModA ma ->
+  | EModPath ma ->
     let (ma, loc) = r_split ma in
     let (module_name, _) = r_split ma.module_name in
     let element = self ma.field in
@@ -351,7 +351,7 @@ let rec compile_expression ~raise : CST.expr -> AST.expr = fun e ->
     if List.mem ~equal:Caml.(=) build_ins module_name then
       let fun_name = match ma.field with
         EVar v -> v.value
-      | EModA _ -> raise.raise @@ unknown_constant module_name loc
+      | EModPath _ -> raise.raise @@ unknown_constant module_name loc
       |ECase _|ECond _|EAnnot _|EList _|EConstr _|EUpdate _|ELetIn _|EFun _|ESeq _|ECodeInj _
       |ELogic _|EArith _|EString _|ERecord _|EProj _|ECall _|EBytes _|EUnit _|ETypeIn _|EModIn _
       |EModAlias _|ETuple _|EPar _ -> failwith "Corner case : This couldn't be produce by the parser"

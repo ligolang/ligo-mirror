@@ -240,7 +240,7 @@ and pp_expr = function
 | EConstr     e -> pp_region_reg pp_constr_expr e
 | ERecord     e -> pp_region_reg pp_record_expr e
 | EProj       e -> pp_region_reg pp_projection e
-| EModA       e -> pp_module_access pp_expr e
+| EModPath    e -> pp_module_path pp_expr e
 | EUpdate     e -> pp_region_reg pp_update e
 | EVar        v -> pp_region_reg pp_ident v
 | ECall       e -> pp_region_reg pp_call_expr e
@@ -419,10 +419,12 @@ and pp_projection {value; _} =
   let fields = separate_map sep pp_selection fields in
   group (pp_region_reg pp_ident struct_name ^^ string "." ^^ break 0 ^^ fields)
 
-and pp_module_access : type a.(a -> document) -> a module_access reg -> document
-= fun f {value; _} ->
-  let {module_name; field; _} = value in
-  group (pp_region_reg pp_ident module_name ^^ string "." ^^ break 0 ^^ f field)
+and pp_module_path :
+  'a.('a -> document) -> 'a module_path reg -> document =
+  fun print {value; _} ->
+    let {module_path; field; _} = value in
+    let path = pp_nsepseq "." pp_ident module_path
+    in group (path ^^ string "." ^^ break 0 ^^ print field)
 
 and pp_selection = function
   FieldName v   -> pp_region_reg (fun v -> string v.value) v
@@ -544,7 +546,7 @@ and pp_type_expr = function
 | TVar t    -> pp_region_reg pp_ident t
 | TString s -> pp_region_reg pp_string s
 | TInt i    -> pp_region_reg pp_int i
-| TModA   t -> pp_region_reg (pp_module_access pp_type_expr) t
+| TModPath t -> pp_region_reg (pp_module_path pp_ident) t
 | TArg    t -> pp_region_reg pp_quoted_param t
 
 and pp_quoted_param param =

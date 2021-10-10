@@ -60,8 +60,7 @@ let rec fold_type_expression : 'a folder -> 'a -> type_expr -> 'a = fun f init t
     res
   | TPar    {value;region=_} ->
     self init value.inside
-  | TModA {value;region=_} ->
-    self init value.field
+  | TModPath _
   | TArg    _
   | TVar    _
   | TInt    _
@@ -114,11 +113,11 @@ let rec fold_expression : 'a folder -> 'a -> expr -> 'a = fun f init e  ->
   | EArith Sub   {value;region=_}
   | EArith Mult  {value;region=_}
   | EArith Div   {value;region=_}
-  | EArith Mod   {value;region=_} 
+  | EArith Mod   {value;region=_}
   | EArith Land  {value;region=_}
   | EArith Lor   {value;region=_}
   | EArith Lxor  {value;region=_}
-  | EArith Lsl   {value;region=_} 
+  | EArith Lsl   {value;region=_}
   | EArith Lsr   {value;region=_} ->
     bin_op value
   | EArith Neg   {value;region=_} ->
@@ -155,7 +154,7 @@ let rec fold_expression : 'a folder -> 'a -> expr -> 'a = fun f init e  ->
       res
     in
     List.Ne.fold_left aux init @@ npseq_to_ne_list value.updates.value.ne_elements
-  | EModA    {value;region=_} -> self init value.field
+  | EModPath {value;region=_} -> self init value.field
   | EVar     _ -> init
   | ECall    {value;region=_} ->
     let (lam, args) = value in
@@ -301,10 +300,7 @@ let rec map_type_expression : ('err) mapper -> type_expr -> 'b = fun f t ->
     let inside = self value.inside in
     let value = {value with inside} in
     return @@ TPar {value;region}
-  | TModA {value;region} ->
-    let field = self value.field in
-    let value = {value with field} in
-    return @@ TModA {value;region}
+  | TModPath _
   | TArg _
   | TVar    _
   | TInt _
@@ -444,10 +440,10 @@ let rec map_expression : ('err) mapper -> expr -> expr = fun f e  ->
     let updates = {value.updates with value = {value.updates.value with ne_elements}} in
     let value = {value with updates} in
     return @@ EUpdate {value;region}
-  | EModA {value;region} ->
+  | EModPath {value;region} ->
     let field = self value.field in
     let value = {value with field} in
-    return @@ EModA {value;region}
+    return @@ EModPath {value;region}
   | EVar     _ as e -> return e
   | ECall    {value;region} ->
     let (lam, args) = value in

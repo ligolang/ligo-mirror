@@ -202,17 +202,23 @@ and module_alias = {
 }
 
 and type_expr =
-  TProd   of cartesian
-| TSum    of sum_type reg
-| TRecord of field_decl reg ne_injection reg
-| TApp    of (type_constr * type_constr_arg) reg
-| TFun    of (type_expr * arrow * type_expr) reg
-| TPar    of type_expr par reg
-| TVar    of variable
-| TString of lexeme reg
-| TInt    of (lexeme * Z.t) reg
-| TModA   of type_expr module_access reg
-| TArg    of type_var reg
+  TProd    of cartesian
+| TSum     of sum_type reg
+| TRecord  of field_decl reg ne_injection reg
+| TApp     of (type_constr * type_constr_arg) reg
+| TFun     of (type_expr * arrow * type_expr) reg
+| TPar     of type_expr par reg
+| TVar     of variable
+| TString  of lexeme reg
+| TInt     of (lexeme * Z.t) reg
+| TModPath of type_name module_path reg
+| TArg     of type_var reg
+
+and 'a module_path = {
+  module_path : (module_name, dot) nsepseq;
+  selector    : dot;
+  field       : 'a
+}
 
 and type_constr_arg =
   CArg      of type_expr
@@ -286,7 +292,7 @@ and expr =
 | EConstr   of (constr * expr option) reg
 | ERecord   of record reg
 | EProj     of projection reg
-| EModA     of expr module_access reg
+| EModPath  of expr module_path reg
 | EUpdate   of update reg
 | EVar      of variable
 | ECall     of (expr * expr nseq) reg
@@ -377,12 +383,6 @@ and comp_expr =
 | Neq   of neq   bin_op reg
 
 and record = field_assign reg ne_injection
-
-and 'a module_access = {
-  module_name : module_name;
-  selector    : dot;
-  field       : 'a;
-}
 
 and projection = {
   struct_name : variable;
@@ -487,29 +487,35 @@ and code_inj = {
   rbracket : rbracket;
 }
 
-(* Projecting regions from some nodes of the AST *)
+(* PROJECTING REGIONS *)
 
 let rec last to_region = function
     [] -> Region.ghost
 |  [x] -> to_region x
 | _::t -> last to_region t
 
-let nsepseq_to_region to_region (hd,tl) =
-  let reg (_, item) = to_region item in
-  Region.cover (to_region hd) (last reg tl)
+let nseq_to_region to_region (hd, tl) =
+  Region.cover (to_region hd) (last to_region tl)
+
+let nsepseq_to_region to_region (hd, tl) =
+  Region.cover (to_region hd) (last (to_region <@ snd) tl)
+
+let sepseq_to_region to_region = function
+      None -> Region.ghost
+| Some seq -> nsepseq_to_region to_region seq
 
 let type_expr_to_region = function
-  TProd   {region; _}
-| TSum    {region; _}
-| TRecord {region; _}
-| TApp    {region; _}
-| TFun    {region; _}
-| TPar    {region; _}
-| TString {region; _}
-| TInt    {region; _}
-| TVar    {region; _}
-| TModA   {region; _}
-| TArg    {region; _}
+  TProd    {region; _}
+| TSum     {region; _}
+| TRecord  {region; _}
+| TApp     {region; _}
+| TFun     {region; _}
+| TPar     {region; _}
+| TString  {region; _}
+| TInt     {region; _}
+| TVar     {region; _}
+| TModPath {region; _}
+| TArg     {region; _}
  -> region
 
 let list_pattern_to_region = function
@@ -541,7 +547,7 @@ let logic_expr_to_region = function
 
 let arith_expr_to_region = function
   Add {region;_} | Sub {region;_} | Mult {region;_}
-| Div {region;_} | Mod {region;_} | Land {region;_} 
+| Div {region;_} | Mod {region;_} | Land {region;_}
 | Lor {region;_} | Lxor {region;_} | Lsl {region;_} | Lsr {region;_}
 | Neg {region;_} | Int {region;_} | Mutez {region; _}
 | Nat {region; _} -> region
@@ -564,7 +570,7 @@ let expr_to_region = function
 | ECall {region;_}   | EVar {region; _}    | EProj {region; _}
 | EUnit {region;_}   | EPar {region;_}     | EBytes {region; _}
 | ESeq {region; _}   | ERecord {region; _} | EUpdate {region; _}
-| EModA {region; _}
+| EModPath {region; _}
 | ECodeInj {region; _} -> region
 
 let declaration_to_region = function

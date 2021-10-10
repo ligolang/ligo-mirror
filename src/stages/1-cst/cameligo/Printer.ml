@@ -105,6 +105,11 @@ let print_var state {region; value} =
             (compact state region)value
   in Buffer.add_string state#buffer line
 
+let print_UIdent state {region; value} =
+  let line =
+    sprintf "%s: UIdent %S\n" (compact state region) value
+  in Buffer.add_string state#buffer line
+
 let print_constr state {region; value} =
   let line =
     sprintf "%s: Constr \"%s\"\n"
@@ -218,8 +223,17 @@ and print_type_expr state = function
 | TFun t          -> print_fun_type state t
 | TString s       -> print_string state s
 | TInt x          -> print_int state x
-| TModA   ma      -> print_module_access print_type_expr state ma
+| TModPath t      -> print_module_path state print_type_name t
 | TArg t          -> print_quoted_param state t
+
+(* Module paths *)
+
+and print_module_path :
+  'a.state -> (state -> 'a -> unit) -> 'a module_path reg -> unit =
+  fun state print {value; _} ->
+    print_nsepseq state "DOT" print_UIdent value.module_path; (* XXX *)
+    print_token   state value.selector "DOT";
+    print         state value.field
 
 and print_sum_type state {value; _} =
   let {variants; attributes; lead_vbar} = value in
@@ -259,13 +273,6 @@ and print_projection state {value; _} =
   print_var     state struct_name;
   print_token   state selector ".";
   print_nsepseq state "." print_selection field_path
-
-and print_module_access : type a.(state -> a -> unit ) -> state -> a module_access reg -> unit =
-fun f state {value; _} ->
-  let {module_name; selector; field} = value in
-  print_var     state module_name;
-  print_token   state selector ".";
-  f             state field;
 
 and print_update state {value; _} =
  let {lbrace; record; kwd_with; updates; rbrace} = value in
@@ -434,7 +441,7 @@ and print_expr state = function
 | ECall e             -> print_fun_call    state e
 | EVar v              -> print_var         state v
 | EProj p             -> print_projection  state p
-| EModA ma            -> print_module_access print_expr state ma
+| EModPath p          -> print_module_path state print_expr p
 | EUpdate u           -> print_update      state u
 | EUnit e             -> print_unit        state e
 | EBytes b            -> print_bytes       state b
@@ -733,7 +740,91 @@ let expr_to_string ~offsets ~mode =
 let type_expr_to_string ~offsets ~mode =
   to_string ~offsets ~mode print_type_expr
 
-(* Pretty-printing the CST*)
+(* The function [swap] takes a function and two values which are
+   applied to the function in reverse order. It is useful when calling
+   a function whose arguments have no labels and we want to do an eta
+   expansion. For example,
+
+   [let mk_child print value = Some (swap print value)]
+
+   instead of
+
+   [let mk_child print value = Some (fun state -> print state value)].
+
+   We also use [swap] in arguments to calls to higher-order functions,
+   for instance:
+
+   [mk_child (swap print_then print) value.ifso]
+ *)
+
+let swap = Utils.swap
+
+(* Printing nodes *)
+
+(* The call [print_long state reg] prints a node as a string and its
+   source region from [reg]. *)
+
+let print_long state {value; region} =
+  let reg  = compact state region in
+  let node = sprintf "%s%s (%s)\n" state#pad_path value reg
+  in Buffer.add_string state#buffer node
+
+(* The call [print_long' state value region] is for cases where the
+   value to print as a string, and the source region are given
+   separately. Compare with [print_long]. *)
+
+let print_long' state value region =
+  print_long state {value; region}
+
+(* The call [print_short state value] is the short version of
+   [print_long']: there is no source region to print. This is used
+   often when printing nodes whose aim is to guide the interpretation,
+   but do not correspond to a node in the CST, for example "<cst>", or
+   "<statements". *)
+
+let print_short state value =
+  let node = sprintf "%s%s\n" state#pad_path value
+  in Buffer.add_string state#buffer node
+
+(* Making subtrees (children) from general values ([mk_child]),
+   optional values ([mk_child_opt]) or list values
+   ([mk_child_list]). The type of a subtree ("child") is a ['a
+   option], with the interpretation that [None] means "no subtree
+   printed". In the case of a list, the empty list is interpreted as
+   meaning "no subtree printed." *)
+
+let mk_child print value = Some (swap print value)
+
+let mk_child_opt print = function
+        None -> None
+| Some value -> mk_child print value
+
+let mk_child_list print = function
+    [] -> None
+| list -> mk_child print list
+
+(* Printing trees (node + subtrees). The call [print_tree state label
+   ?region children] prints a node whose label is [label] and optional
+   region is [region], and whose subtrees are [children]. The latter
+   is a list of optional values, with the interpretation of [None] as
+   meaning "no subtree printed". *)
+
+let print_tree state label ?region children =
+  let () = match region with
+                    None -> print_short state label
+           | Some region -> print_long' state label region in
+  let children         = List.filter_map (fun x -> x) children in
+  let arity            = List.length children in
+  let apply rank print = print (state#pad arity rank)
+  in List.iteri apply children
+
+(* A special case of tree occurs often: the unary tree, that is, a
+   tree with exactly one subtree. *)
+
+let print_unary state label ?region print_sub node =
+  print_tree state label ?region [mk_child print_sub node]
+
+(* Pretty-printing the CST *)
 
 let pp_ident state {value=name; region} =
   let reg  = compact state region in
@@ -1014,9 +1105,8 @@ and pp_expr state = function
 | EProj {value; region} ->
     pp_loc_node state "EProj" region;
     pp_projection state value
-| EModA {value; region} ->
-    pp_loc_node state "EModA" region;
-    pp_module_access pp_expr state value
+| EModPath p ->
+    pp_module_path state "EModPath" pp_expr p
 | EUpdate {value; region} ->
     pp_loc_node state "EUpdate" region;
     pp_update state value
@@ -1058,6 +1148,16 @@ and pp_expr state = function
 | ECodeInj {value; region} ->
     pp_loc_node state "ECodeInj" region;
     pp_code_inj state value
+
+and pp_module_path :
+  'a.state -> string -> (state -> 'a -> unit) -> 'a module_path reg -> unit =
+  fun state label printer node ->
+  let {value; region} = node in
+  let children =
+    (List.map (mk_child print_long)
+    @@ Utils.nsepseq_to_list value.module_path)
+    @ [mk_child printer value.field]
+  in print_tree state label ~region children
 
 and pp_fun_expr state node =
   let {binders; lhs_type; body; _} = node in
@@ -1212,11 +1312,6 @@ and pp_projection state proj =
   let apply len rank = pp_selection (state#pad len rank) in
   pp_ident (state#pad (1+len) 0) proj.struct_name;
   List.iteri (apply len) selections
-
-and pp_module_access : type a. (state -> a -> unit ) -> state -> a module_access -> unit
-= fun f state ma ->
-  pp_ident (state#pad 2 0) ma.module_name;
-  f (state#pad 2 1) ma.field
 
 and pp_update state update =
   pp_path (state#pad 2 0) update.record;
@@ -1423,9 +1518,8 @@ and pp_type_expr state = function
 | TInt s ->
     pp_node   state "TInt";
     pp_int (state#pad 1 0) s
-| TModA {value; region} ->
-    pp_loc_node state "TModA" region;
-    pp_module_access pp_type_expr state value
+| TModPath p ->
+    pp_module_path state "TModPath" pp_ident p
 | TArg t ->
     pp_node state "TArg";
     pp_type_var (state#pad 1 0) t

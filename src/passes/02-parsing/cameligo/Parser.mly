@@ -18,13 +18,30 @@ let list_of_option = function
        None -> []
 | Some list -> list
 
+let mk_mod_path :
+  (module_name * dot) Utils.nseq * 'a ->
+  ('a -> Region.t) ->
+  'a CST.module_path Region.reg =
+  fun (nseq, field) to_region ->
+    let (first, sep), tail = nseq in
+    let rec trans (seq, prev_sep as acc) = function
+      [] -> acc
+    | (item, next_sep) :: others ->
+        trans ((prev_sep, item) :: seq, next_sep) others in
+    let list, last_dot = trans ([], sep) tail in
+    let module_path = first, List.rev list in
+    let region = CST.nseq_to_region (fun (x,_) -> x.region) nseq in
+    let region = Region.cover region (to_region field)
+    and value = {module_path; selector=last_dot; field}
+    in {value; region}
+
 (* END HEADER *)
 %}
 
 (* Reductions on error *)
 
 %on_error_reduce seq_expr
-%on_error_reduce nsepseq(selection,DOT)
+%on_error_reduce selected_expr
 %on_error_reduce call_expr_level
 %on_error_reduce add_expr_level
 %on_error_reduce cons_expr_level
@@ -38,8 +55,6 @@ let list_of_option = function
 %on_error_reduce base_expr(expr)
 %on_error_reduce base_expr(base_cond)
 %on_error_reduce base_expr(closed_expr)
-%on_error_reduce module_var_e
-%on_error_reduce module_var_t
 %on_error_reduce nsepseq(module_name,DOT)
 %on_error_reduce core_expr
 %on_error_reduce match_expr(base_cond)
@@ -235,15 +250,25 @@ prod_type_level:
 | core_type { $1 }
 
 core_type:
-  "<string>"       { TString $1 }
-| "<int>"          {    TInt $1 }
+  "<string>"       {  TString $1 }
+| "<int>"          {     TInt $1 }
 | "_"              { TVar {value="_"; region=$1} }
-| type_name        {    TVar $1 }
-| module_access_t  {   TModA $1 }
-| type_constr_app  {    TApp $1 }
-| record_type      { TRecord $1 }
-| type_var         {    TArg $1 }
-| par(type_expr)   {    TPar $1 }
+| type_name        {     TVar $1 }
+| type_in_module   { TModPath $1 }
+| type_constr_app  {     TApp $1 }
+| record_type      {  TRecord $1 }
+| type_var         {     TArg $1 }
+| par(type_expr)   {     TPar $1 }
+
+type_in_module:
+  module_path(type_name) { mk_mod_path $1 (fun x -> x.region) }
+
+module_path(selected):
+  module_name "." module_path(selected) {
+    let (head, tail), selected = $3 in
+    (($1,$2), head::tail), selected
+  }
+| module_name "." selected { (($1,$2), []), $3 }
 
 type_constr_app:
   type_constr_arg type_name {
@@ -298,18 +323,6 @@ record_type:
       terminator;
       attributes=$1}
     in {region; value} }
-
-module_access_t :
-  module_name "." module_var_t {
-    let start       = $1.region in
-    let stop        = type_expr_to_region $3 in
-    let region      = cover start stop in
-    let value       = {module_name=$1; selector=$2; field=$3}
-    in {region; value} }
-
-module_var_t:
-  module_access_t  { TModA $1 }
-| field_name       { TVar  $1 }
 
 field_decl:
   attributes field_name ":" type_expr {
@@ -769,7 +782,7 @@ core_expr:
 | "<bytes>"                           {                     EBytes $1 }
 | "<ident>"                           {                       EVar $1 }
 | projection                          {                      EProj $1 }
-| module_access_e                     {                      EModA $1 }
+| value_in_module                     {                   EModPath $1 }
 | "<string>"                          {           EString (String $1) }
 | "<verbatim>"                        {         EString (Verbatim $1) }
 | unit                                {                      EUnit $1 }
@@ -780,6 +793,14 @@ core_expr:
 | code_inj                            {                   ECodeInj $1 }
 | par(expr)                           {                       EPar $1 }
 | par(typed_expr)                     {                     EAnnot $1 }
+
+value_in_module:
+  module_path(selected_expr) { mk_mod_path $1 CST.expr_to_region }
+
+selected_expr:
+  "or"       { EVar  {value="or"; region=$1} }
+| field_name { EVar  $1 }
+| projection { EProj $1 }
 
 code_inj:
   "[%lang" expr "]" {
@@ -797,20 +818,6 @@ projection:
     let region = cover start stop in
     let value  = {struct_name=$1; selector=$2; field_path=$3}
     in {region; value} }
-
-module_access_e:
-  module_name "." module_var_e {
-    let start       = $1.region in
-    let stop        = expr_to_region $3 in
-    let region      = cover start stop in
-    let value       = {module_name=$1; selector=$2; field=$3}
-    in {region; value} }
-
-module_var_e:
-  module_access_e   { EModA $1 }
-| "or"              { EVar {value="or"; region=$1} }
-| field_name        { EVar  $1 }
-| projection        { EProj $1 }
 
 selection:
   field_name { FieldName $1 }

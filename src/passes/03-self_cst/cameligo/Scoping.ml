@@ -91,7 +91,7 @@ let check_linearity_type_vars ~raise : CST.type_vars -> unit =
         raise.raise @@ non_linear_type_decl var
       else VarSet.add var.value.name varset
     in
-    let varset = List.fold_left lst ~f:aux ~init:VarSet.empty in 
+    let varset = List.fold_left lst ~f:aux ~init:VarSet.empty in
     ignore varset ; ()
 
 (* Checking the linearity of patterns *)
@@ -196,7 +196,7 @@ let peephole_type ~raise : unit -> type_expr -> unit = fun _ t ->
   | TFun    _
   | TPar    _
   | TVar    _
-  | TModA   _
+  | TModPath _
   | TString _
   | TInt    _ -> ()
 
@@ -207,7 +207,7 @@ let peephole_expression ~raise : unit -> expr -> unit =
       let apply ({value; _}: _ case_clause reg)  =
         check_pattern ~raise value.pattern in
       let () =
-        List.iter 
+        List.iter
           ~f:apply
           (Utils.nsepseq_to_list value.cases.value)
       in ()
@@ -239,7 +239,7 @@ let peephole_expression ~raise : unit -> expr -> unit =
   | ERecord  _
   | EProj    _
   | EUpdate  _
-  | EModA    _
+  | EModPath _
   | EVar     _
   | ECall    _
   | EBytes   _
