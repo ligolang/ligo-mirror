@@ -1816,8 +1816,8 @@ interactive_expr: Function LPAR Const Ident RPAR COLON Ident With
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
 ## In state 36, spurious reduction of production core_type -> Ident
-## In state 73, spurious reduction of production prod_type_level -> core_type
-## In state 54, spurious reduction of production fun_type_level -> prod_type_level
+## In state 73, spurious reduction of production cartesian_level -> core_type
+## In state 54, spurious reduction of production fun_type_level -> cartesian_level
 ## In state 72, spurious reduction of production type_expr -> fun_type_level
 ## In state 241, spurious reduction of production type_annotation -> COLON type_expr
 ##
@@ -1919,8 +1919,8 @@ interactive_expr: Function LPAR Var Ident COLON String With
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 73, spurious reduction of production prod_type_level -> core_type
-## In state 54, spurious reduction of production fun_type_level -> prod_type_level
+## In state 73, spurious reduction of production cartesian_level -> core_type
+## In state 54, spurious reduction of production fun_type_level -> cartesian_level
 ## In state 109, spurious reduction of production param_type -> COLON fun_type_level
 ## In state 110, spurious reduction of production option(param_type) -> param_type
 ## In state 114, spurious reduction of production param_decl -> Var var_pattern option(param_type)
@@ -2412,8 +2412,8 @@ interactive_expr: LPAR Verbatim COLON Ident With
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
 ## In state 36, spurious reduction of production core_type -> Ident
-## In state 73, spurious reduction of production prod_type_level -> core_type
-## In state 54, spurious reduction of production fun_type_level -> prod_type_level
+## In state 73, spurious reduction of production cartesian_level -> core_type
+## In state 54, spurious reduction of production fun_type_level -> cartesian_level
 ## In state 72, spurious reduction of production type_expr -> fun_type_level
 ## In state 615, spurious reduction of production annot_expr -> disj_expr COLON type_expr
 ##
@@ -3398,8 +3398,8 @@ contract: Function Ident LPAR Const Ident RPAR COLON Ident With
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
 ## In state 36, spurious reduction of production core_type -> Ident
-## In state 73, spurious reduction of production prod_type_level -> core_type
-## In state 54, spurious reduction of production fun_type_level -> prod_type_level
+## In state 73, spurious reduction of production cartesian_level -> core_type
+## In state 54, spurious reduction of production fun_type_level -> cartesian_level
 ## In state 72, spurious reduction of production type_expr -> fun_type_level
 ## In state 241, spurious reduction of production type_annotation -> COLON type_expr
 ##
@@ -3416,8 +3416,8 @@ contract: Recursive Function Ident LPAR Const Ident RPAR COLON String With
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 73, spurious reduction of production prod_type_level -> core_type
-## In state 54, spurious reduction of production fun_type_level -> prod_type_level
+## In state 73, spurious reduction of production cartesian_level -> core_type
+## In state 54, spurious reduction of production fun_type_level -> cartesian_level
 ## In state 72, spurious reduction of production type_expr -> fun_type_level
 ## In state 241, spurious reduction of production type_annotation -> COLON type_expr
 ##
@@ -3700,7 +3700,7 @@ contract: Type Ident Is BigMap With
 ##
 ## Ends in an error in state: 39.
 ##
-## type_constr_app -> BigMap . type_tuple [ VBAR Type TIMES SEMI Recursive RPAR RBRACKET RBRACE Module Is Function End EQ EOF Directive Const COMMA Attr ASS ARROW ]
+## type_ctor_app -> BigMap . type_tuple [ VBAR Type TIMES SEMI Recursive RPAR RBRACKET RBRACE Module Is Function End EQ EOF Directive Const COMMA Attr ASS ARROW ]
 ##
 ## The known suffix of the stack is as follows:
 ## BigMap
@@ -3714,7 +3714,7 @@ contract: Type Ident Is Map With
 ##
 ## Ends in an error in state: 31.
 ##
-## type_constr_app -> Map . type_tuple [ VBAR Type TIMES SEMI Recursive RPAR RBRACKET RBRACE Module Is Function End EQ EOF Directive Const COMMA Attr ASS ARROW ]
+## type_ctor_app -> Map . type_tuple [ VBAR Type TIMES SEMI Recursive RPAR RBRACKET RBRACE Module Is Function End EQ EOF Directive Const COMMA Attr ASS ARROW ]
 ##
 ## The known suffix of the stack is as follows:
 ## Map
@@ -3827,8 +3827,8 @@ contract: Type Ident Is LPAR String With
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 73, spurious reduction of production prod_type_level -> core_type
-## In state 54, spurious reduction of production fun_type_level -> prod_type_level
+## In state 73, spurious reduction of production cartesian_level -> core_type
+## In state 54, spurious reduction of production fun_type_level -> cartesian_level
 ## In state 72, spurious reduction of production type_expr -> fun_type_level
 ##
 
@@ -3840,7 +3840,7 @@ contract: Type Ident Is List With
 ##
 ## Ends in an error in state: 33.
 ##
-## type_constr_app -> List . par(type_expr) [ VBAR Type TIMES SEMI Recursive RPAR RBRACKET RBRACE Module Is Function End EQ EOF Directive Const COMMA Attr ASS ARROW ]
+## type_ctor_app -> List . par(type_expr) [ VBAR Type TIMES SEMI Recursive RPAR RBRACKET RBRACE Module Is Function End EQ EOF Directive Const COMMA Attr ASS ARROW ]
 ##
 ## The known suffix of the stack is as follows:
 ## List
@@ -3863,8 +3863,8 @@ contract: Type Ident Is Map LPAR String With
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 73, spurious reduction of production prod_type_level -> core_type
-## In state 54, spurious reduction of production fun_type_level -> prod_type_level
+## In state 73, spurious reduction of production cartesian_level -> core_type
+## In state 54, spurious reduction of production fun_type_level -> cartesian_level
 ## In state 72, spurious reduction of production type_expr -> fun_type_level
 ## In state 49, spurious reduction of production nsepseq(type_expr,COMMA) -> type_expr
 ##
@@ -3889,8 +3889,8 @@ contract: Type Ident Is Record Ident COLON Ident With
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
 ## In state 36, spurious reduction of production core_type -> Ident
-## In state 73, spurious reduction of production prod_type_level -> core_type
-## In state 54, spurious reduction of production fun_type_level -> prod_type_level
+## In state 73, spurious reduction of production cartesian_level -> core_type
+## In state 54, spurious reduction of production fun_type_level -> cartesian_level
 ## In state 72, spurious reduction of production type_expr -> fun_type_level
 ## In state 91, spurious reduction of production field_decl -> Ident COLON type_expr
 ## In state 80, spurious reduction of production nsepseq(field_decl,SEMI) -> field_decl
@@ -3965,8 +3965,8 @@ contract: Type Ident Is Record LBRACKET Ident COLON Ident With
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
 ## In state 36, spurious reduction of production core_type -> Ident
-## In state 73, spurious reduction of production prod_type_level -> core_type
-## In state 54, spurious reduction of production fun_type_level -> prod_type_level
+## In state 73, spurious reduction of production cartesian_level -> core_type
+## In state 54, spurious reduction of production fun_type_level -> cartesian_level
 ## In state 72, spurious reduction of production type_expr -> fun_type_level
 ## In state 91, spurious reduction of production field_decl -> Ident COLON type_expr
 ## In state 80, spurious reduction of production nsepseq(field_decl,SEMI) -> field_decl
@@ -3997,7 +3997,7 @@ contract: Type Ident Is Set With
 ##
 ## Ends in an error in state: 23.
 ##
-## type_constr_app -> Set . par(type_expr) [ VBAR Type TIMES SEMI Recursive RPAR RBRACKET RBRACE Module Is Function End EQ EOF Directive Const COMMA Attr ASS ARROW ]
+## type_ctor_app -> Set . par(type_expr) [ VBAR Type TIMES SEMI Recursive RPAR RBRACKET RBRACE Module Is Function End EQ EOF Directive Const COMMA Attr ASS ARROW ]
 ##
 ## The known suffix of the stack is as follows:
 ## Set
@@ -4011,10 +4011,10 @@ contract: Type Ident Is String ARROW With
 ##
 ## Ends in an error in state: 55.
 ##
-## fun_type_level -> prod_type_level ARROW . fun_type_level [ VBAR Type SEMI Recursive RPAR RBRACKET RBRACE Module Is Function End EQ EOF Directive Const COMMA Attr ASS ]
+## fun_type_level -> cartesian_level ARROW . fun_type_level [ VBAR Type SEMI Recursive RPAR RBRACKET RBRACE Module Is Function End EQ EOF Directive Const COMMA Attr ASS ]
 ##
 ## The known suffix of the stack is as follows:
-## prod_type_level ARROW
+## cartesian_level ARROW
 ##
 
 Ill-formed function type.
@@ -4033,7 +4033,7 @@ contract: Type Ident Is String TIMES With
 ##
 ## Ends in an error in state: 74.
 ##
-## prod_type_level -> core_type TIMES . nsepseq(core_type,TIMES) [ VBAR Type SEMI Recursive RPAR RBRACKET RBRACE Module Is Function End EQ EOF Directive Const COMMA Attr ASS ARROW ]
+## cartesian_level -> core_type TIMES . nsepseq(core_type,TIMES) [ VBAR Type SEMI Recursive RPAR RBRACKET RBRACE Module Is Function End EQ EOF Directive Const COMMA Attr ASS ARROW ]
 ##
 ## The known suffix of the stack is as follows:
 ## core_type TIMES
