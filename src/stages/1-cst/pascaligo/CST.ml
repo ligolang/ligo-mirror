@@ -252,7 +252,7 @@ and type_expr =
 | T_Int     of (lexeme * Z.t) reg
 | T_ModPath of type_name module_path reg
 | T_Par     of type_expr par reg
-| T_Prod    of cartesian
+| T_Cart    of cartesian
 | T_Record  of field_decl reg injection reg
 | T_String  of lexeme reg
 | T_Sum     of sum_type reg
@@ -260,8 +260,7 @@ and type_expr =
 
 (* Application of type constructors *)
 
-and type_ctor_app =
-  type_ctor module_path reg * type_tuple option
+and type_ctor_app = type_ctor module_path reg * type_tuple option
 
 and 'a module_path = {
   module_path : (module_name, dot) nsepseq;
@@ -476,7 +475,7 @@ and while_loop = {
 and pattern =
   P_Bytes  of (lexeme * Hex.t) reg
 | P_Cons   of (pattern, cons) nsepseq reg
-| P_Ctor   of (ctor * tuple_pattern option) reg
+| P_Ctor   of data_ctor_pattern
 | P_Int    of (lexeme * Z.t) reg
 | P_List   of pattern injection reg
 | P_Nat    of (lexeme * Z.t) reg
@@ -489,6 +488,8 @@ and pattern =
 | P_Var    of var_pattern reg
 
 (* Pattern for data constructor application *)
+
+and data_ctor_pattern = (ctor module_path reg * tuple_pattern option) reg
 
 and tuple_pattern = (pattern, comma) nsepseq par reg
 
@@ -506,12 +507,12 @@ and 'rhs field =
 | Complete of 'rhs full_field
 
 and punned = {
-  field_name : field_name;
+  pun        : field_name;  (* Can be "_" *)
   attributes : attributes
 }
 
 and 'rhs full_field = {
-  field_name : field_name;
+  field_name : field_name; (* Cannot be "_" *)
   assign     : equal;
   field_rhs  : 'rhs;
   attributes : attributes
@@ -602,8 +603,7 @@ and code_inj = {
 
 (* Application of a data constructor *)
 
-and data_ctor_app =
-  type_ctor module_path reg * arguments option
+and data_ctor_app = ctor module_path reg * arguments option
 
 (* Functional expression *)
 
@@ -678,153 +678,150 @@ let rec last to_region = function
 |  [x] -> to_region x
 | _::t -> last to_region t
 
-let nsepseq_to_region to_region (hd,tl) =
-  let reg (_, item) = to_region item in
-  Region.cover (to_region hd) (last reg tl)
+let nseq_to_region to_region (hd, tl) =
+  Region.cover (to_region hd) (last to_region tl)
+
+let nsepseq_to_region to_region (hd, tl) =
+  Region.cover (to_region hd) (last (to_region <@ snd) tl)
+
+let sepseq_to_region to_region = function
+      None -> Region.ghost
+| Some seq -> nsepseq_to_region to_region seq
+
+(* IMPORTANT: In the following function definition, the data
+   constructors are sorted alphabetically. If you add or modify some,
+   please make sure they remain in order. *)
 
 let type_expr_to_region = function
-  TProd    {region; _}
-| TSum     {region; _}
-| TRecord  {region; _}
-| TApp     {region; _}
-| TFun     {region; _}
-| TPar     {region; _}
-| TString  {region; _}
-| TInt     {region; _}
-| TVar     {region; _}
-| TModPath {region; _}
+  T_Ctor    {region; _}
+| T_Fun     {region; _}
+| T_Int     {region; _}
+| T_ModPath {region; _}
+| T_Par     {region; _}
+| T_Cart    {region; _}
+| T_Record  {region; _}
+| T_String  {region; _}
+| T_Sum     {region; _}
+| T_Var     {region; _}
   -> region
 
-let rec expr_to_region = function
-  ELogic  e -> logic_expr_to_region e
-| EArith  e -> arith_expr_to_region e
-| EString e -> string_expr_to_region e
-| EAnnot  e -> annot_expr_to_region e
-| EList   e -> list_expr_to_region e
-| ESet    e -> set_expr_to_region e
-| ERecord e -> record_expr_to_region e
-| EMap    e -> map_expr_to_region e
-| ETuple  e -> tuple_expr_to_region e
-| EConstr  {region; _}
-| EUpdate  {region; _}
-| EProj    {region; _}
-| EModPath {region; _}
-| EVar     {region; _}
-| ECall    {region; _}
-| EBytes   {region; _}
-| ECase    {region; _}
-| ECond    {region; _}
-| EPar     {region; _}
-| EFun     {region; _}
-| ECodeInj {region; _}
-| EBlock   {region; _} -> region
+(* IMPORTANT: In the following function definition, the data
+   constructors are sorted alphabetically. If you add or modify some,
+   please make sure they remain in order. *)
 
-and tuple_expr_to_region {region; _} = region
-
-and map_expr_to_region = function
-  MapLookUp {region; _}
-| MapInj    {region; _} -> region
-| BigMapInj {region; _} -> region
-
-and set_expr_to_region = function
-  SetInj {region; _}
-| SetMem {region; _} -> region
-
-and logic_expr_to_region = function
-  BoolExpr e -> bool_expr_to_region e
-| CompExpr e -> comp_expr_to_region e
-
-and bool_expr_to_region = function
-  Or    {region; _}
-| And   {region; _}
-| Not   {region; _}
+let expr_to_region = function
+  E_Add       {region; _}
+| E_And       {region; _}
+| E_Typed     {region; _}
+| E_BigMap    {region; _}
+| E_Block     {region; _}
+| E_Bytes     {region; _}
+| E_Call      {region; _}
+| E_Case      {region; _}
+| E_Cat       {region; _}
+| E_CodeInj   {region; _}
+| E_Equal     {region; _}
+| E_Cond      {region; _}
+| E_Cons      {region; _}
+| E_Ctor      {region; _}
+| E_Div       {region; _}
+| E_Fun       {region; _}
+| E_Geq       {region; _}
+| E_Gt        {region; _}
+| E_Int       {region; _}
+| E_Leq       {region; _}
+| E_List      {region; _}
+| E_Lt        {region; _}
+| E_Map       {region; _}
+| E_MapLookup {region; _}
+| E_Mod       {region; _}
+| E_ModPath   {region; _}
+| E_Mult      {region; _}
+| E_Mutez     {region; _}
+| E_Nat       {region; _}
+| E_Neg       {region; _}
+| E_Nil        region
+| E_Neq       {region; _}
+| E_Not       {region; _}
+| E_Or        {region; _}
+| E_Par       {region; _}
+| E_Proj      {region; _}
+| E_Record    {region; _}
+| E_Set       {region; _}
+| E_SetMem    {region; _}
+| E_String    {region; _}
+| E_Sub       {region; _}
+| E_Tuple     {region; _}
+| E_Update    {region; _}
+| E_Var       {region; _}
+| E_Verbatim  {region; _}
   -> region
 
-and comp_expr_to_region = function
-  Lt    {region; _}
-| Leq   {region; _}
-| Gt    {region; _}
-| Geq   {region; _}
-| Equal {region; _}
-| Neq   {region; _} -> region
+and tuple_expr_to_region x = x.Region.region
 
-and arith_expr_to_region = function
-  Add  {region; _}
-| Sub  {region; _}
-| Mult {region; _}
-| Div  {region; _}
-| Mod  {region; _}
-| Neg  {region; _}
-| Int  {region; _}
-| Nat  {region; _}
-| Mutez  {region; _} -> region
+and typed_expr_to_region x = x.Region.region
 
-and string_expr_to_region = function
-  Cat      {region; _}
-| String   {region; _}
-| Verbatim {region; _} -> region
+and record_expr_to_region x = x.Region.region
 
-and annot_expr_to_region {region; _} = region
-
-and list_expr_to_region = function
-  ECons {region; _}
-| EListComp {region; _}
-| ENil region -> region
-
-and record_expr_to_region {region; _} = region
+let local_path_to_region = function
+  Name var  -> var.region
+| InRecord path -> path.region
 
 let path_to_region = function
-  Name var -> var.region
-| Path {region; _} -> region
+  LocalPath p -> local_path_to_region p
+| InModule  p -> p.region
+
+(* IMPORTANT: In the following function definition, the data
+   constructors are sorted alphabetically. If you add or modify some,
+   please make sure they remain in order. *)
 
 let instr_to_region = function
-  Cond                {region; _}
-| CaseInstr           {region; _}
-| Assign              {region; _}
-| Loop While          {region; _}
-| Loop For ForInt     {region; _}
-| Loop For ForCollect {region; _}
-| ProcCall            {region; _}
-| Skip                region
-| RecordPatch         {region; _}
-| MapPatch            {region; _}
-| SetPatch            {region; _}
-| MapRemove           {region; _}
-| SetRemove           {region; _} -> region
+  I_Assign      {region; _}
+| I_Call        {region; _}
+| I_Case        {region; _}
+| I_Cond        {region; _}
+| I_For         {region; _}
+| I_ForIn       {region; _}
+| I_MapPatch    {region; _}
+| I_MapRem      {region; _}
+| I_RecordPatch {region; _}
+| I_Skip         region
+| I_SetPatch    {region; _}
+| I_SetRem      {region; _}
+| I_While       {region; _}
+  -> region
 
-let clause_block_to_region = function
-  LongBlock {region; _}
-| ShortBlock {region; _} -> region
+let test_clause_to_region = function
+  ClauseInstr instr -> instr_to_region instr
+| ClauseBlock block -> block.Region.region
 
-let if_clause_to_region = function
-  ClauseInstr instr        -> instr_to_region instr
-| ClauseBlock clause_block -> clause_block_to_region clause_block
+(* IMPORTANT: In the following function definition, the data
+   constructors are sorted alphabetically. If you add or modify some,
+   please make sure they remain in order. *)
 
 let pattern_to_region = function
-  PVar        {region; _}
-| PInt        {region; _}
-| PNat        {region; _}
-| PBytes      {region; _}
-| PString     {region; _}
-| PConstr     {region; _}
-| PList PListComp  {region; _}
-| PList PNil  region
-| PList PParCons {region; _}
-| PList PCons {region; _}
-| PTuple      {region; _}
-| PRecord     {region; _} -> region
+  P_Bytes   {region; _}
+| P_Cons    {region; _}
+| P_Ctor    {region; _}
+| P_Int     {region; _}
+| P_List    {region; _}
+| P_Nat     {region; _}
+| P_Nil      region
+| P_Par     {region; _}
+| P_Record  {region; _}
+| P_String  {region; _}
+| P_Tuple   {region; _}
+| P_Typed   {region; _}
+| P_Var     {region; _}
+  -> region
 
 let declaration_to_region = function
-  TypeDecl    {region;_}
-| ConstDecl   {region;_}
-| FunDecl     {region;_}
-| ModuleDecl  {region;_}
-| ModuleAlias {region;_} -> region
-| Directive d -> Directive.to_region d
-
-let lhs_to_region : lhs -> Region.t = function
-  Path path -> path_to_region path
-| MapPath {region; _} -> region
+  D_Const    {region; _}
+| D_Fun      {region; _}
+| D_Module   {region; _}
+| D_ModAlias {region; _}
+| D_Type     {region; _} -> region
+| D_Directive d -> Directive.to_region d
 
 let selection_to_region = function
   FieldName {region; _}
