@@ -28,7 +28,7 @@ module Token = Lexing_pascaligo.Token
 %token <Region.t> RBRACE      "}"
 %token <Region.t> LBRACKET    "["
 %token <Region.t> RBRACKET    "]"
-%token <Region.t> CONS        "#"
+%token <Region.t> SHARP       "#"
 %token <Region.t> VBAR        "|"
 %token <Region.t> ARROW       "->"
 %token <Region.t> ASS         ":="
