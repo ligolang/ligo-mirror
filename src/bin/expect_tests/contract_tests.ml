@@ -960,8 +960,8 @@ let%expect_test _ =
                      PUSH mutez 0 ;
                      DIG 3 ;
                      TRANSFER_TOKENS ;
-                     DUG 2 ;
                      SWAP ;
+                     DIG 2 ;
                      PAIR ;
                      NIL operation ;
                      DIG 2 ;
