@@ -884,9 +884,7 @@ let%expect_test _ =
   [%expect {|
 { parameter
     (or (ticket %receive unit)
-        (pair %send
-           (contract %destination (ticket unit))
-           (pair (nat %amount) (address %ticketer)))) ;
+        (pair %send (contract %destination (ticket unit)) (nat %amount) (address %ticketer))) ;
   storage (pair (address %manager) (big_map %tickets address (ticket unit))) ;
   code { PUSH mutez 0 ;
          AMOUNT ;
@@ -1714,18 +1712,14 @@ let%expect_test _ =
   run_ligo_good [ "compile" ; "contract" ; contract "uncurry_contract.mligo" ] ;
   let output = [%expect.output] in
   let lines = String.split_on_char '\n' output in
-  let lines = List.take lines 8 in
+  let lines = List.take lines 4 in
   let output = String.concat "\n" lines in
   print_string output;
   [%expect {|
     { parameter unit ;
       storage unit ;
-      code { LAMBDA
-               (pair unit (pair unit (pair unit unit)))
-               unit
-               { UNPAIR 4 ; DROP 4 ; PUSH unit Unit } ;
-             LAMBDA (pair nat nat) nat { UNPAIR ; MUL } ;
-             DIG 2 ; |}]
+      code { LAMBDA (pair unit unit unit unit) unit { UNPAIR 4 ; DROP 4 ; PUSH unit Unit } ;
+             LAMBDA (pair nat nat) nat { UNPAIR ; MUL } ; |}]
 
 (* old uncurry bugs: *)
 let%expect_test _ =
@@ -1764,7 +1758,7 @@ let%expect_test _ =
     Warning: unused variable "s".
     Hint: replace it by "_s" to prevent this warning.
 
-    { parameter (pair (int %x) (pair (int %y) (pair (int %z) (int %w)))) ;
+    { parameter (pair (int %x) (int %y) (int %z) (int %w)) ;
       storage int ;
       code { CAR ; UNPAIR 4 ; ADD ; ADD ; ADD ; NIL operation ; PAIR } } |}]
 
