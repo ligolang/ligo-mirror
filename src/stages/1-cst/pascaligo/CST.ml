@@ -305,7 +305,7 @@ and sum_type = {
 
 and variant = {
   ctor       : ctor;
-  arg        : (kwd_of * type_expr) option;
+  args       : (kwd_of * type_expr) option;
   attributes : attributes
 }
 
