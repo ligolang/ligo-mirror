@@ -163,7 +163,6 @@ interactive_expr: Begin UIdent With
 ##
 
 Ill-formed selection of a value from a module.
-
 At this point, the selection symbol '.' is expected, followed by one
 of the following:
   * the qualified name of a value, like 'A.B.c.d';
@@ -417,6 +416,16 @@ interactive_expr: Begin If Verbatim Then Skip Else With
 ## The known suffix of the stack is as follows:
 ## If expr Then test_clause(closed_instr) Else
 ##
+interactive_expr: Begin If UIdent Then If UIdent Then Skip Else With
+##
+## Ends in an error in state: 593.
+##
+## if_then_else_instr(closed_instr) -> If expr Then test_clause(closed_instr) Else . test_clause(closed_instr) [ Else ]
+## if_then_else_instr(instruction) -> If expr Then test_clause(closed_instr) Else . test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
+##
+## The known suffix of the stack is as follows:
+## If expr Then test_clause(closed_instr) Else
+##
 
 Ill-formed conditional instruction.
 At this point, the 'else' branch is expected as one of the following:
@@ -461,6 +470,17 @@ interactive_expr: Begin If Verbatim Then With
 ## The known suffix of the stack is as follows:
 ## If expr Then
 ##
+interactive_expr: Begin If UIdent Then If UIdent Then With
+##
+## Ends in an error in state: 512.
+##
+## if_then_else_instr(closed_instr) -> If expr Then . test_clause(closed_instr) Else test_clause(closed_instr) [ Else ]
+## if_then_else_instr(instruction) -> If expr Then . test_clause(closed_instr) Else test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
+## if_then_instr(instruction) -> If expr Then . test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
+##
+## The known suffix of the stack is as follows:
+## If expr Then
+##
 
 Ill-formed conditional instruction.
 At this point, the 'then' branch is expected as one of the following:
@@ -479,9 +499,45 @@ interactive_expr: Begin If With
 ## The known suffix of the stack is as follows:
 ## If
 ##
+interactive_expr: Begin If UIdent Then If With
+##
+## Ends in an error in state: 510.
+##
+## if_then_else_instr(closed_instr) -> If . expr Then test_clause(closed_instr) Else test_clause(closed_instr) [ Else ]
+## if_then_else_instr(instruction) -> If . expr Then test_clause(closed_instr) Else test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
+## if_then_instr(instruction) -> If . expr Then test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
+##
+## The known suffix of the stack is as follows:
+## If
+##
 
 Ill-formed conditional instruction.
-At this point, a condition is expected as an expression.
+At this point, the condition is expected as an expression.
+
+interactive_expr: If With
+##
+## Ends in an error in state: 144.
+##
+## if_then_else_expr(expr) -> If . expr Then closed_expr Else expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+## if_then_expr(expr) -> If . expr Then expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+##
+## The known suffix of the stack is as follows:
+## If
+##
+interactive_expr: If UIdent Then If With
+##
+## Ends in an error in state: 479.
+##
+## if_then_else_expr(closed_expr) -> If . expr Then closed_expr Else closed_expr [ Else ]
+## if_then_else_expr(expr) -> If . expr Then closed_expr Else expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+## if_then_expr(expr) -> If . expr Then expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+##
+## The known suffix of the stack is as follows:
+## If
+##
+
+Ill-formed conditional expression.
+At this point, the condition is expected as an expression.
 
 interactive_expr: Ident DOT Int DOT With
 ##
@@ -500,6 +556,15 @@ interactive_expr: Ident DOT With
 ##
 ## The known suffix of the stack is as follows:
 ## Ident DOT
+##
+interactive_expr: LPAR UIdent RPAR DOT With
+##
+## Ends in an error in state: 195.
+##
+## local_path -> par(expr) DOT . nsepseq(selection,DOT) [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LPAR LE LBRACKET LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ASS ARROW ]
+##
+## The known suffix of the stack is as follows:
+## par(expr) DOT
 ##
 
 Ill-formed selection in a record or a tuple.
@@ -594,9 +659,19 @@ interactive_expr: Begin Remove Verbatim From Map With
 ## The known suffix of the stack is as follows:
 ## Remove expr From Map
 ##
+interactive_expr: Begin If UIdent Then Remove UIdent From Map With
+##
+## Ends in an error in state: 506.
+##
+## remove(Map,closed_expr) -> Remove expr From Map . closed_expr [ Else ]
+## remove(Map,expr) -> Remove expr From Map . expr [ VBAR SEMI RBRACKET RBRACE End ]
+##
+## The known suffix of the stack is as follows:
+## Remove expr From Map
+##
 
-Ill-formed removal in a map.
-At this point, the fully qualified name of a map is expected.
+Ill-formed removal from a map.
+At this point, a map is expected as an expression.
 
 interactive_expr: Begin Remove Verbatim From Set With
 ##
@@ -607,9 +682,19 @@ interactive_expr: Begin Remove Verbatim From Set With
 ## The known suffix of the stack is as follows:
 ## Remove expr From Set
 ##
+interactive_expr: Begin If UIdent Then Remove UIdent From Set With
+##
+## Ends in an error in state: 478.
+##
+## remove(Set,closed_expr) -> Remove expr From Set . closed_expr [ Else ]
+## remove(Set,expr) -> Remove expr From Set . expr [ VBAR SEMI RBRACKET RBRACE End ]
+##
+## The known suffix of the stack is as follows:
+## Remove expr From Set
+##
 
-Ill-formed removal in a set.
-At this point, the fully qualified name of a set is expected.
+Ill-formed removal from a set.
+At this point, a set is expected as an expression.
 
 interactive_expr: Begin Remove Verbatim From With
 ##
@@ -622,9 +707,24 @@ interactive_expr: Begin Remove Verbatim From With
 ## The known suffix of the stack is as follows:
 ## Remove expr From
 ##
+interactive_expr: Begin If UIdent Then Remove UIdent From With
+##
+## Ends in an error in state: 477.
+##
+## remove(BigMap,closed_expr) -> Remove expr From . BigMap closed_expr [ Else ]
+## remove(BigMap,expr) -> Remove expr From . BigMap expr [ VBAR SEMI RBRACKET RBRACE End ]
+## remove(Map,closed_expr) -> Remove expr From . Map closed_expr [ Else ]
+## remove(Map,expr) -> Remove expr From . Map expr [ VBAR SEMI RBRACKET RBRACE End ]
+## remove(Set,closed_expr) -> Remove expr From . Set closed_expr [ Else ]
+## remove(Set,expr) -> Remove expr From . Set expr [ VBAR SEMI RBRACKET RBRACE End ]
+##
+## The known suffix of the stack is as follows:
+## Remove expr From
+##
 
-Ill-formed removal in a map or a set.
-At this point, either the keyword 'map' or 'set' is expected.
+Ill-formed removal from a collection.
+At this point, either the keyword 'map', 'big_map', or 'set' is
+expected.
 
 interactive_expr: Begin Remove With
 ##
@@ -637,13 +737,25 @@ interactive_expr: Begin Remove With
 ## The known suffix of the stack is as follows:
 ## Remove
 ##
+interactive_expr: Begin If UIdent Then Remove With
+##
+## Ends in an error in state: 475.
+##
+## remove(BigMap,closed_expr) -> Remove . expr From BigMap closed_expr [ Else ]
+## remove(BigMap,expr) -> Remove . expr From BigMap expr [ VBAR SEMI RBRACKET RBRACE End ]
+## remove(Map,closed_expr) -> Remove . expr From Map closed_expr [ Else ]
+## remove(Map,expr) -> Remove . expr From Map expr [ VBAR SEMI RBRACKET RBRACE End ]
+## remove(Set,closed_expr) -> Remove . expr From Set closed_expr [ Else ]
+## remove(Set,expr) -> Remove . expr From Set expr [ VBAR SEMI RBRACKET RBRACE End ]
+##
+## The known suffix of the stack is as follows:
+## Remove
+##
 
-Ill-formed removal in a map or a set.
+Ill-formed removal from a collection.
 At this point, one of the following is expected:
-  * if removing an element from a set, that set element as an
-    expression;
-  * if removing a binding from a map, the key of that binding as an
-    expression.
+  * a set element as an expression;
+  * a key as an expression.
 Note: A binding is made of two expressions (a key and a value)
 separated by an arrow '->'.
 
@@ -1148,9 +1260,29 @@ interactive_expr: Function LPAR Const Ident RPAR Is With
 ## The known suffix of the stack is as follows:
 ## Function parameters Is
 ##
+interactive_expr: If UIdent Then Function LPAR Const Ident RPAR Is With
+##
+## Ends in an error in state: 484.
+##
+## fun_expr(closed_expr) -> Function parameters Is . closed_expr [ Else ]
+## fun_expr(expr) -> Function parameters Is . expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+##
+## The known suffix of the stack is as follows:
+## Function parameters Is
+##
+interactive_expr: If UIdent Then Function LPAR Const Ident RPAR COLON Ident Is With
+##
+## Ends in an error in state: 497.
+##
+## fun_expr(closed_expr) -> Function parameters type_annotation Is . closed_expr [ Else ]
+## fun_expr(expr) -> Function parameters type_annotation Is . expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+##
+## The known suffix of the stack is as follows:
+## Function parameters type_annotation Is
+##
 
 Ill-formed function expression.
-At this point, the function body is expected as an expression.
+At this point, the body is expected as an expression.
 
 interactive_expr: Function LPAR Const Ident RPAR With
 ##
@@ -1510,6 +1642,16 @@ interactive_expr: If Verbatim Then Verbatim Else With
 ## The known suffix of the stack is as follows:
 ## If expr Then closed_expr Else
 ##
+interactive_expr: If UIdent Then If UIdent Then UIdent Else With
+##
+## Ends in an error in state: 502.
+##
+## if_then_else_expr(closed_expr) -> If expr Then closed_expr Else . closed_expr [ Else ]
+## if_then_else_expr(expr) -> If expr Then closed_expr Else . expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+##
+## The known suffix of the stack is as follows:
+## If expr Then closed_expr Else
+##
 
 Ill-formed conditional expression.
 At this point, the contents of the 'else' branch is expected as an
@@ -1525,24 +1667,21 @@ interactive_expr: If Verbatim Then With
 ## The known suffix of the stack is as follows:
 ## If expr Then
 ##
+interactive_expr: If UIdent Then If UIdent Then With
+##
+## Ends in an error in state: 481.
+##
+## if_then_else_expr(closed_expr) -> If expr Then . closed_expr Else closed_expr [ Else ]
+## if_then_else_expr(expr) -> If expr Then . closed_expr Else expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+## if_then_expr(expr) -> If expr Then . expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+##
+## The known suffix of the stack is as follows:
+## If expr Then
+##
 
 Ill-formed conditional expression.
 At this point, the contents of the 'then' branch is expected as an
 expression.
-
-interactive_expr: If With
-##
-## Ends in an error in state: 144.
-##
-## if_then_else_expr(expr) -> If . expr Then closed_expr Else expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
-## if_then_expr(expr) -> If . expr Then expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
-##
-## The known suffix of the stack is as follows:
-## If
-##
-
-Ill-formed if conditional expression.
-At this point, the condition is expected as an expression.
 
 interactive_expr: LPAR Verbatim COLON Ident With
 ##
@@ -3331,18 +3470,6 @@ Ill-formed attributed variable.
 At this point, if the attribute is complete, an identifier is
 expected.
 
-interactive_expr: LPAR UIdent RPAR DOT With
-##
-## Ends in an error in state: 195.
-##
-## local_path -> par(expr) DOT . nsepseq(selection,DOT) [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LPAR LE LBRACKET LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ASS ARROW ]
-##
-## The known suffix of the stack is as follows:
-## par(expr) DOT
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
 contract: Const LPAR UIdent COLON UIdent ARROW
 ##
 ## Ends in an error in state: 219.
@@ -3364,7 +3491,9 @@ contract: Const LPAR UIdent COLON UIdent ARROW
 ## In state 248, spurious reduction of production typed_pattern -> pattern type_annotation
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed typed pattern.
+At this point, if the type annotation is complete, a closing
+parenthesis ')' is expected.
 
 contract: Const LPAR UIdent COMMA UIdent With
 ##
@@ -3386,19 +3515,11 @@ contract: Const LPAR UIdent COMMA UIdent With
 ## In state 241, spurious reduction of production pattern -> core_pattern
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-contract: Const LPAR UIdent COMMA UIdent COMMA With
-##
-## Ends in an error in state: 231.
-##
-## nsepseq(pattern,COMMA) -> pattern COMMA . nsepseq(pattern,COMMA) [ RPAR ]
-##
-## The known suffix of the stack is as follows:
-## pattern COMMA
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed pattern of a constructor parameter.
+At this point, if the pattern is complete, one of the following is
+expected:
+  * a comma ',' followed by another parameter as a pattern;
+  * a closing parenthesis ')' if there are no more parameters.
 
 contract: Const UIdent LPAR UIdent With
 ##
@@ -3419,7 +3540,22 @@ contract: Const UIdent LPAR UIdent With
 ## In state 241, spurious reduction of production pattern -> core_pattern
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed pattern of a constructor parameter.
+At this point, if the pattern is complete, a comma ',' is expected,
+followed by another parameter as a pattern.
+
+contract: Const LPAR UIdent COMMA UIdent COMMA With
+##
+## Ends in an error in state: 231.
+##
+## nsepseq(pattern,COMMA) -> pattern COMMA . nsepseq(pattern,COMMA) [ RPAR ]
+##
+## The known suffix of the stack is as follows:
+## pattern COMMA
+##
+
+Ill-formed pattern of a constructor parameter.
+At this point, a parameter is expected as a pattern.
 
 interactive_expr: UIdent With Record LBRACKET Ident EQ UIdent While
 ##
@@ -3454,7 +3590,11 @@ interactive_expr: UIdent With Record LBRACKET Ident EQ UIdent While
 ## In state 304, spurious reduction of production sep_or_term_list(field_path_assignment,SEMI) -> nsepseq(field_path_assignment,SEMI)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed record update.
+At this point, if the field assignment is complete, one of the
+following is expected:
+  * a semicolon ';' followed by another field assignment (update);
+  * a closing bracket ']' if the update is complete.
 
 interactive_expr: UIdent DOT UIdent With
 ##
@@ -3467,7 +3607,12 @@ interactive_expr: UIdent DOT UIdent With
 ## UIdent
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed selection of a value in a module.
+At this point, the selection symbol '.' is expected, followed by one
+of the following:
+  * a sub-module name;
+  * a record name;
+  * a tuple name.
 
 interactive_expr: UIdent DOT UIdent DOT With
 ##
@@ -3480,7 +3625,11 @@ interactive_expr: UIdent DOT UIdent DOT With
 ## UIdent DOT
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed selection of a value in a module.
+At this point, one of the following is expected:
+  * a sub-module name;
+  * a record name;
+  * a tuple name.
 
 interactive_expr: Begin Remove UIdent While
 ##
@@ -3513,127 +3662,6 @@ interactive_expr: Begin Remove UIdent While
 ## In state 315, spurious reduction of production base_expr(expr) -> disj_expr_level
 ## In state 370, spurious reduction of production expr -> base_expr(expr)
 ##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: Begin Remove UIdent From BigMap With
-##
-## Ends in an error in state: 397.
-##
-## remove(BigMap,expr) -> Remove expr From BigMap . expr [ VBAR SEMI RBRACKET RBRACE End ]
-##
-## The known suffix of the stack is as follows:
-## Remove expr From BigMap
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-contract: Module UIdent Is Block With
-##
-## Ends in an error in state: 463.
-##
-## terse_module_decl -> Module UIdent Is option(Block) . LBRACE declarations RBRACE [ Type SEMI Recursive RBRACE Module Function End EOF Directive Const Attr ]
-##
-## The known suffix of the stack is as follows:
-## Module UIdent Is option(Block)
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: Begin LPAR With
-##
-## Ends in an error in state: 468.
-##
-## par(expr) -> LPAR . expr RPAR [ LBRACKET DOT ]
-##
-## The known suffix of the stack is as follows:
-## LPAR
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: Begin LPAR UIdent While
-##
-## Ends in an error in state: 469.
-##
-## par(expr) -> LPAR expr . RPAR [ LBRACKET DOT ]
-##
-## The known suffix of the stack is as follows:
-## LPAR expr
-##
-## WARNING: This example involves spurious reductions.
-## This implies that, although the LR(1) items shown above provide an
-## accurate view of the past (what has been recognized so far), they
-## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 125, spurious reduction of production ctor_app(arguments) -> UIdent
-## In state 295, spurious reduction of production ctor_expr -> ctor_app(arguments)
-## In state 294, spurious reduction of production core_expr -> ctor_expr
-## In state 296, spurious reduction of production update_expr_level -> core_expr
-## In state 172, spurious reduction of production unary_expr_level -> update_expr_level
-## In state 176, spurious reduction of production mult_expr_level -> unary_expr_level
-## In state 279, spurious reduction of production add_expr_level -> mult_expr_level
-## In state 330, spurious reduction of production cons_expr_level -> add_expr_level
-## In state 317, spurious reduction of production cat_expr_level -> cons_expr_level
-## In state 357, spurious reduction of production comp_expr_level -> cat_expr_level
-## In state 344, spurious reduction of production set_mem_level -> comp_expr_level
-## In state 191, spurious reduction of production conj_expr_level -> set_mem_level
-## In state 364, spurious reduction of production disj_expr_level -> conj_expr_level
-## In state 315, spurious reduction of production base_expr(expr) -> disj_expr_level
-## In state 370, spurious reduction of production expr -> base_expr(expr)
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: Begin If UIdent While
-##
-## Ends in an error in state: 472.
-##
-## if_then_else_instr(instruction) -> If expr . Then test_clause(closed_instr) Else test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
-## if_then_instr(instruction) -> If expr . Then test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
-##
-## The known suffix of the stack is as follows:
-## If expr
-##
-## WARNING: This example involves spurious reductions.
-## This implies that, although the LR(1) items shown above provide an
-## accurate view of the past (what has been recognized so far), they
-## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 125, spurious reduction of production ctor_app(arguments) -> UIdent
-## In state 295, spurious reduction of production ctor_expr -> ctor_app(arguments)
-## In state 294, spurious reduction of production core_expr -> ctor_expr
-## In state 296, spurious reduction of production update_expr_level -> core_expr
-## In state 172, spurious reduction of production unary_expr_level -> update_expr_level
-## In state 176, spurious reduction of production mult_expr_level -> unary_expr_level
-## In state 279, spurious reduction of production add_expr_level -> mult_expr_level
-## In state 330, spurious reduction of production cons_expr_level -> add_expr_level
-## In state 317, spurious reduction of production cat_expr_level -> cons_expr_level
-## In state 357, spurious reduction of production comp_expr_level -> cat_expr_level
-## In state 344, spurious reduction of production set_mem_level -> comp_expr_level
-## In state 191, spurious reduction of production conj_expr_level -> set_mem_level
-## In state 364, spurious reduction of production disj_expr_level -> conj_expr_level
-## In state 315, spurious reduction of production base_expr(expr) -> disj_expr_level
-## In state 370, spurious reduction of production expr -> base_expr(expr)
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: Begin If UIdent Then Remove With
-##
-## Ends in an error in state: 475.
-##
-## remove(BigMap,closed_expr) -> Remove . expr From BigMap closed_expr [ Else ]
-## remove(BigMap,expr) -> Remove . expr From BigMap expr [ VBAR SEMI RBRACKET RBRACE End ]
-## remove(Map,closed_expr) -> Remove . expr From Map closed_expr [ Else ]
-## remove(Map,expr) -> Remove . expr From Map expr [ VBAR SEMI RBRACKET RBRACE End ]
-## remove(Set,closed_expr) -> Remove . expr From Set closed_expr [ Else ]
-## remove(Set,expr) -> Remove . expr From Set expr [ VBAR SEMI RBRACKET RBRACE End ]
-##
-## The known suffix of the stack is as follows:
-## Remove
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
 interactive_expr: Begin If UIdent Then Remove UIdent While
 ##
 ## Ends in an error in state: 476.
@@ -3669,59 +3697,101 @@ interactive_expr: Begin If UIdent Then Remove UIdent While
 ## In state 370, spurious reduction of production expr -> base_expr(expr)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed removal from a collection.
+At this point, if the item to remove is complete, the keyword `from`
+is expected, followed either the keyword 'big_map', 'map' or 'set'.
 
-interactive_expr: Begin If UIdent Then Remove UIdent From With
+interactive_expr: Begin Remove UIdent From BigMap With
 ##
-## Ends in an error in state: 477.
+## Ends in an error in state: 397.
 ##
-## remove(BigMap,closed_expr) -> Remove expr From . BigMap closed_expr [ Else ]
-## remove(BigMap,expr) -> Remove expr From . BigMap expr [ VBAR SEMI RBRACKET RBRACE End ]
-## remove(Map,closed_expr) -> Remove expr From . Map closed_expr [ Else ]
-## remove(Map,expr) -> Remove expr From . Map expr [ VBAR SEMI RBRACKET RBRACE End ]
-## remove(Set,closed_expr) -> Remove expr From . Set closed_expr [ Else ]
-## remove(Set,expr) -> Remove expr From . Set expr [ VBAR SEMI RBRACKET RBRACE End ]
+## remove(BigMap,expr) -> Remove expr From BigMap . expr [ VBAR SEMI RBRACKET RBRACE End ]
 ##
 ## The known suffix of the stack is as follows:
-## Remove expr From
+## Remove expr From BigMap
 ##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: Begin If UIdent Then Remove UIdent From Set With
+interactive_expr: Begin If UIdent Then Remove UIdent From BigMap With
 ##
-## Ends in an error in state: 478.
+## Ends in an error in state: 508.
 ##
-## remove(Set,closed_expr) -> Remove expr From Set . closed_expr [ Else ]
-## remove(Set,expr) -> Remove expr From Set . expr [ VBAR SEMI RBRACKET RBRACE End ]
+## remove(BigMap,closed_expr) -> Remove expr From BigMap . closed_expr [ Else ]
+## remove(BigMap,expr) -> Remove expr From BigMap . expr [ VBAR SEMI RBRACKET RBRACE End ]
 ##
 ## The known suffix of the stack is as follows:
-## Remove expr From Set
+## Remove expr From BigMap
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed removal from a big map.
+At this point, the big map is expected as an expression.
 
-interactive_expr: If UIdent Then If With
+contract: Module UIdent Is Block With
 ##
-## Ends in an error in state: 479.
+## Ends in an error in state: 463.
 ##
-## if_then_else_expr(closed_expr) -> If . expr Then closed_expr Else closed_expr [ Else ]
-## if_then_else_expr(expr) -> If . expr Then closed_expr Else expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
-## if_then_expr(expr) -> If . expr Then expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+## terse_module_decl -> Module UIdent Is option(Block) . LBRACE declarations RBRACE [ Type SEMI Recursive RBRACE Module Function End EOF Directive Const Attr ]
 ##
 ## The known suffix of the stack is as follows:
-## If
+## Module UIdent Is option(Block)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed module declaration.
+At this point, an opening brace '{' is expected, followed by
+declarations.
 
-interactive_expr: If UIdent Then If UIdent While
+interactive_expr: Begin LPAR With
 ##
-## Ends in an error in state: 480.
+## Ends in an error in state: 468.
 ##
-## if_then_else_expr(closed_expr) -> If expr . Then closed_expr Else closed_expr [ Else ]
-## if_then_else_expr(expr) -> If expr . Then closed_expr Else expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
-## if_then_expr(expr) -> If expr . Then expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+## par(expr) -> LPAR . expr RPAR [ LBRACKET DOT ]
+##
+## The known suffix of the stack is as follows:
+## LPAR
+##
+
+Ill-formed parenthesised expression.
+At this point, an expression is expected, followed by a closing
+parenthesis ')'.
+
+interactive_expr: Begin LPAR UIdent While
+##
+## Ends in an error in state: 469.
+##
+## par(expr) -> LPAR expr . RPAR [ LBRACKET DOT ]
+##
+## The known suffix of the stack is as follows:
+## LPAR expr
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 125, spurious reduction of production ctor_app(arguments) -> UIdent
+## In state 295, spurious reduction of production ctor_expr -> ctor_app(arguments)
+## In state 294, spurious reduction of production core_expr -> ctor_expr
+## In state 296, spurious reduction of production update_expr_level -> core_expr
+## In state 172, spurious reduction of production unary_expr_level -> update_expr_level
+## In state 176, spurious reduction of production mult_expr_level -> unary_expr_level
+## In state 279, spurious reduction of production add_expr_level -> mult_expr_level
+## In state 330, spurious reduction of production cons_expr_level -> add_expr_level
+## In state 317, spurious reduction of production cat_expr_level -> cons_expr_level
+## In state 357, spurious reduction of production comp_expr_level -> cat_expr_level
+## In state 344, spurious reduction of production set_mem_level -> comp_expr_level
+## In state 191, spurious reduction of production conj_expr_level -> set_mem_level
+## In state 364, spurious reduction of production disj_expr_level -> conj_expr_level
+## In state 315, spurious reduction of production base_expr(expr) -> disj_expr_level
+## In state 370, spurious reduction of production expr -> base_expr(expr)
+##
+
+Ill-formed parenthesised expression.
+At this point, if the expression is complete, a closing parenthesis
+')' is expected.
+
+interactive_expr: Begin If UIdent While
+##
+## Ends in an error in state: 472.
+##
+## if_then_else_instr(instruction) -> If expr . Then test_clause(closed_instr) Else test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
+## if_then_instr(instruction) -> If expr . Then test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
 ##
 ## The known suffix of the stack is as follows:
 ## If expr
@@ -3746,181 +3816,6 @@ interactive_expr: If UIdent Then If UIdent While
 ## In state 315, spurious reduction of production base_expr(expr) -> disj_expr_level
 ## In state 370, spurious reduction of production expr -> base_expr(expr)
 ##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: If UIdent Then If UIdent Then With
-##
-## Ends in an error in state: 481.
-##
-## if_then_else_expr(closed_expr) -> If expr Then . closed_expr Else closed_expr [ Else ]
-## if_then_else_expr(expr) -> If expr Then . closed_expr Else expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
-## if_then_expr(expr) -> If expr Then . expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
-##
-## The known suffix of the stack is as follows:
-## If expr Then
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: If UIdent Then Function With
-##
-## Ends in an error in state: 482.
-##
-## fun_expr(closed_expr) -> Function . parameters Is closed_expr [ Else ]
-## fun_expr(closed_expr) -> Function . parameters type_annotation Is closed_expr [ Else ]
-## fun_expr(expr) -> Function . parameters Is expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
-## fun_expr(expr) -> Function . parameters type_annotation Is expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
-##
-## The known suffix of the stack is as follows:
-## Function
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: If UIdent Then Function LPAR Const Ident RPAR With
-##
-## Ends in an error in state: 483.
-##
-## fun_expr(closed_expr) -> Function parameters . Is closed_expr [ Else ]
-## fun_expr(closed_expr) -> Function parameters . type_annotation Is closed_expr [ Else ]
-## fun_expr(expr) -> Function parameters . Is expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
-## fun_expr(expr) -> Function parameters . type_annotation Is expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
-##
-## The known suffix of the stack is as follows:
-## Function parameters
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: If UIdent Then Function LPAR Const Ident RPAR Is With
-##
-## Ends in an error in state: 484.
-##
-## fun_expr(closed_expr) -> Function parameters Is . closed_expr [ Else ]
-## fun_expr(expr) -> Function parameters Is . expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
-##
-## The known suffix of the stack is as follows:
-## Function parameters Is
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: If UIdent Then LBRACE Skip RBRACE While
-##
-## Ends in an error in state: 492.
-##
-## block_with(closed_expr) -> block . With closed_expr [ Else ]
-## block_with(expr) -> block . With expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
-##
-## The known suffix of the stack is as follows:
-## block
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: If UIdent Then LBRACE Skip RBRACE With With
-##
-## Ends in an error in state: 493.
-##
-## block_with(closed_expr) -> block With . closed_expr [ Else ]
-## block_with(expr) -> block With . expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
-##
-## The known suffix of the stack is as follows:
-## block With
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: If UIdent Then Function LPAR Const Ident RPAR COLON UIdent ARROW
-##
-## Ends in an error in state: 496.
-##
-## fun_expr(closed_expr) -> Function parameters type_annotation . Is closed_expr [ Else ]
-## fun_expr(expr) -> Function parameters type_annotation . Is expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
-##
-## The known suffix of the stack is as follows:
-## Function parameters type_annotation
-##
-## WARNING: This example involves spurious reductions.
-## This implies that, although the LR(1) items shown above provide an
-## accurate view of the past (what has been recognized so far), they
-## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 24, spurious reduction of production variant -> UIdent
-## In state 43, spurious reduction of production nsepseq(variant,VBAR) -> variant
-## In state 62, spurious reduction of production sum_type -> nsepseq(variant,VBAR)
-## In state 55, spurious reduction of production type_expr -> sum_type
-## In state 80, spurious reduction of production type_annotation -> COLON type_expr
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: If UIdent Then Function LPAR Const Ident RPAR COLON Ident Is With
-##
-## Ends in an error in state: 497.
-##
-## fun_expr(closed_expr) -> Function parameters type_annotation Is . closed_expr [ Else ]
-## fun_expr(expr) -> Function parameters type_annotation Is . expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
-##
-## The known suffix of the stack is as follows:
-## Function parameters type_annotation Is
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: If UIdent Then If UIdent Then UIdent Else With
-##
-## Ends in an error in state: 502.
-##
-## if_then_else_expr(closed_expr) -> If expr Then closed_expr Else . closed_expr [ Else ]
-## if_then_else_expr(expr) -> If expr Then closed_expr Else . expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
-##
-## The known suffix of the stack is as follows:
-## If expr Then closed_expr Else
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: Begin If UIdent Then Remove UIdent From Map With
-##
-## Ends in an error in state: 506.
-##
-## remove(Map,closed_expr) -> Remove expr From Map . closed_expr [ Else ]
-## remove(Map,expr) -> Remove expr From Map . expr [ VBAR SEMI RBRACKET RBRACE End ]
-##
-## The known suffix of the stack is as follows:
-## Remove expr From Map
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: Begin If UIdent Then Remove UIdent From BigMap With
-##
-## Ends in an error in state: 508.
-##
-## remove(BigMap,closed_expr) -> Remove expr From BigMap . closed_expr [ Else ]
-## remove(BigMap,expr) -> Remove expr From BigMap . expr [ VBAR SEMI RBRACKET RBRACE End ]
-##
-## The known suffix of the stack is as follows:
-## Remove expr From BigMap
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: Begin If UIdent Then If With
-##
-## Ends in an error in state: 510.
-##
-## if_then_else_instr(closed_instr) -> If . expr Then test_clause(closed_instr) Else test_clause(closed_instr) [ Else ]
-## if_then_else_instr(instruction) -> If . expr Then test_clause(closed_instr) Else test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
-## if_then_instr(instruction) -> If . expr Then test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
-##
-## The known suffix of the stack is as follows:
-## If
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
 interactive_expr: Begin If UIdent Then If UIdent While
 ##
 ## Ends in an error in state: 511.
@@ -3953,21 +3848,165 @@ interactive_expr: Begin If UIdent Then If UIdent While
 ## In state 370, spurious reduction of production expr -> base_expr(expr)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed conditional instruction.
+At this point, if the condition is complete, the keyword 'then' is
+expected, followed by an instruction or a block of statements
+(instructions and declarations).
 
-interactive_expr: Begin If UIdent Then If UIdent Then With
+interactive_expr: If UIdent Then If UIdent While
 ##
-## Ends in an error in state: 512.
+## Ends in an error in state: 480.
 ##
-## if_then_else_instr(closed_instr) -> If expr Then . test_clause(closed_instr) Else test_clause(closed_instr) [ Else ]
-## if_then_else_instr(instruction) -> If expr Then . test_clause(closed_instr) Else test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
-## if_then_instr(instruction) -> If expr Then . test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
+## if_then_else_expr(closed_expr) -> If expr . Then closed_expr Else closed_expr [ Else ]
+## if_then_else_expr(expr) -> If expr . Then closed_expr Else expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+## if_then_expr(expr) -> If expr . Then expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
 ##
 ## The known suffix of the stack is as follows:
-## If expr Then
+## If expr
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 125, spurious reduction of production ctor_app(arguments) -> UIdent
+## In state 295, spurious reduction of production ctor_expr -> ctor_app(arguments)
+## In state 294, spurious reduction of production core_expr -> ctor_expr
+## In state 296, spurious reduction of production update_expr_level -> core_expr
+## In state 172, spurious reduction of production unary_expr_level -> update_expr_level
+## In state 176, spurious reduction of production mult_expr_level -> unary_expr_level
+## In state 279, spurious reduction of production add_expr_level -> mult_expr_level
+## In state 330, spurious reduction of production cons_expr_level -> add_expr_level
+## In state 317, spurious reduction of production cat_expr_level -> cons_expr_level
+## In state 357, spurious reduction of production comp_expr_level -> cat_expr_level
+## In state 344, spurious reduction of production set_mem_level -> comp_expr_level
+## In state 191, spurious reduction of production conj_expr_level -> set_mem_level
+## In state 364, spurious reduction of production disj_expr_level -> conj_expr_level
+## In state 315, spurious reduction of production base_expr(expr) -> disj_expr_level
+## In state 370, spurious reduction of production expr -> base_expr(expr)
+##
+interactive_expr: If UIdent While
+##
+## Ends in an error in state: 668.
+##
+## if_then_else_expr(expr) -> If expr . Then closed_expr Else expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+## if_then_expr(expr) -> If expr . Then expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+##
+## The known suffix of the stack is as follows:
+## If expr
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 125, spurious reduction of production ctor_app(arguments) -> UIdent
+## In state 295, spurious reduction of production ctor_expr -> ctor_app(arguments)
+## In state 294, spurious reduction of production core_expr -> ctor_expr
+## In state 296, spurious reduction of production update_expr_level -> core_expr
+## In state 172, spurious reduction of production unary_expr_level -> update_expr_level
+## In state 176, spurious reduction of production mult_expr_level -> unary_expr_level
+## In state 279, spurious reduction of production add_expr_level -> mult_expr_level
+## In state 330, spurious reduction of production cons_expr_level -> add_expr_level
+## In state 317, spurious reduction of production cat_expr_level -> cons_expr_level
+## In state 357, spurious reduction of production comp_expr_level -> cat_expr_level
+## In state 344, spurious reduction of production set_mem_level -> comp_expr_level
+## In state 191, spurious reduction of production conj_expr_level -> set_mem_level
+## In state 364, spurious reduction of production disj_expr_level -> conj_expr_level
+## In state 315, spurious reduction of production base_expr(expr) -> disj_expr_level
+## In state 370, spurious reduction of production expr -> base_expr(expr)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed conditional expression.
+At this point, if the condition is complete, the keyword 'then' is
+expected, followed by an expression.
+
+interactive_expr: If UIdent Then Function With
+##
+## Ends in an error in state: 482.
+##
+## fun_expr(closed_expr) -> Function . parameters Is closed_expr [ Else ]
+## fun_expr(closed_expr) -> Function . parameters type_annotation Is closed_expr [ Else ]
+## fun_expr(expr) -> Function . parameters Is expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+## fun_expr(expr) -> Function . parameters type_annotation Is expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+##
+## The known suffix of the stack is as follows:
+## Function
+##
+
+Ill-formed function expression.
+At this point, parameter declarations are expected between parentheses.
+
+interactive_expr: If UIdent Then Function LPAR Const Ident RPAR With
+##
+## Ends in an error in state: 483.
+##
+## fun_expr(closed_expr) -> Function parameters . Is closed_expr [ Else ]
+## fun_expr(closed_expr) -> Function parameters . type_annotation Is closed_expr [ Else ]
+## fun_expr(expr) -> Function parameters . Is expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+## fun_expr(expr) -> Function parameters . type_annotation Is expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+##
+## The known suffix of the stack is as follows:
+## Function parameters
+##
+
+Ill-formed function declaration.
+At this point, one of the following is expected:
+  * the keyword 'is' followed by the body as an expression;
+  * a type annotation starting with a colon ':' for the return value.
+
+interactive_expr: If UIdent Then Function LPAR Const Ident RPAR COLON UIdent ARROW
+##
+## Ends in an error in state: 496.
+##
+## fun_expr(closed_expr) -> Function parameters type_annotation . Is closed_expr [ Else ]
+## fun_expr(expr) -> Function parameters type_annotation . Is expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+##
+## The known suffix of the stack is as follows:
+## Function parameters type_annotation
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 24, spurious reduction of production variant -> UIdent
+## In state 43, spurious reduction of production nsepseq(variant,VBAR) -> variant
+## In state 62, spurious reduction of production sum_type -> nsepseq(variant,VBAR)
+## In state 55, spurious reduction of production type_expr -> sum_type
+## In state 80, spurious reduction of production type_annotation -> COLON type_expr
+##
+
+Ill-formed function declaration.
+At this point, if the return type is complete, the keyword 'is' is
+expected, followed by the body as an expression.
+
+interactive_expr: If UIdent Then LBRACE Skip RBRACE While
+##
+## Ends in an error in state: 492.
+##
+## block_with(closed_expr) -> block . With closed_expr [ Else ]
+## block_with(expr) -> block . With expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+##
+## The known suffix of the stack is as follows:
+## block
+##
+
+Ill-formed block expression.
+At this point, the keyword 'with' is expected, followed by an
+expression (whose value is that of the block).
+
+interactive_expr: If UIdent Then LBRACE Skip RBRACE With With
+##
+## Ends in an error in state: 493.
+##
+## block_with(closed_expr) -> block With . closed_expr [ Else ]
+## block_with(expr) -> block With . expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
+##
+## The known suffix of the stack is as follows:
+## block With
+##
+
+Ill-formed block expression.
+At this point, an expression is expected, whose value is that of the
+block.
 
 interactive_expr: Begin For Ident In List UIdent While
 ##
@@ -4162,19 +4201,6 @@ interactive_expr: Begin If UIdent Then If UIdent Then Skip With
 ## In state 474, spurious reduction of production base_instr(closed_instr,closed_expr) -> Skip
 ## In state 615, spurious reduction of production closed_instr -> base_instr(closed_instr,closed_expr)
 ## In state 610, spurious reduction of production test_clause(closed_instr) -> closed_instr
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: Begin If UIdent Then If UIdent Then Skip Else With
-##
-## Ends in an error in state: 593.
-##
-## if_then_else_instr(closed_instr) -> If expr Then test_clause(closed_instr) Else . test_clause(closed_instr) [ Else ]
-## if_then_else_instr(instruction) -> If expr Then test_clause(closed_instr) Else . test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
-##
-## The known suffix of the stack is as follows:
-## If expr Then test_clause(closed_instr) Else
 ##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>
@@ -4479,39 +4505,6 @@ interactive_expr: Case UIdent Of UIdent ARROW UIdent While
 ## In state 656, spurious reduction of production case_clause(expr) -> pattern ARROW expr
 ## In state 660, spurious reduction of production nsepseq(case_clause(expr),VBAR) -> case_clause(expr)
 ## In state 657, spurious reduction of production cases(expr) -> nsepseq(case_clause(expr),VBAR)
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: If UIdent While
-##
-## Ends in an error in state: 668.
-##
-## if_then_else_expr(expr) -> If expr . Then closed_expr Else expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
-## if_then_expr(expr) -> If expr . Then expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
-##
-## The known suffix of the stack is as follows:
-## If expr
-##
-## WARNING: This example involves spurious reductions.
-## This implies that, although the LR(1) items shown above provide an
-## accurate view of the past (what has been recognized so far), they
-## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 125, spurious reduction of production ctor_app(arguments) -> UIdent
-## In state 295, spurious reduction of production ctor_expr -> ctor_app(arguments)
-## In state 294, spurious reduction of production core_expr -> ctor_expr
-## In state 296, spurious reduction of production update_expr_level -> core_expr
-## In state 172, spurious reduction of production unary_expr_level -> update_expr_level
-## In state 176, spurious reduction of production mult_expr_level -> unary_expr_level
-## In state 279, spurious reduction of production add_expr_level -> mult_expr_level
-## In state 330, spurious reduction of production cons_expr_level -> add_expr_level
-## In state 317, spurious reduction of production cat_expr_level -> cons_expr_level
-## In state 357, spurious reduction of production comp_expr_level -> cat_expr_level
-## In state 344, spurious reduction of production set_mem_level -> comp_expr_level
-## In state 191, spurious reduction of production conj_expr_level -> set_mem_level
-## In state 364, spurious reduction of production disj_expr_level -> conj_expr_level
-## In state 315, spurious reduction of production base_expr(expr) -> disj_expr_level
-## In state 370, spurious reduction of production expr -> base_expr(expr)
 ##
 
 <YOUR SYNTAX ERROR MESSAGE HERE>

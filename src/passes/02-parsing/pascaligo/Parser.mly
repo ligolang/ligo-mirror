@@ -1489,8 +1489,8 @@ field_pattern:
 
 typed_pattern:
   pattern type_annotation {
-    let start  = pattern_to_region $1 in
-    let stop   = type_expr_to_region (snd $2) in
-    let region = cover start stop in
-    let value  = {pattern=$1; type_annot=$2}
+    let start  = pattern_to_region $1
+    and stop   = type_expr_to_region (snd $2) in
+    let region = cover start stop
+    and value  = {pattern=$1; type_annot=$2}
     in P_Typed {region; value} }
