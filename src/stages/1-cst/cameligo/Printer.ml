@@ -110,7 +110,7 @@ let print_UIdent state {region; value} =
     sprintf "%s: UIdent %S\n" (compact state region) value
   in Buffer.add_string state#buffer line
 
-let print_constr state {region; value} =
+let print_ctor state {region; value} =
   let line =
     sprintf "%s: Constr \"%s\"\n"
             (compact state region) value
@@ -217,7 +217,7 @@ and print_type_expr state = function
   TProd prod      -> print_cartesian state prod
 | TSum sum        -> print_sum_type state sum
 | TRecord t       -> print_record_type state t
-| TApp app        -> print_type_app state app
+| TApp app        -> print_type_ctor_app state app
 | TPar par        -> print_type_par state par
 | TVar var        -> print_var state var
 | TFun t          -> print_fun_type state t
@@ -247,12 +247,12 @@ and print_fun_type state {value; _} =
   print_token     state arrow "->";
   print_type_expr state range
 
-and print_type_app state {value; _} =
-  let type_constr, type_constr_arg = value in
-  print_type_constr_arg state type_constr_arg;
-  print_var             state type_constr
+and print_type_ctor_app state {value; _} =
+  let mod_path, type_ctor_arg = value in
+  print_type_ctor_arg state type_ctor_arg;
+  print_module_path   state print_var mod_path
 
-and print_type_constr_arg state = function
+and print_type_ctor_arg state = function
   CArg t -> print_type_expr state t
 | CArgTuple t -> print_type_tuple state t
 
@@ -296,7 +296,7 @@ and print_cartesian state Region.{value;_} =
 and print_variant state {value; _} =
   let {constr; arg; attributes=attr} = value in
   print_attributes state attr;
-  print_constr state constr;
+  print_ctor state constr;
   match arg with
     None -> ()
   | Some (kwd_of, t_expr) ->
@@ -387,7 +387,7 @@ and print_pattern state = function
     print_token   state lpar "(";
     print_pattern state p;
     print_token   state rpar ")"
-| PConstr p -> print_constr_pattern state p
+| PConstr p -> print_ctor_pattern state p
 | PRecord r ->
     print_record_pattern state r
 | PTyped t ->
@@ -418,9 +418,9 @@ and print_field_pattern state {value; _} =
   print_token   state eq "=";
   print_pattern state pattern
 
-and print_constr_pattern state node =
+and print_ctor_pattern state node =
   let {value=constr, p_opt; _} = node in
-  print_constr state constr;
+  print_ctor state constr;
   match p_opt with
     None -> ()
   | Some pattern -> print_pattern state pattern
@@ -449,12 +449,12 @@ and print_expr state = function
 | EList e             -> print_list_expr   state e
 | ESeq seq            -> print_sequence    state seq
 | ERecord e           -> print_record_expr state e
-| EConstr e           -> print_constr_expr state e
+| EConstr e           -> print_ctor_expr state e
 | ECodeInj e          -> print_code_inj    state e
 
-and print_constr_expr state {value; _} =
+and print_ctor_expr state {value; _} =
   let constr, argument = value in
-  print_constr state constr;
+  print_ctor state constr;
   match argument with
     None -> ()
   | Some arg -> print_expr state arg
@@ -976,7 +976,7 @@ and pp_pvar state {value; _} =
 and pp_pattern state = function
   PConstr p ->
     pp_node state "PConstr";
-    pp_constr_pattern (state#pad 1 0) p
+    pp_ctor_pattern (state#pad 1 0) p
 | PVar p -> pp_pvar state p
 | PInt i ->
     pp_node state "PInt";
@@ -1067,7 +1067,7 @@ and pp_int state {value=lexeme,z; region} =
   pp_loc_node (state#pad 2 0) lexeme region;
   pp_node     (state#pad 2 1) (Z.to_string z)
 
-and pp_constr_pattern state {value; _} =
+and pp_ctor_pattern state {value; _} =
   let constr, pat_opt = value in
   pp_ident state constr;
   match pat_opt with
@@ -1096,9 +1096,9 @@ and pp_expr state = function
 | EList e_list ->
     pp_node state "EList";
     pp_list_expr (state#pad 1 0) e_list
-| EConstr e_constr ->
+| EConstr e_ctor ->
     pp_node state "EConstr";
-    pp_constr_expr (state#pad 1 0) e_constr
+    pp_ctor_expr (state#pad 1 0) e_ctor
 | ERecord {value; region} ->
     pp_loc_node state "ERecord" region;
     pp_ne_injection pp_field_assign state value
@@ -1344,7 +1344,7 @@ and pp_field_path_assign state {value; _} =
   pp_path (state#pad 2 0) field_path;
   pp_expr (state#pad 2 1) field_expr
 
-and pp_constr_expr state {value; _} =
+and pp_ctor_expr state {value; _} =
   let constr, expr_opt = value in
   match expr_opt with
     None -> pp_ident (state#pad 1 0) constr
@@ -1496,10 +1496,11 @@ and pp_type_expr state = function
 | TRecord {value; region} ->
     pp_loc_node    state "TRecord" region;
     pp_record_type state value
-| TApp {value=name,tuple; region} ->
-    pp_loc_node   state "TApp" region;
-    pp_ident      (state#pad 2 0) name;
-    pp_type_constr_arg (state#pad 2 1) tuple
+| TApp {value; region} ->
+    let mod_path, type_ctor_arg = value in
+    pp_loc_node      state "TApp" region;
+    pp_module_path   (state#pad 2 0) "<constructor>" pp_ident mod_path;
+    pp_type_ctor_arg (state#pad 2 1) type_ctor_arg
 | TFun {value; region} ->
     pp_loc_node state "TFun" region;
     let apply len rank =
@@ -1536,7 +1537,7 @@ and pp_sum_type state {variants; attributes; _} =
     let state = state#pad arity (arity-1)
     in pp_attributes state attributes
 
-and pp_type_constr_arg state = function
+and pp_type_ctor_arg state = function
   CArg  t -> pp_type_expr state t
 | CArgTuple t -> pp_arg_tuple state t
 

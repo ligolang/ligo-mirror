@@ -115,7 +115,7 @@ type module_name = string reg
 type fun_name    = string reg
 type type_name   = string reg
 type field_name  = string reg
-type type_constr = string reg
+type type_ctor   = string reg
 type constr      = string reg
 type attribute   = string reg
 type type_param  = string reg
@@ -205,7 +205,7 @@ and type_expr =
   TProd    of cartesian
 | TSum     of sum_type reg
 | TRecord  of field_decl reg ne_injection reg
-| TApp     of (type_constr * type_constr_arg) reg
+| TApp     of type_ctor_app reg
 | TFun     of (type_expr * arrow * type_expr) reg
 | TPar     of type_expr par reg
 | TVar     of variable
@@ -214,13 +214,15 @@ and type_expr =
 | TModPath of type_name module_path reg
 | TArg     of type_var reg
 
+and type_ctor_app = type_ctor module_path reg * type_ctor_arg
+
 and 'a module_path = {
   module_path : (module_name, dot) nsepseq;
   selector    : dot;
   field       : 'a
 }
 
-and type_constr_arg =
+and type_ctor_arg =
   CArg      of type_expr
 | CArgTuple of (type_expr, comma) nsepseq par reg
 
@@ -588,6 +590,6 @@ let path_to_region = function
   Name var -> var.region
 | Path {region; _} -> region
 
-let type_constr_arg_to_region = function
+let type_ctor_arg_to_region = function
   CArg  t -> type_expr_to_region t
 | CArgTuple t -> t.region

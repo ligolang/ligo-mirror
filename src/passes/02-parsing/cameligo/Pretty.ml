@@ -134,7 +134,7 @@ and pp_type_params (node : type_params) =
   in string "type " ^^ type_vars
 
 and pp_pattern = function
-  PConstr   p -> pp_region_reg pp_pconstr p
+  PConstr   p -> pp_region_reg pp_pctor p
 | PUnit     t -> pp_region_reg (fun _ -> string "()") t
 | PVar      v -> pp_pvar v
 | PInt      i -> pp_region_reg pp_int i
@@ -154,11 +154,11 @@ and pp_pvar {value; _} =
   if attributes = [] then v
   else group (pp_attributes attributes ^/^ v)
 
-and pp_pconstr {value; _} =
+and pp_pctor {value; _} =
   match value with
-    constr, None -> pp_region_reg pp_ident constr
-  | constr, Some pat ->
-      prefix 4 1 (pp_region_reg pp_ident constr) (pp_pattern pat)
+    ctor, None -> pp_region_reg pp_ident ctor
+  | ctor, Some pat ->
+      prefix 4 1 (pp_region_reg pp_ident ctor) (pp_pattern pat)
 
 and pp_int {value; _} =
   string (Z.to_string (snd value))
@@ -237,7 +237,7 @@ and pp_expr = function
 | EArith      e -> group (pp_arith_expr e)
 | EString     e -> pp_string_expr e
 | EList       e -> group (pp_list_expr e)
-| EConstr     e -> pp_region_reg pp_constr_expr e
+| EConstr     e -> pp_region_reg pp_ctor_expr e
 | ERecord     e -> pp_region_reg pp_record_expr e
 | EProj       e -> pp_region_reg pp_projection e
 | EModPath    e -> pp_module_path pp_expr e
@@ -369,12 +369,12 @@ and pp_compound = function
 | Braces (a, b)   -> (("{", a), ("}", b))
 | Brackets (a, b) -> (("[", a), ("]",b))
 
-and pp_constr_expr {value; _} =
-  let constr, arg = value in
-  let constr = pp_region_reg (fun t -> string t.value) constr in
+and pp_ctor_expr {value; _} =
+  let ctor, arg = value in
+  let ctor = pp_region_reg (fun t -> string t.value) ctor in
   match arg with
-      None -> constr
-  | Some e -> prefix 2 1 constr (pp_expr e)
+      None -> ctor
+  | Some e -> prefix 2 1 ctor (pp_expr e)
 
 and pp_record_expr ne_inj = group (pp_ne_injection pp_field_assign ne_inj)
 
@@ -540,7 +540,7 @@ and pp_type_expr = function
   TProd t   -> pp_region_reg pp_cartesian t
 | TSum t    -> pp_region_reg pp_sum_type t
 | TRecord t -> pp_region_reg pp_record_type t
-| TApp t    -> pp_region_reg pp_type_app t
+| TApp t    -> pp_region_reg pp_type_ctor_app t
 | TFun t    -> pp_region_reg pp_fun_type t
 | TPar t    -> pp_region_reg pp_type_par t
 | TVar t    -> pp_region_reg pp_ident t
@@ -605,16 +605,18 @@ and pp_field_decl {value; _} =
   let t_expr = pp_type_expr field_type
   in prefix 2 1 (name ^^ pp_region_t (string " :") colon) t_expr
 
-and pp_type_app {value = (ctor, type_constr_arg); _} =
-  pp_type_constr_arg type_constr_arg
-  ^^ pp_region_t (group (nest 2 (break 1 ^^ pp_type_constr ctor)))
-                 ctor.region
+and pp_type_ctor_app (node : type_ctor_app reg) =
+  let {value; _} = node in
+  let mod_path, type_ctor_arg = value in
+  let path_doc = pp_module_path pp_ident mod_path in
+  pp_type_ctor_arg type_ctor_arg
+  ^^ pp_region_t (group (nest 2 (break 1 ^^ path_doc))) mod_path.region
 
-and pp_type_constr_arg = function
+and pp_type_ctor_arg = function
   CArg t -> pp_type_expr t
-| CArgTuple t -> pp_constr_arg_tuple t
+| CArgTuple t -> pp_ctor_arg_tuple t
 
-and pp_constr_arg_tuple {value; _} =
+and pp_ctor_arg_tuple {value; _} =
   let head, tail = value.inside in
   let rec app = function
     []  -> empty
@@ -629,7 +631,7 @@ and pp_constr_arg_tuple {value; _} =
       pp_type_expr head ^^ (pp_region_t (string ",") (fst h)) ^^ app (h :: tail)
     in (pp_region_t (string "(") value.lpar) ^^ nest 1 (components ^^ (pp_region_t (string ")") value.rpar))
 
-and pp_type_constr ctor = string ctor.value
+and pp_type_ctor ctor = string ctor.value
 
 and pp_fun_type {value; _} =
   let lhs, arrow, rhs = value in

@@ -34,7 +34,7 @@ let type_vars_of_list : string Region.reg list -> CST.type_vars = fun lst ->
   let type_var_of_name : _ -> CST.type_var Region.reg = fun name -> wrap CST.{quote=ghost;name} in
   match lst with
   | [name] -> QParam (type_var_of_name name)
-  | x -> 
+  | x ->
     let x = Utils.nsepseq_map type_var_of_name (list_to_nsepseq x) in
     QParamTuple (wrap (par x))
 
@@ -115,7 +115,7 @@ let rec decompile_type_expr : AST.type_expression -> CST.type_expr = fun te ->
     let arguments = List.map ~f:decompile_type_expr arguments in
     let arguments = list_to_nsepseq arguments in
     let par : _ CST.par = {lpar=ghost;inside=arguments;rpar=ghost} in
-    let lst : CST.type_constr_arg = CST.CArgTuple (wrap par) in
+    let lst : CST.type_ctor_arg = CST.CArgTuple (wrap par) in
     return @@ CST.TApp (wrap (type_constant,lst))
   | T_annoted _annot ->
     failwith "let's work on it later"
@@ -287,7 +287,7 @@ let rec decompile_expression : AST.expression -> CST.expr = fun expr ->
         let pattern = decompile_pattern pattern in
         (wrap ({pattern ; arrow = ghost ; rhs }:_ CST.case_clause))
     in
-    let case_clauses = List.map ~f:aux cases in 
+    let case_clauses = List.map ~f:aux cases in
     let cases = list_to_nsepseq case_clauses in
     let cases = wrap cases in
     let cases : _ CST.case = {kwd_match=ghost;expr;kwd_with=ghost;lead_vbar=None;cases} in
@@ -489,7 +489,7 @@ and decompile_declaration : AST.declaration Location.wrap -> CST.declaration = f
   match decl with
     Declaration_type {type_binder;type_expr} -> (
     let name = decompile_variable type_binder in
-    let params =  
+    let params =
       match type_expr.type_content with
       | T_abstraction _ -> (
         let rec aux : AST.type_expression -> _ list -> _ list  =
