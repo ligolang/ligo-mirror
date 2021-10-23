@@ -58,30 +58,54 @@ module type S =
     val to_region : token -> Region.t
     val concrete  : string -> lexeme
 
-    (* Injections *)
+    (* INJECTIONS *)
 
-    type   int_err = Non_canonical_zero
-    type mutez_err = Unsupported_mutez_syntax
-                   | Non_canonical_zero_tez
-    type   nat_err = Invalid_natural
-                   | Unsupported_nat_syntax
-                   | Non_canonical_zero_nat
-    type   sym_err = Invalid_symbol of string
-    type  lang_err = Unsupported_lang_syntax
-    type   kwd_err = Invalid_keyword
+    (* Integers *)
 
-    val mk_int      : lexeme -> Region.t -> (token,   int_err) result
-    val mk_nat      : lexeme -> Region.t -> (token,   nat_err) result
-    val mk_mutez    : lexeme -> Region.t -> (token, mutez_err) result
-    val mk_sym      : lexeme -> Region.t -> (token,   sym_err) result
-    val mk_kwd      : lexeme -> Region.t -> (token,   kwd_err) result
+    val mk_int : lexeme -> Z.t -> Region.t -> token
+
+    (* Natural numbers *)
+
+    type nat_err = Wrong_nat_syntax
+
+    val mk_nat :
+      lexeme -> Z.t -> Region.t -> (token, nat_err) result
+
+    (* Mutez *)
+
+    type mutez_err = Wrong_mutez_syntax
+
+    val mk_mutez :
+      lexeme -> suffix:string -> Int64.t ->
+      Region.t -> (token, mutez_err) result
+
+    (* Symbols *)
+
+    type sym_err = Invalid_symbol of string
+
+    val mk_sym : lexeme -> Region.t -> (token, sym_err) result
+
+    (* Keywords *)
+
+    type kwd_err = Invalid_keyword
+
+    val mk_kwd : lexeme -> Region.t -> (token, kwd_err) result
+
+    (* Code injection *)
+
+    type lang_err = Wrong_lang_syntax
+
+    val mk_lang :
+      lexeme Region.reg -> Region.t -> (token, lang_err) result
+
+    (* Others *)
+
     val mk_ident    : lexeme -> Region.t -> token
     val mk_string   : lexeme -> Region.t -> token
     val mk_verbatim : lexeme -> Region.t -> token
     val mk_bytes    : lexeme -> Region.t -> token
     val mk_uident   : lexeme -> Region.t -> token
     val mk_attr     : lexeme -> Region.t -> token
-    val mk_lang     : lexeme Region.reg -> Region.t -> (token, lang_err) result
     val mk_eof      : Region.t -> token
 
     (* Predicates *)
@@ -90,5 +114,4 @@ module type S =
 
     val support_string_delimiter : char -> bool
     val verbatim_delimiters : string * string
-
   end

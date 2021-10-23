@@ -29,7 +29,7 @@ module T =
     | Bytes    of (lexeme * Hex.t) Region.reg
     | Int      of (lexeme * Z.t) Region.reg
     | Nat      of (lexeme * Z.t) Region.reg
-    | Mutez    of (lexeme * Z.t) Region.reg
+    | Mutez    of (lexeme * Int64.t) Region.reg
     | Ident    of lexeme Region.reg
     | UIdent   of lexeme Region.reg
     | Lang     of lexeme Region.reg Region.reg
@@ -221,7 +221,7 @@ module T =
     | Nat Region.{region; value = s,n} ->
         region, sprintf "Nat (%S, %s)" s (Z.to_string n)
     | Mutez Region.{region; value = s,n} ->
-        region, sprintf "Mutez (%S, %s)" s (Z.to_string n)
+        region, sprintf "Mutez (%S, %s)" s (Int64.to_string n)
     | Ident Region.{region; value} ->
         region, sprintf "Ident %S" value
     | UIdent Region.{region; value} ->
@@ -298,8 +298,8 @@ module T =
     | Verbatim v -> String.escaped v.Region.value
     | Bytes b    -> fst b.Region.value
     | Int i
-    | Nat i
-    | Mutez i    -> fst i.Region.value
+    | Nat i      -> fst i.Region.value
+    | Mutez m    -> fst m.Region.value
     | Ident id   -> id.Region.value
     | UIdent id  -> id.Region.value
     | Attr a     -> sprintf "[@%s]" a.Region.value
@@ -412,6 +412,8 @@ module T =
     let mk_string lexeme region =
       String Region.{region; value=lexeme}
 
+    (* Verbatim strings *)
+
     let mk_verbatim lexeme region =
       Verbatim Region.{region; value=lexeme}
 
@@ -422,45 +424,24 @@ module T =
       let value = lexeme, `Hex norm
       in Bytes Region.{region; value}
 
-    (* Numerical values *)
+    (* Integers *)
 
-    type int_err = Non_canonical_zero
+    let mk_int lexeme z region =
+      Int Region.{region; value = (lexeme, z)}
 
-    let mk_int lexeme region =
-      let z =
-        Str.(global_replace (regexp "_") "" lexeme) |> Z.of_string
-      in if   Z.equal z Z.zero && lexeme <> "0"
-         then Error Non_canonical_zero
-         else Ok (Int Region.{region; value = lexeme,z})
+    (* Natural numbers *)
 
-    type nat_err =
-      Invalid_natural
-    | Unsupported_nat_syntax
-    | Non_canonical_zero_nat
+    type nat_err = Wrong_nat_syntax (* Not used in ReasonLIGO *)
 
-    let mk_nat lexeme region =
-      match String.index_opt lexeme 'n' with
-        None -> Error Invalid_natural
-      | Some _ ->
-          let z =
-            Str.(global_replace (regexp "_") "" lexeme) |>
-              Str.(global_replace (regexp "n") "") |>
-              Z.of_string in
-          if   Z.equal z Z.zero && lexeme <> "0n"
-          then Error Non_canonical_zero_nat
-          else Ok (Nat Region.{region; value = lexeme,z})
+    let mk_nat nat z region =
+      Ok (Nat Region.{region; value = (nat ^ "n", z)})
 
-    type mutez_err =
-        Unsupported_mutez_syntax
-      | Non_canonical_zero_tez
+    (* Mutez *)
 
-    let mk_mutez lexeme region =
-      let z = Str.(global_replace (regexp "_") "" lexeme) |>
-                Str.(global_replace (regexp "mutez") "") |>
-                Z.of_string in
-      if   Z.equal z Z.zero && lexeme <> "0mutez"
-      then Error Non_canonical_zero_tez
-      else Ok (Mutez Region.{region; value = lexeme, z})
+    type mutez_err = Wrong_mutez_syntax (* Not used in ReasonLIGO *)
+
+    let mk_mutez nat ~suffix int64 region =
+      Ok (Mutez Region.{region; value = (nat ^ suffix, int64)})
 
     (* End-Of-File *)
 
@@ -530,7 +511,7 @@ module T =
 
     (* Code injection *)
 
-    type lang_err = Unsupported_lang_syntax
+    type lang_err = Wrong_lang_syntax
 
     let mk_lang lang region = Ok (Lang Region.{value=lang; region})
 
@@ -538,11 +519,9 @@ module T =
 
     let is_eof = function EOF _ -> true | _ -> false
 
-    let support_string_delimiter c =
-      c = '"'
+    let support_string_delimiter c = (c = '"')
 
     let verbatim_delimiters = ("{|", "|}")
-
   end
 
 include T

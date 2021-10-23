@@ -144,7 +144,7 @@ module T =
     and ctor_sym = gen_sym "C"
 
     let concrete = function
-        (* Identifiers, labels, numbers and strings *)
+      (* Identifiers, labels, numbers and strings *)
 
       "Ident"   -> id_sym ()
     | "UIdent"   -> ctor_sym ()
@@ -266,8 +266,10 @@ module T =
         Directive.project d
 
       (* comments *)
-    | LineCom Region.{region; value} -> region, sprintf "Line comment %S" value
-    | BlockCom Region.{region; value} -> region, sprintf "Block comment %S" value
+    | LineCom Region.{region; value} ->
+         region, sprintf "Line comment %S" value
+    | BlockCom Region.{region; value} ->
+        region, sprintf "Block comment %S" value
 
       (* Literals *)
     | String Region.{region; value} ->
@@ -557,6 +559,8 @@ module T =
     let mk_string lexeme region =
       String Region.{region; value=lexeme}
 
+    (* Verbatim strings *)
+
     let mk_verbatim lexeme region =
       Verbatim Region.{region; value=lexeme}
 
@@ -567,29 +571,23 @@ module T =
       let value = lexeme, `Hex norm
       in Bytes Region.{region; value}
 
-    (* Numerical values *)
+    (* Integers *)
 
-    type int_err = Non_canonical_zero
+    let mk_int lexeme z region =
+      Int Region.{region; value = (lexeme, z)}
 
-    let mk_int lexeme region =
-      let z =
-        Str.(global_replace (regexp "_") "" lexeme) |> Z.of_string
-      in if   Z.equal z Z.zero && lexeme <> "0"
-         then Error Non_canonical_zero
-         else Ok (Int Region.{region; value = lexeme,z})
+    (* Natural numbers *)
 
-    type nat_err =
-      Invalid_natural
-    | Unsupported_nat_syntax
-    | Non_canonical_zero_nat
+    type nat_err = Wrong_nat_syntax
 
-    let mk_nat _lexeme _region = Error Unsupported_nat_syntax
+    let mk_nat _nat _z _region = Error Wrong_nat_syntax
 
-    type mutez_err =
-      Unsupported_mutez_syntax
-    | Non_canonical_zero_tez
+    (* Mutez *)
 
-    let mk_mutez _lexeme _region = Error Unsupported_mutez_syntax
+    type mutez_err = Wrong_mutez_syntax
+
+    let mk_mutez _nat ~suffix:_ _int64 _region =
+      Error Wrong_mutez_syntax
 
     (* End-Of-File *)
 
@@ -651,7 +649,7 @@ module T =
       | "*="  -> Ok (MULT_EQ  region)
       | "%="  -> Ok (REM_EQ   region)
       | "/="   -> Ok (DIV_EQ  region)
-      
+
       (* | "<<<=" -> Ok (SL_EQ   region)
       | ">>>=" -> Ok (SR_EQ   region)
       | "&="   -> Ok (AND_EQ  region)
@@ -682,11 +680,9 @@ module T =
 
     (* Code injection *)
 
-    type lang_err =
-      Unsupported_lang_syntax
+    type lang_err = Wrong_lang_syntax
 
-    let mk_lang _lang _region =
-      Error Unsupported_lang_syntax
+    let mk_lang _lang _region = Error Wrong_lang_syntax
 
     (* PREDICATES *)
 
