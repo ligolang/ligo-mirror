@@ -21,7 +21,7 @@ expected:
   * a vertical bar '|' followed by another clause;
   * a closing bracket ']' if the case is complete.
 Note: A clause, here, is made of a pattern and an instruction or
-a block, separated by an arrow '->'.
+a block of statements, separated by an arrow '->'.
 
 interactive_expr: Begin Case Verbatim Of LBRACKET With
 ##
@@ -64,8 +64,7 @@ interactive_expr: Begin Case Verbatim Of WILD ARROW Skip VBAR With
 ##
 
 Ill-formed case instruction.
-At this point, a case clause is expected, made of a pattern and an
-instruction or block, separated by an arrow '->'.
+At this point, a case clause is expected, starting with a pattern.
 
 interactive_expr: Begin Case Verbatim Of WILD ARROW Skip With
 ##
@@ -90,7 +89,7 @@ expected:
   * a vertical bar '|' followed by another clause;
   * the keyword 'end' if the case is complete.
 Note: A clause, here, is made of a pattern and an instruction or
-a block, separated by an arrow '->'.
+a block of statements, separated by an arrow '->'.
 
 interactive_expr: Begin Case Verbatim Of WILD ARROW With
 ##
@@ -106,9 +105,8 @@ Ill-formed clause of a case instruction.
 At this point, one of the following is expected:
   * a single instruction;
   * a block of statements (instructions and declarations).
-Note: A clause, here, is made of a pattern and an instruction or a
-block, separated by an arrow '->'. A block is either delimited by '{'
-and '}' (terse dialect) or 'begin' and 'end' (verbose dialect).
+Note: A block is either delimited by '{' and '}' (terse dialect) or
+'begin' and 'end' (verbose dialect).
 
 interactive_expr: Begin Case Verbatim Of WILD With
 ##
@@ -206,7 +204,7 @@ interactive_expr: Begin For Ident ARROW Ident With
 
 Ill-formed bounded loop over a map.
 At this point, the keywords 'in map' are expected, followed by the map
-to be iterated, as an expression.
+as an expression.
 
 interactive_expr: Begin For Ident ARROW With
 ##
@@ -252,7 +250,7 @@ interactive_expr: Begin For Ident ASS Verbatim To Verbatim Step Verbatim Attr
 
 Ill-formed bounded loop over a numerical interval.
 At this point, if the step clause is complete, the loop body is
-expected as a block of instructions.
+expected as a block of statements.
 Note: A block is either delimited by '{' and '}' (terse dialect) or
 'begin' and 'end' (verbose dialect).
 
@@ -323,8 +321,8 @@ interactive_expr: Begin For Ident In With
 ##
 
 Ill-formed bounded loop over a set or a list.
-At this point, the keywords 'set' or 'list' are expected, followed by
-the actual collection as an expression.
+At this point, the keyword 'set' or 'list' is expected, followed by
+the collection as an expression.
 
 interactive_expr: Begin For Ident With
 ##
@@ -438,6 +436,24 @@ interactive_expr: Begin If Verbatim Then Skip With
 ##
 ## Ends in an error in state: 617.
 ##
+## if_then_else_instr(instruction) -> If expr Then test_clause(closed_instr) . Else test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
+##
+## The known suffix of the stack is as follows:
+## If expr Then test_clause(closed_instr)
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 474, spurious reduction of production base_instr(closed_instr,closed_expr) -> Skip
+## In state 615, spurious reduction of production closed_instr -> base_instr(closed_instr,closed_expr)
+## In state 610, spurious reduction of production test_clause(closed_instr) -> closed_instr
+##
+interactive_expr: Begin If UIdent Then If UIdent Then Skip With
+##
+## Ends in an error in state: 592.
+##
+## if_then_else_instr(closed_instr) -> If expr Then test_clause(closed_instr) . Else test_clause(closed_instr) [ Else ]
 ## if_then_else_instr(instruction) -> If expr Then test_clause(closed_instr) . Else test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
 ##
 ## The known suffix of the stack is as follows:
@@ -595,8 +611,7 @@ interactive_expr: Begin Patch Ident While
 
 Ill-formed patch.
 At this point, if the data structure (map, set or record) being
-patched is fully qualified, the keyword 'with' is expected, followed
-by a map, a set or a record expression.
+patched is fully qualified, the keyword 'with' is expected.
 
 interactive_expr: Record With
 ##
@@ -616,7 +631,10 @@ At this point, one of the following is expected:
   * assignments to record fields, separated by semicolons
     ';' and followed by the keyword 'end';
   * an opening bracket '[' followed by assignments and a closing
-    bracket ']'.
+    bracket ']';
+  * the brackets '[' and ']' if defining an empty record (terse
+    dialect);
+  * the keyword 'end' if defining an empty record (verbose dialect).
 
 interactive_expr: Begin Patch Ident With With
 ##
@@ -631,8 +649,7 @@ interactive_expr: Begin Patch Ident With With
 ##
 
 Ill-formed patch.
-At this point, a map, a record or a set is expected, starting with the
-keywors 'map', 'record' or 'set', respectively.
+At this point, the keyword 'map', 'record' or 'set' is expected.
 
 interactive_expr: Begin Patch With
 ##
@@ -647,8 +664,7 @@ interactive_expr: Begin Patch With
 ##
 
 Ill-formed patch.
-At this point, the fully qualified name of a record, a set or a map is
-expected.
+At this point, a record, a set or a map is expected as an expression.
 
 interactive_expr: Begin Remove Verbatim From Map With
 ##
@@ -723,8 +739,7 @@ interactive_expr: Begin If UIdent Then Remove UIdent From With
 ##
 
 Ill-formed removal from a collection.
-At this point, either the keyword 'map', 'big_map', or 'set' is
-expected.
+At this point, the keyword 'map', 'big_map', or 'set' is expected.
 
 interactive_expr: Begin Remove With
 ##
@@ -754,10 +769,8 @@ interactive_expr: Begin If UIdent Then Remove With
 
 Ill-formed removal from a collection.
 At this point, one of the following is expected:
-  * a set element as an expression;
-  * a key as an expression.
-Note: A binding is made of two expressions (a key and a value)
-separated by an arrow '->'.
+  * a set element as an expression, if removing from a set;
+  * a key as an expression, if removing from a map or big map.
 
 interactive_expr: Begin Skip End While
 ##
@@ -769,7 +782,7 @@ interactive_expr: Begin Skip End While
 ## block
 ##
 
-Ill-formed block of instructions.
+Ill-formed block expression.
 At this point, the keyword 'with' is expected, followed by an
 expression whose value is that of the whole block.
 
@@ -783,9 +796,9 @@ interactive_expr: Begin Skip End With With
 ## block With
 ##
 
-Ill-formed block of instructions.
+Ill-formed block expression.
 At this point, an expression is expected, whose value is that of the
-block.
+whole block.
 
 interactive_expr: Begin Skip With
 ##
@@ -878,7 +891,7 @@ interactive_expr: Begin Var With
 ##
 
 Ill-formed variable declaration.
-At this point, a variable name is expected.
+At this point, a pattern is expected.
 
 interactive_expr: Begin While With
 ##
@@ -931,7 +944,8 @@ At this point, one of the following is expected:
     the keyword 'end';
   * an opening bracket '[' followed by key/value bindings,
     or none (empty big_map), and a closing bracket ']';
-  * the keyword 'end' if the big_map is empty.
+  * the brackets '[' and ']' if the big_map is empty (terse dialect);
+  * the keyword 'end' if the big_map is empty (verbose dialect).
 Note: A binding is made of two expressions (a key and a value)
 separated by an arrow '->'.
 
@@ -1038,7 +1052,7 @@ interactive_expr: Case Verbatim Of LPAR WILD COMMA With
 ## pattern COMMA
 ##
 
-Ill-formed tuple of patterns in a case expression.
+Ill-formed tuple of patterns.
 At this point, a tuple component is expected as a pattern.
 
 interactive_expr: Case Verbatim Of LPAR WILD SHARP Bytes With
@@ -1060,9 +1074,13 @@ interactive_expr: Case Verbatim Of LPAR WILD SHARP Bytes With
 ## In state 243, spurious reduction of production pattern -> core_pattern SHARP nsepseq(core_pattern,SHARP)
 ##
 
-Ill-formed case expression.
-At this point, if the list pattern is complete, a closing parenthesis
-')' is expected.
+Ill-formed pattern.
+At this point, if the pattern is complete, one of the following is expected:
+  * a closing parenthesis ')' if defining a parenthesised pattern;
+  * a comma ',' followed by a component as a pattern, if defining a
+    tuple;
+  * a type annotation starting with a colon ':' if defining a typed
+    pattern.
 
 interactive_expr: Case Verbatim Of LPAR With
 ##
@@ -1076,8 +1094,8 @@ interactive_expr: Case Verbatim Of LPAR With
 ## LPAR
 ##
 
-Ill-formed list pattern.
-At this point, a pattern matching non-empty lists is expected.
+Ill-formed parenthesised pattern.
+At this point, a pattern is expected.
 
 interactive_expr: Case Verbatim Of List LBRACKET WILD With
 ##
@@ -1097,9 +1115,9 @@ interactive_expr: Case Verbatim Of List LBRACKET WILD With
 ##
 
 Ill-formed list of patterns.
-At this point, if pattern matching a list element is complete, one of
-the following is expected:
-  * a semicolon ';' followed by another pattern;
+At this point, if the list element is complete, one of the following
+is expected:
+  * a semicolon ';' followed by another element as a pattern;
   * a closing bracket ']' if the list is complete.
 
 interactive_expr: Case Verbatim Of List LBRACKET With
@@ -1115,7 +1133,7 @@ interactive_expr: Case Verbatim Of List LBRACKET With
 
 Ill-formed list of patterns.
 At this point, one of the following is expected:
-  * patterns matching list elements and separated by semicolons ';';
+  * an element as a pattern;
   * a closing bracket ']' if matching the empty list.
 
 interactive_expr: Case Verbatim Of List With
@@ -1133,10 +1151,9 @@ interactive_expr: Case Verbatim Of List With
 
 Ill-formed list of patterns.
 At this point, one of the following is expected:
-  * patterns matching list elements, separated by semicolons ';';
-  * an opening bracket '[' followed by patterns separated by
-    semicolons ';', and a closing bracket ']';
-  * the brackets '[]' or the keyword 'end' if matching the empty list.
+  * a list element as a pattern;
+  * an opening bracket '[' followed by a list element as a pattern;
+  * the keyword 'end' of '[]' if matching the empty list.
 
 interactive_expr: Case Verbatim Of WILD ARROW With
 ##
@@ -1174,7 +1191,7 @@ interactive_expr: Case Verbatim Of WILD SHARP With
 ##
 
 Ill-formed list of patterns.
-At this point, a pattern matching a non-empty list is expected.
+At this point, a non-empty list is expected as a pattern.
 
 interactive_expr: Case Verbatim Of WILD With
 ##
@@ -1224,7 +1241,10 @@ interactive_expr: UIdent DOT With
 ##
 
 Ill-formed selection of a value from a module.
-At this point, the qualified name of a value is expected.
+At this point, one of the following is expected:
+  * a sub-module name;
+  * a record name;
+  * a tuple name.
 
 interactive_expr: Function LPAR Const Ident RPAR COLON Ident With
 ##
@@ -1246,10 +1266,8 @@ interactive_expr: Function LPAR Const Ident RPAR COLON Ident With
 ##
 
 Ill-formed function expression.
-At this point, the keyword 'is' is expected, followed with the
-function body as an expression or a block of statements (instructions
-or declarations) ending with an expression.
-Note: A block, in this context, is delimited by 'block {' and '} with'.
+At this point, the keyword 'is' is expected, followed by the function
+body as an expression.
 
 interactive_expr: Function LPAR Const Ident RPAR Is With
 ##
@@ -1307,7 +1325,8 @@ contract: Attr Function Ident LPAR Const Ident RPAR With
 
 Ill-formed function expression.
 At this point, one of the following is expected:
-  * a type annotation for the returned value;
+  * a type annotation for the returned value, starting with a colon
+    ':';
   * the keyword 'is' followed by the function body as an expression.
 
 interactive_expr: Function LPAR Const Ident With
@@ -1325,7 +1344,7 @@ Ill-formed function parameter declaration.
 At this point, one of the following is expected:
   * a type annotation starting with a colon ':';
   * a semicolon ';' followed with another parameter declaration;
-  * a closing parenthesis ')' if no more parameters.
+  * a closing parenthesis ')' if there are no more parameters.
 
 interactive_expr: Function LPAR Var Ident COLON String With
 ##
@@ -1348,8 +1367,10 @@ interactive_expr: Function LPAR Var Ident COLON String With
 ##
 
 Ill-formed function parameter declaration.
-At this point, if the parameter declaration is complete, a closing
-parenthesis ')' is expected.
+At this point, if the parameter declaration is complete, one of the
+following is expected:
+  * a semicolon ';' followed by another parameter declaration;
+  * a closing parenthesis ')' if there are no more parameters.
 
 interactive_expr: Function LPAR Var Ident COLON With
 ##
@@ -1363,6 +1384,7 @@ interactive_expr: Function LPAR Var Ident COLON With
 
 Ill-formed function parameter type.
 At this point, a type is expected.
+Note: Use parentheses if you want a sum type.
 
 interactive_expr: Function LPAR Var Ident SEMI With
 ##
@@ -1534,13 +1556,9 @@ interactive_expr: Ident While
 ## In state 370, spurious reduction of production expr -> base_expr(expr)
 ##
 
-Ill-formed map lookup or record update.
-At this point, if the name is fully qualified, one of the following is
-expected:
-  * if the name denotes a map, then a key as an expression between
-    brackets '[' and ']';
-  * if the name denotes a record, then the keyword 'with', followed by
-    a record (update)
+Ill-formed expression.
+At this point, if the expression is complete, the end of the file is
+expected.
 
 interactive_expr: Ident With Record Ident EQ Bytes SEMI With
 ##
@@ -1598,7 +1616,9 @@ interactive_expr: Ident With Record LBRACKET With
 ##
 
 Ill-formed record update.
-At this point, a field assignment (update) is expected.
+At this point, one of the following is expected:
+  * a field assignment (update);
+  * a closing bracket ']' if the update is empty.
 
 interactive_expr: Ident With Record With
 ##
@@ -1615,9 +1635,9 @@ interactive_expr: Ident With Record With
 
 Ill-formed record update.
 At this point, one of the following is expected:
-  * a series of field assignments (updates), separated by semicolons ';';
-  * an opening bracket '[' followed by field assignments and a closing
-    bracket ']'.
+  * field assignments (updates), separated by semicolons ';';
+  * an opening bracket '[' followed by field assignments;
+  * brackets '[]' or the keyword 'end' if the update is empty.
 
 interactive_expr: Ident With With
 ##
@@ -1732,11 +1752,8 @@ interactive_expr: LPAR With
 ## LPAR
 ##
 
-Ill-formed expression.
-At this point, an expression is expected, denoting either
-  * an expression annotated with its type,
-  * a parenthesised expression,
-  * a tuple component.
+Ill-formed parenthesised expression.
+At this point, an expression is expected.
 
 interactive_expr: Lang With
 ##
@@ -1783,9 +1800,9 @@ interactive_expr: List With
 
 Ill-formed list of expressions.
 At this point, one of the following is expected:
-  * the brackets '[]' or the keyword 'end' if the list is empty;
   * list elements as expressions separated by semicolons ';';
-  * as the previous case, but enclosed between brackets '[' and ']'.
+  * an opening bracket '[' followed by list elements;
+  * the brackets '[]' or the keyword 'end' if the list is empty.
 
 contract: Const Record Ident EQ With
 ##
@@ -1798,7 +1815,7 @@ contract: Const Record Ident EQ With
 ##
 
 Ill-formed record constant declaration.
-At this point a pattern is expected.
+At this point, a pattern is expected.
 
 contract: Const Record Ident With
 ##
@@ -1819,7 +1836,8 @@ contract: Const Record Ident With
 ##
 
 Ill-formed record constant declaration.
-At this point, if the current field pattern is complete, one of the following is expected:
+At this point, if the current field pattern is complete, one of the
+following is expected:
   * the keyword 'end' if the record is complete;
   * another field pattern.
 
@@ -1841,7 +1859,10 @@ contract: Const Record LBRACKET Ident EQ Bytes End
 ##
 
 Ill-formed record constant declaration.
-At this point, if the pattern is complete, a closing bracket ']' is expected.
+At this point, if the pattern is complete, one of the following is
+expected:
+  * a semicolon ';' followed by another field pattern;
+  * a closing bracket ']' if the record pattern is complete.
 
 contract: Const Record LBRACKET With
 ##
@@ -1854,10 +1875,10 @@ contract: Const Record LBRACKET With
 ## Record LBRACKET
 ##
 
-Ill-formed record constant declaration.
-At this point one of the following is expected:
+Ill-formed record pattern.
+At this point, one of the following is expected:
   * a field pattern;
-  * closing bracket.
+  * a closing bracket ']' if the record pattern is empty.
 
 contract: Const Record With
 ##
@@ -1872,11 +1893,12 @@ contract: Const Record With
 ## Record
 ##
 
-Ill-formed record constant declaration.
-At this point one of the following is expected:
-  * a list of semicolon ';' separated field patterns;
-  * an opening bracket '[', followed by semicolon separated ';' field patterns.
-  * the closing 'end' keyword.
+Ill-formed record pattern.
+At this point, one of the following is expected:
+  * a field pattern;
+  * an opening bracket '[', followed by a field pattern;
+  * the brackets '[]' and keyword 'end', if the record pattern is
+    empty.
 
 interactive_expr: MINUS With
 ##
@@ -1939,9 +1961,9 @@ interactive_expr: Map With
 
 Ill-formed map expression.
 At this point, one of the following is expected:
-  * the brackets '[]' or the keyword 'end' if the map is empty;
   * key/value bindings separated by semicolons ';';
-  * as the previous case, but enclosed between brackets '[' and ']'.
+  * an opening bracket '[' followed by a binding;
+  * the brackets '[]' or the keyword 'end' if the map is empty;
 Note: A binding is made of two expressions (a key and a value)
 separated by an arrow '->'.
 
@@ -1967,6 +1989,10 @@ interactive_expr: Ident With Record Ident EQ With
 ## The known suffix of the stack is as follows:
 ## field_path EQ
 ##
+
+Ill-formed record update.
+At this point, the field value (update) is expected as an expression.
+
 interactive_expr: Record Ident EQ With
 ##
 ## Ends in an error in state: 133.
@@ -1977,9 +2003,8 @@ interactive_expr: Record Ident EQ With
 ## Ident EQ
 ##
 
-Ill-formed record field assignment.
-At this point, an expression is expected, whose value is that of the
-field.
+Ill-formed record expression.
+At this point, the field value is expected as an expression.
 
 interactive_expr: Record LBRACKET With
 ##
@@ -1993,8 +2018,9 @@ interactive_expr: Record LBRACKET With
 ##
 
 Ill-formed record expression.
-At this point, field assignments separated by semicolons ';' are
-expected.
+At this point, one of the following is expected:
+  * field assignments separated by semicolons ';';
+  * a closing bracket ']' if the record is empty.
 
 interactive_expr: Set LBRACKET With
 ##
@@ -2027,9 +2053,9 @@ interactive_expr: Set With
 
 Ill-formed set expression.
 At this point, one of the following is expected:
-  * the brackets '[]' or the keyword 'end' if the set is empty;
   * set elements (expressions) separated by semicolons ';';
-  * as the previous case, but enclosed between brackets '[' and ']'.
+  * an opening bracket '[' followed by a set element as an expression;
+  * the brackets '[]' or the keyword 'end' if the set is empty.
 
 interactive_expr: Verbatim CARET With
 ##
@@ -4038,7 +4064,9 @@ interactive_expr: Begin For Ident In List UIdent While
 ## In state 370, spurious reduction of production expr -> base_expr(expr)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed bounded loop over a map.
+At this point, the body of the loop is expected as a block of
+statements (instructions and declarations).
 
 interactive_expr: Begin For Ident ASS UIdent While
 ##
@@ -4071,7 +4099,10 @@ interactive_expr: Begin For Ident ASS UIdent While
 ## In state 370, spurious reduction of production expr -> base_expr(expr)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed bounded loop over a numerical interval.
+At this point, if the initial value of the index is complete, the
+keyword 'to' is expected, followed by an expression whose value is the
+final value of the index.
 
 interactive_expr: Begin For Ident ASS UIdent To UIdent While
 ##
@@ -4104,7 +4135,13 @@ interactive_expr: Begin For Ident ASS UIdent To UIdent While
 ## In state 370, spurious reduction of production expr -> base_expr(expr)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed bounded loop over a numerical interval.
+At this point, if the final value of the index is complete, one of the
+following is expected:
+  * a step clause introduced by the keyword 'step' and followed by
+    the index increment as an expression;
+  * a loop body as a block of statements (instructions and
+    declarations).
 
 interactive_expr: Begin For Ident ARROW Ident In Map UIdent While
 ##
@@ -4136,7 +4173,9 @@ interactive_expr: Begin For Ident ARROW Ident In Map UIdent While
 ## In state 370, spurious reduction of production expr -> base_expr(expr)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed bounded loop over a map.
+At this point, if the collection is complete, the body of the loop is
+expected as a block of statements (instructions and declarations).
 
 interactive_expr: Begin Case UIdent While
 ##
@@ -4169,7 +4208,9 @@ interactive_expr: Begin Case UIdent While
 ## In state 370, spurious reduction of production expr -> base_expr(expr)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed case instruction.
+At this point, if the condition is complete, the keyword 'of' is
+expected, followed by case clauses separated by vertical bars '|'.
 
 interactive_expr: Begin LPAR UIdent RPAR With
 ##
@@ -4182,28 +4223,11 @@ interactive_expr: Begin LPAR UIdent RPAR With
 ## par(expr)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
-
-interactive_expr: Begin If UIdent Then If UIdent Then Skip With
-##
-## Ends in an error in state: 592.
-##
-## if_then_else_instr(closed_instr) -> If expr Then test_clause(closed_instr) . Else test_clause(closed_instr) [ Else ]
-## if_then_else_instr(instruction) -> If expr Then test_clause(closed_instr) . Else test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
-##
-## The known suffix of the stack is as follows:
-## If expr Then test_clause(closed_instr)
-##
-## WARNING: This example involves spurious reductions.
-## This implies that, although the LR(1) items shown above provide an
-## accurate view of the past (what has been recognized so far), they
-## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 474, spurious reduction of production base_instr(closed_instr,closed_expr) -> Skip
-## In state 615, spurious reduction of production closed_instr -> base_instr(closed_instr,closed_expr)
-## In state 610, spurious reduction of production test_clause(closed_instr) -> closed_instr
-##
-
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed selection from a record, tuple or map.
+At this point, one of the following is expected:
+  * the selection symbol '.', followed either by a record field name
+    or a tuple component number;
+  * an opening bracket '[' if looking up a value in a map.
 
 interactive_expr: Begin If UIdent Then Ident With
 ##
@@ -4225,7 +4249,9 @@ interactive_expr: Begin If UIdent Then Ident With
 ## In state 554, spurious reduction of production lhs -> path_expr
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed assignment.
+At this point, if the left-hand side is complete, the assignment
+symbol ':=' is expected, followed by an expression.
 
 interactive_expr: Begin If UIdent Then Ident ASS With
 ##
@@ -4238,7 +4264,8 @@ interactive_expr: Begin If UIdent Then Ident ASS With
 ## lhs ASS
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed assignment.
+At this point, the right-hand side is expected as an expression.
 
 interactive_expr: Ident LBRACKET UIdent While
 ##
@@ -4270,7 +4297,9 @@ interactive_expr: Ident LBRACKET UIdent While
 ## In state 370, spurious reduction of production expr -> base_expr(expr)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed map lookup.
+At this point, if the expression denoting the key is complete, a
+closing bracket ']' is expected.
 
 interactive_expr: Begin While UIdent While
 ##
@@ -4302,7 +4331,10 @@ interactive_expr: Begin While UIdent While
 ## In state 370, spurious reduction of production expr -> base_expr(expr)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed general loop.
+At this point, if the condition is complete, the body of the loop is
+expected as a block of instructions (starting either with the keyword
+'block' or 'begin').
 
 interactive_expr: BigMap LBRACKET UIdent ARROW UIdent While
 ##
@@ -4337,7 +4369,12 @@ interactive_expr: BigMap LBRACKET UIdent ARROW UIdent While
 ## In state 639, spurious reduction of production sep_or_term_list(binding,SEMI) -> nsepseq(binding,SEMI)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed big_map expression.
+At this point, one of the following is expected:
+  * a semicolon ';' followed by more key/value bindings;
+  * a closing bracket ']' if the big_map is complete.
+Note: A binding is made of two expressions (a key and a value)
+separated by an arrow '->'.
 
 interactive_expr: BigMap UIdent While
 ##
@@ -4369,7 +4406,9 @@ interactive_expr: BigMap UIdent While
 ## In state 370, spurious reduction of production expr -> base_expr(expr)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed key/value binding in a map.
+At this point, if the key is complete, an arrow '->' is expected,
+followed by an expression denoting the value associated to the key.
 
 interactive_expr: BigMap UIdent ARROW UIdent While
 ##
@@ -4404,7 +4443,11 @@ interactive_expr: BigMap UIdent ARROW UIdent While
 ## In state 639, spurious reduction of production sep_or_term_list(binding,SEMI) -> nsepseq(binding,SEMI)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed big map expression.
+At this point, if the binding is complete, one of the following is
+expected:
+  * a semicolon ';' followed by more key/value bindings;
+  * the keyword 'end' if the big map is complete.
 
 interactive_expr: Case UIdent While
 ##
@@ -4437,7 +4480,12 @@ interactive_expr: Case UIdent While
 ## In state 370, spurious reduction of production expr -> base_expr(expr)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed case expression.
+At this point, if the condition is complete, the keyword 'of' is
+expected, followed with a series of case clauses separated by vertical
+bars '|'.
+Note: A clause, here, is made of a pattern and an expression,
+separated by an arrow '->'.
 
 interactive_expr: Case UIdent Of LBRACKET UIdent ARROW UIdent While
 ##
@@ -4472,7 +4520,13 @@ interactive_expr: Case UIdent Of LBRACKET UIdent ARROW UIdent While
 ## In state 657, spurious reduction of production cases(expr) -> nsepseq(case_clause(expr),VBAR)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed case expression.
+At this point, if the case clause is complete, one of the following is
+expected:
+  * a vertical bar '|' followed by another clause;
+  * a closing bracket ']' if the case is complete.
+Note: A clause, here, is made of a pattern and an expression separated
+by an arrow '->'.
 
 interactive_expr: Case UIdent Of UIdent ARROW UIdent While
 ##
@@ -4507,7 +4561,13 @@ interactive_expr: Case UIdent Of UIdent ARROW UIdent While
 ## In state 657, spurious reduction of production cases(expr) -> nsepseq(case_clause(expr),VBAR)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed case expression.
+At this point, if the case clause is complete, one of the following is
+expected:
+  * a vertical bar '|' followed by another clause;
+  * the keyword 'end' if the case is complete.
+Note: A clause, here, is made of a pattern and an expression separated
+by an arrow '->'.
 
 interactive_expr: LPAR UIdent COMMA UIdent While
 ##
@@ -4541,7 +4601,11 @@ interactive_expr: LPAR UIdent COMMA UIdent While
 ## In state 678, spurious reduction of production tuple(expr) -> expr COMMA nsepseq(expr,COMMA)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed tuple expression.
+At this point, if the component is complete, one of the following is
+expected:
+  * a comma ',' followed by another component as an expression;
+  * a closing parenthesis ')' if the tuple is complete.
 
 interactive_expr: LPAR UIdent While
 ##
@@ -4574,7 +4638,11 @@ interactive_expr: LPAR UIdent While
 ## In state 370, spurious reduction of production expr -> base_expr(expr)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed expression.
+At this point, if the expression is complete, one of the following is
+expected:
+  * a comma ',' followed by an expression, if defining a tuple;
+  * a closing parenthesis ')' if defining a parenthesised expression.
 
 interactive_expr: Lang UIdent While
 ##
@@ -4606,7 +4674,9 @@ interactive_expr: Lang UIdent While
 ## In state 370, spurious reduction of production expr -> base_expr(expr)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed code injection.
+At this point, if the expression denoting the code to inject is
+complete, then a closing bracket ']' is expected.
 
 interactive_expr: List LBRACKET UIdent While
 ##
@@ -4640,7 +4710,11 @@ interactive_expr: List LBRACKET UIdent While
 ## In state 691, spurious reduction of production sep_or_term_list(expr,SEMI) -> nsepseq(expr,SEMI)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed list of expressions.
+At this point, if the list element is complete, one of the following
+is expected:
+  * a semicolon ';' followed by another element as an expression;
+  * a closing bracket ']' if the list is complete.
 
 interactive_expr: List UIdent While
 ##
@@ -4674,7 +4748,11 @@ interactive_expr: List UIdent While
 ## In state 691, spurious reduction of production sep_or_term_list(expr,SEMI) -> nsepseq(expr,SEMI)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed list of expressions.
+At this point, if the list element is complete, one of the following
+is expected:
+  * a semicolon ';' followed by another element as an expression;
+  * the keyword 'end' if the list is complete.
 
 interactive_expr: Map LBRACKET UIdent ARROW UIdent While
 ##
@@ -4709,7 +4787,13 @@ interactive_expr: Map LBRACKET UIdent ARROW UIdent While
 ## In state 639, spurious reduction of production sep_or_term_list(binding,SEMI) -> nsepseq(binding,SEMI)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed map expression.
+At this point, if the key/value binding is complete, one of the
+following is expected:
+  * a semicolon ';' followed by another key/value binding;
+  * a closing bracket ']' if the map is complete.
+Note: A binding is made of two expressions (a key and a value)
+separated by an arrow '->'.
 
 interactive_expr: Record LBRACKET Ident While
 ##
@@ -4729,7 +4813,11 @@ interactive_expr: Record LBRACKET Ident While
 ## In state 712, spurious reduction of production sep_or_term_list(field_assignment,SEMI) -> nsepseq(field_assignment,SEMI)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed record expression.
+At this point, if the field assignment is complete, one of the
+following is expected:
+  * a semicolon ';' followed by another record field assignment;
+  * a closing bracket ']' if the record is complete.
 
 interactive_expr: Set LBRACKET UIdent While
 ##
@@ -4763,7 +4851,10 @@ interactive_expr: Set LBRACKET UIdent While
 ## In state 691, spurious reduction of production sep_or_term_list(expr,SEMI) -> nsepseq(expr,SEMI)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed set expression.
+At this point, one of the following is expected:
+  * a semicolon ';' followed by another set element as an expression;
+  * a closing bracket ']' if the set is complete.
 
 interactive_expr: Set UIdent While
 ##
@@ -4797,7 +4888,10 @@ interactive_expr: Set UIdent While
 ## In state 691, spurious reduction of production sep_or_term_list(expr,SEMI) -> nsepseq(expr,SEMI)
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed set expression.
+At this point, one of the following is expected:
+  * a semicolon ';' followed by another set element as an expression;
+  * the keyword 'end' if the set is complete.
 
 interactive_expr: Ident LPAR UIdent While
 ##
@@ -4830,4 +4924,7 @@ interactive_expr: Ident LPAR UIdent While
 ## In state 679, spurious reduction of production nsepseq(expr,COMMA) -> expr
 ##
 
-<YOUR SYNTAX ERROR MESSAGE HERE>
+Ill-formed function call.
+At this point, if the argument is complete, one of the following is expected:
+  * a comma ',' followed by another argument;
+  * a closing parenthesis ')' if there are no more arguments.
