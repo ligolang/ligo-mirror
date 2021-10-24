@@ -456,14 +456,14 @@ module T =
 
     (* Natural numbers *)
 
-    type nat_err = Wrong_nat_syntax (* Not used in CameLIGO *)
+    type nat_err = Wrong_nat_syntax of string (* Not used in CameLIGO *)
 
     let mk_nat nat z region =
       Ok (Nat Region.{region; value = (nat ^ "n", z)})
 
     (* Mutez *)
 
-    type mutez_err = Wrong_mutez_syntax (* Not used in CameLIGO *)
+    type mutez_err = Wrong_mutez_syntax of string (* Not used in CameLIGO *)
 
     let mk_mutez nat ~suffix int64 region =
       Ok (Mutez Region.{region; value = (nat ^ suffix, int64)})
@@ -533,7 +533,7 @@ module T =
 
     (* Code injection *)
 
-    type lang_err = Wrong_lang_syntax
+    type lang_err = Wrong_lang_syntax of string (* Not used in CameLIGO *)
 
     let mk_lang lang region = Ok (Lang Region.{value=lang; region})
 

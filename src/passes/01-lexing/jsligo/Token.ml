@@ -578,16 +578,17 @@ module T =
 
     (* Natural numbers *)
 
-    type nat_err = Wrong_nat_syntax
+    type nat_err = Wrong_nat_syntax of string
 
-    let mk_nat _nat _z _region = Error Wrong_nat_syntax
+    let mk_nat _nat _z _region =
+      Error (Wrong_nat_syntax "Example: \"12334 as nat\".")
 
     (* Mutez *)
 
-    type mutez_err = Wrong_mutez_syntax
+    type mutez_err = Wrong_mutez_syntax of string
 
     let mk_mutez _nat ~suffix:_ _int64 _region =
-      Error Wrong_mutez_syntax
+      Error (Wrong_mutez_syntax "Example: \"1234 as mutez\".")
 
     (* End-Of-File *)
 
@@ -680,16 +681,18 @@ module T =
 
     (* Code injection *)
 
-    type lang_err = Wrong_lang_syntax
+    type lang_err = Wrong_lang_syntax of string
 
-    let mk_lang _lang _region = Error Wrong_lang_syntax
+    let mk_lang _lang _region =
+      Error (Wrong_lang_syntax
+               "Example: \"(Michelson `{UNPAIR; ADD}`\
+                         as ((n: [nat, nat]) => nat))\".")
 
     (* PREDICATES *)
 
     let is_eof = function EOF _ -> true | _ -> false
 
-    let support_string_delimiter c =
-      c = '"' || c = '\''
+    let support_string_delimiter c = (c = '"')
 
     let verbatim_delimiters = ("`", "`")
   end

@@ -24,10 +24,10 @@ module Make (Token : Token.S) =
       Unexpected_character of char
     | Non_canonical_zero
     | Invalid_symbol of string
-    | Wrong_nat_syntax
-    | Wrong_mutez_syntax
-    | Wrong_lang_syntax
-    | Unterminated_verbatim
+    | Wrong_nat_syntax of string
+    | Wrong_mutez_syntax of string
+    | Wrong_lang_syntax of string
+    | Unterminated_verbatim of string
     | Invalid_linemarker_argument
     | Overflow_mutez
     | Underflow_mutez
@@ -43,18 +43,15 @@ module Make (Token : Token.S) =
     | Invalid_symbol s ->
         sprintf "Invalid symbol: %S.\n\
                  Hint: Check the LIGO syntax you use." s
-    | Wrong_nat_syntax ->
-        "Wrong nat syntax.\n\
-         Hint: Check the documentation of your LIGO dialect."
-    | Wrong_mutez_syntax ->
-        "Wrong (mu)tez syntax.\n\
-         Hint: Check the documentation of your LIGO dialect."
-    | Wrong_lang_syntax ->
-        "Wrong code injection syntax.\n\
-         Hint: Check the documentation of your LIGO dialect."
-    | Unterminated_verbatim ->
-        "Unterminated verbatim.\n\
-         Hint: Close with \"|}\"."
+    | Wrong_nat_syntax hint ->
+        sprintf "Wrong nat syntax.\n%s" hint
+    | Wrong_mutez_syntax hint ->
+        sprintf "Wrong mutez syntax.\n%s" hint
+    | Wrong_lang_syntax hint ->
+        sprintf "Wrong code injection syntax.\n%s" hint
+    | Unterminated_verbatim term ->
+        sprintf "Unterminated verbatim.\n\
+                 Hint: Close with %S." term
     | Invalid_linemarker_argument ->
         "Unexpected or invalid linemarker argument.\n\
          Hint: The optional argument is either 1 or 2."
@@ -122,8 +119,8 @@ module Make (Token : Token.S) =
       then fail region Non_canonical_zero
       else match Token.mk_nat nat z region with
              Ok token -> Core.Token token, state
-           | Error Token.Wrong_nat_syntax ->
-               fail region Wrong_nat_syntax
+           | Error (Token.Wrong_nat_syntax hint) ->
+               fail region (Wrong_nat_syntax hint)
 
     (* Mutez *)
 
@@ -137,8 +134,8 @@ module Make (Token : Token.S) =
           else let suffix = "mutez" in
                match Token.mk_mutez nat ~suffix mutez_64 region with
                  Ok token -> Core.Token token, state
-               | Error Token.Wrong_mutez_syntax ->
-                   fail region Wrong_mutez_syntax
+               | Error (Token.Wrong_mutez_syntax hint) ->
+                   fail region (Wrong_mutez_syntax hint)
 
     (* Integral Tez (internally converted to mutez) *)
 
@@ -151,8 +148,8 @@ module Make (Token : Token.S) =
         then fail region Non_canonical_zero
         else match Token.mk_mutez nat ~suffix mutez_64 region with
                Ok token -> Core.Token token, state
-             | Error Token.Wrong_mutez_syntax ->
-                 fail region Wrong_mutez_syntax
+             | Error (Token.Wrong_mutez_syntax hint) ->
+                 fail region (Wrong_mutez_syntax hint)
       with Z.Overflow -> fail region Overflow_mutez
 
     (* Tez as a decimal number (internally converted to mutez) *)
@@ -175,8 +172,8 @@ module Make (Token : Token.S) =
           else let lexeme = integral ^ "." ^ fractional in
                match Token.mk_mutez lexeme ~suffix mutez_64 region with
                  Ok token -> Core.Token token, state
-               | Error Token.Wrong_mutez_syntax ->
-                   fail region Wrong_mutez_syntax
+               | Error (Token.Wrong_mutez_syntax hint) ->
+                   fail region (Wrong_mutez_syntax hint)
         with Z.Overflow -> fail region Overflow_mutez
       else fail region Underflow_mutez
 
@@ -208,8 +205,8 @@ module Make (Token : Token.S) =
       let lang     = Region.{value=lang; region=lang_reg} in
       match Token.mk_lang lang region with
         Ok token -> Core.Token token, state
-      | Error Token.Wrong_lang_syntax ->
-          fail region Wrong_lang_syntax
+      | Error (Token.Wrong_lang_syntax hint) ->
+          fail region (Wrong_lang_syntax hint)
 
     (* Symbols *)
 
@@ -321,7 +318,7 @@ and scan_verbatim verbatim_end thread state = parse
 | nl as nl { let ()    = Lexing.new_line lexbuf
              and state = state#set_pos (state#pos#new_line nl) in
              scan_verbatim verbatim_end (thread#push_string nl) state lexbuf }
-| eof      { fail thread#opening Unterminated_verbatim }
+| eof      { fail thread#opening (Unterminated_verbatim verbatim_end) }
 | "`"
 | "|}" as lexeme  {
   if verbatim_end = lexeme then

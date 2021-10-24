@@ -66,14 +66,14 @@ module type S =
 
     (* Natural numbers *)
 
-    type nat_err = Wrong_nat_syntax
+    type nat_err = Wrong_nat_syntax of string (* Hint *)
 
     val mk_nat :
       lexeme -> Z.t -> Region.t -> (token, nat_err) result
 
     (* Mutez *)
 
-    type mutez_err = Wrong_mutez_syntax
+    type mutez_err = Wrong_mutez_syntax of string (* Hint *)
 
     val mk_mutez :
       lexeme -> suffix:string -> Int64.t ->
@@ -93,7 +93,7 @@ module type S =
 
     (* Code injection *)
 
-    type lang_err = Wrong_lang_syntax
+    type lang_err = Wrong_lang_syntax of string (* Hint *)
 
     val mk_lang :
       lexeme Region.reg -> Region.t -> (token, lang_err) result
