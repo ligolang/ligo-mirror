@@ -263,7 +263,7 @@ let terminate_decl semi = function
 %on_error_reduce nsepseq(case_clause(test_clause(instruction)),VBAR)
 %on_error_reduce lhs
 %on_error_reduce nsepseq(statement,SEMI)
-%on_error_reduce ctor_app(tuple_pattern)
+%on_error_reduce ctor_app(ctor_params)
 %on_error_reduce update_expr_level
 %on_error_reduce nsepseq(param_decl,SEMI)
 %on_error_reduce nsepseq(selection,DOT)
@@ -288,11 +288,8 @@ let terminate_decl semi = function
 %on_error_reduce disj_expr_level
 %on_error_reduce nsepseq(variant,VBAR)
 %on_error_reduce core_pattern
-%on_error_reduce nsepseq(type_expr,COMMA)
 %on_error_reduce expr
-%on_error_reduce nsepseq(expr,COMMA)
 %on_error_reduce option(SEMI)
-%on_error_reduce option(VBAR)
 %on_error_reduce nseq(top_declaration)
 %on_error_reduce nseq(Attr)
 
@@ -361,7 +358,7 @@ sep_or_term_list(item,sep):
 (* Aliasing and inlining some tokens *)
 
 %inline variable        : "<ident>"  { $1 }
-%inline type_var        : "<ident>"  { $1 }
+%inline type_param      : "<ident>"  { $1 }
 %inline type_name       : "<ident>"  { $1 }
 %inline fun_name        : "<ident>"  { $1 }
 %inline field_name      : "<ident>"  { $1 }
@@ -423,7 +420,7 @@ declaration:
 (* Type declarations *)
 
 type_decl:
-  "type" type_name type_params? "is" type_expr {
+  "type" type_name ioption(type_params) "is" type_expr {
     let stop   = type_expr_to_region $5 in
     let region = cover $1 stop in
     let value  = {kwd_type=$1; name=$2; params=$3; kwd_is=$4;
@@ -431,7 +428,7 @@ type_decl:
     in {region; value} }
 
 type_params:
-  par(nsepseq(type_var,",")) { $1 }
+  par(nsepseq(type_param,",")) { $1 }
 
 (* Type expressions
 
@@ -590,6 +587,9 @@ record_type:
     and value = {$2 with value = {$2.value with attributes=$1}}
     in {region; value} }
 
+(* When the type annotation is missing in a field declaration, the
+   type of the field is taken to be have the name of the field. *)
+
 field_decl:
   attributes field_name ioption(type_annotation) {
     let stop = match $3 with
@@ -601,7 +601,12 @@ field_decl:
     let value = {attributes=$1; field_name=$2; field_type=$3}
     in {region; value} }
 
-type_annotation:
+  (* Inlining the definition of the non-terminal [type_annotation]
+     enables the syntactic context of its occurrences, yielding more
+     precise syntax error messages. (Otherwise we have only one error
+     message about a type annotation in all contexts). *)
+
+%inline type_annotation:
   ":" type_expr { $1,$2 }
 
 (* Constant declarations *)
@@ -850,7 +855,7 @@ case(rhs):
   terse_case(rhs) | verb_case(rhs) { $1 }
 
 terse_case(rhs):
-  "case" expr "of" "[" "|"? cases(rhs) "]" {
+  "case" expr "of" "[" ioption("|") cases(rhs) "]" {
     fun rhs_to_region ->
       let enclosing = Brackets ($4,$7)
       and cases     = $6 rhs_to_region in
@@ -860,7 +865,7 @@ terse_case(rhs):
       in {region; value} }
 
 verb_case(rhs):
-  "case" expr "of" "|"? cases(rhs) "end" {
+  "case" expr "of" ioption("|") cases(rhs) "end" {
     fun rhs_to_region ->
       let enclosing = End $6
       and cases     = $5 rhs_to_region in
@@ -971,7 +976,11 @@ for_in:
 step_clause:
   "step" expr { $1,$2 }
 
-collection:
+(* The inlining of the non-terminal [collection] enables the exact
+   syntactic context to become available for syntax error messages,
+   that is, the kind of collection will be known. *)
+
+%inline collection:
   "set"  { `Set  $1 }
 | "list" { `List $1 }
 
@@ -1344,7 +1353,7 @@ field_path:
     and value  = {record=$1; selector=$2; field_path=$3}
     in E_Proj {region; value}
   }
-| record_or_tuple { E_Var $1 }
+| variable { E_Var $1 }
 
 selection:
   field_name { FieldName $1 }
@@ -1461,13 +1470,23 @@ core_pattern:
 list_pattern:
   injection("list",core_pattern) { $1 mk_list }
 
-(* Constructed patterns *)
-
-ctor_pattern:
-  ctor_app(tuple_pattern) { $1 }
+(* Tuple pattern *)
 
 tuple_pattern:
   par(tuple(pattern)) { $1 }
+
+(* Constructed patterns (note how we do not reuse [tuple_pattern] in
+   order to obtain more syntactic contexts for the error messages:
+   discriminate between tuple patterns and constructor parameters. *)
+
+ctor_pattern:
+  ctor_app(ctor_params) { $1 }
+
+ctor_params:
+  par(tuple(ctor_param_pattern)) { $1 }
+
+ctor_param_pattern:
+  pattern { $1 }
 
 (* Record patterns *)
 
