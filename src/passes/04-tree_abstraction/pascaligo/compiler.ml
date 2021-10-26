@@ -508,7 +508,10 @@ and conv ~raise : ?const:bool -> CST.pattern -> AST.ty_expr AST.pattern =
      let (var,loc) = r_split var in
      let attributes = if const then Stage_common.Helpers.const_attribute else Stage_common.Helpers.var_attribute in
     let b =
-      let var = Location.wrap ~loc @@ Var.of_name var.variable.value in
+      let var = Location.wrap ~loc @@ match var.variable.value with
+        | "_" -> Var.fresh ()
+        | var -> Var.of_name var
+      in
       { var ; ascr = None ; attributes }
     in
     Location.wrap ~loc @@ P_var b
@@ -982,7 +985,7 @@ and compile_declaration ~raise : CST.declaration -> _ =
         in
         List.fold_right ~f:aux ~init:rhs lst
     in
-    return region @@ AST.Declaration_type {type_binder=Var.of_name name; type_expr}
+    return region @@ AST.Declaration_type {type_binder=Var.of_name name; type_expr; type_attr=[]}
   | ConstDecl {value={pattern; const_type; init; attributes; _}; region} -> (
     let attr = compile_attributes attributes in
     match pattern with
@@ -1006,7 +1009,7 @@ and compile_declaration ~raise : CST.declaration -> _ =
   | ModuleDecl {value={name; module_; _};region} ->
       let (name,_) = r_split name in
       let module_ = compile_module ~raise module_ in
-      let ast = AST.Declaration_module  {module_binder=name; module_}
+      let ast = AST.Declaration_module  {module_binder=name; module_; module_attr=[]}
       in return region ast
 
   | ModuleAlias {value={alias; binders; _};region} ->

@@ -149,6 +149,7 @@ let rec decompile_type_expr : dialect -> AST.type_expression -> CST.type_expr = 
     | _ -> failwith "unsupported singleton"
   )
   | T_abstraction x -> decompile_type_expr dialect x.type_
+  | T_for_all x -> decompile_type_expr dialect x.type_
 
 let get_e_variable : AST.expression -> _ = fun expr ->
   match expr.expression_content with
@@ -713,7 +714,7 @@ and decompile_declaration ~dialect : AST.declaration Location.wrap -> CST.declar
   let decl = Location.unwrap decl in
   let wrap value = ({value;region=Region.ghost} : _ Region.reg) in
   match decl with
-    Declaration_type {type_binder;type_expr} ->
+    Declaration_type {type_binder;type_expr; type_attr=_} ->
     let kwd_type = Region.ghost
     and name = decompile_variable type_binder
     and kwd_is = Region.ghost in

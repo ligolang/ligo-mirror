@@ -1490,7 +1490,8 @@ File "../../test/contracts/negative/bad_contract2.mligo", line 5, characters 9-4
   6 |   ("bad",store + 1)
 
 Invalid type for entrypoint "main".
-An entrypoint must of type "parameter * storage -> operations list * storage". |}] ;
+An entrypoint must of type "parameter * storage -> operations list * storage".
+We expected a list of operations but we got string |}] ;
 
   run_ligo_bad [ "compile" ; "contract" ; bad_contract "bad_contract3.mligo" ] ;
   [%expect {|
@@ -1642,7 +1643,7 @@ const letin_nesting =
 const letin_nesting2 =
   lambda (x : int) return let y = 2 in let z = 3 in ADD(ADD(x , y) , z)
 const x =  match (+1 , (+2 , +3)) with
-            | (_,(x,_)) -> x
+            | (#2,(x,#3)) -> x
     |}];
 
   run_ligo_good ["print" ; "ast"; contract "letin.religo"];
@@ -1664,7 +1665,7 @@ const letin_nesting =
 const letin_nesting2 =
   lambda (x : int) return let y = 2 in let z = 3 in ADD(ADD(x , y) , z)
 const x =  match (+1 , (+2 , +3)) with
-            | (_,(x,_)) -> x
+            | (#2,(x,#3)) -> x
     |}];
 
   run_ligo_bad ["print" ; "ast-typed"; contract "existential.mligo"];
@@ -1815,7 +1816,7 @@ let%expect_test _ =
     Warning: variable "Foo.x" cannot be used more than once.
 
     Error(s) occurred while checking the contract:
-    At (unshown) location 8, DUP used on the non-dupable type ticket nat.
+    At (unshown) location 8, type ticket nat cannot be used here because it is not duplicable. Only duplicable types can be used with the DUP instruction and as view inputs and outputs.
     At (unshown) location 8, Ticket in unauthorized position (type error).
   |}]
 
@@ -1830,7 +1831,7 @@ let%expect_test _ =
     Warning: variable "x" cannot be used more than once.
 
     Error(s) occurred while checking the contract:
-    At (unshown) location 8, DUP used on the non-dupable type ticket nat.
+    At (unshown) location 8, type ticket nat cannot be used here because it is not duplicable. Only duplicable types can be used with the DUP instruction and as view inputs and outputs.
     At (unshown) location 8, Ticket in unauthorized position (type error).
   |}]
 
@@ -2035,14 +2036,14 @@ let%expect_test _ =
 let%expect_test _ =
   run_ligo_good [ "print" ; "ast-typed" ; contract "attributes.jsligo" ] ;
   [%expect {|
-    const x = 1[@inline]
+    const x = 1[@inline][@private]
     const foo = lambda (a) return let test = ADD(2 ,
-    a)[@inline] in test[@inline]
-    const y = 1
+    a)[@inline] in test[@inline][@private]
+    const y = 1[@private]
     const bar = lambda (b) return let test = lambda (z) return ADD(ADD(2 ,
     b) ,
-    z)[@inline] in (test)@(b)
-    const check = 4 |}]
+    z)[@inline] in (test)@(b)[@private]
+    const check = 4[@private] |}]
 
 (* literal type "casting" inside modules *)
 let%expect_test _ =
@@ -2052,3 +2053,27 @@ let%expect_test _ =
       storage timestamp ;
       code { DROP ; PUSH timestamp 0 ; NIL operation ; PAIR } }
   |}]
+
+(* JsLIGO export testing *)
+let%expect_test _ =
+  run_ligo_bad [ "compile" ; "contract" ; bad_contract "modules_export_type.jsligo" ] ;
+    [%expect {|
+      File "../../test/contracts/negative/modules_export_type.jsligo", line 5, characters 13-16:
+        4 |
+        5 | type a = Bar.foo
+
+      Type "foo" not found. |}];
+  run_ligo_bad [ "compile" ; "contract" ; bad_contract "modules_export_const.jsligo" ] ;
+    [%expect {|
+      File "../../test/contracts/negative/modules_export_const.jsligo", line 5, characters 12-15:
+        4 |
+        5 | let a = Bar.foo;
+
+      Variable "foo" not found. |}];
+  run_ligo_bad [ "compile" ; "contract" ; bad_contract "modules_export_namespace.jsligo" ] ;
+    [%expect {|
+      File "../../test/contracts/negative/modules_export_namespace.jsligo", line 7, characters 0-20:
+        6 |
+        7 | import Foo = Bar.Foo
+
+      Module "Foo" not found. |}]
