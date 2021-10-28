@@ -22,6 +22,7 @@ Inductive comb_ty : node A string -> list (node A string) -> Prop :=
     `{comb_ty c ts ->
       comb_ty (Prim l "pair" [t; c] n) (t :: ts)}.
 
+(* type-level encoding of the effect typed instructions have on the stack *)
 Inductive instr_typed : node A string -> list (node A string) -> list (node A string) -> Prop :=
 | Typed_seq {p s1 s2} :
     `{prog_typed p s1 s2 ->
@@ -112,8 +113,10 @@ with prog_typed : list (node A string) -> list (node A string) -> list (node A s
     prog_typed (i :: p) s1 s3
 .
 
+(* if an instruction i goes from stack s1 to s2, then it can also operate on a larger stack, going from (s1 ++ r) to (s2 ++ r). *)
 Fixpoint weak_instr {i s1 s2 r} (Htyped : instr_typed i s1 s2) {struct Htyped} :
   instr_typed i (s1 ++ r) (s2 ++ r)
+(* if a program p goes from stack s1 to s2, then it can also operate on a larger stack, going from (s1 ++ r) to (s2 ++ r). *)
 with weak_prog {p s1 s2 r} (Htyped : prog_typed p s1 s2) {struct Htyped} :
   prog_typed p (s1 ++ r) (s2 ++ r).
 Proof.
