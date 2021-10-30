@@ -10,8 +10,9 @@ module Directive = LexerLib.Directive
 module Utils     = Simple_utils.Utils
 module Region    = Simple_utils.Region
 
-open Utils
 type 'a reg = 'a Region.reg
+
+open Utils
 
 (* Lexemes *)
 
@@ -119,7 +120,7 @@ type 'a par = {
   rpar   : rpar
 }
 
-(* Brackets compounds *)
+(* Brackets *)
 
 type 'a brackets = {
   lbracket : lbracket;
@@ -129,15 +130,16 @@ type 'a brackets = {
 
 (* Collections *)
 
-type removable = [
-  `Map    of kwd_map
+type iterable = [
+  `List   of kwd_list
+| `Map    of kwd_map
 | `BigMap of kwd_big_map
 | `Set    of kwd_set
 ]
 
-type iterable = [
-  `List of kwd_list
-| removable
+type compound_type = [
+  iterable
+| `Record of kwd_record
 ]
 
 (* The Concrete Syntax Tree *)
@@ -166,7 +168,7 @@ and declaration =
 | D_ModAlias  of module_alias reg
 | D_Type      of type_decl    reg
 
-(* Constant declaration *)
+(* Declarations of constants *)
 
 and const_decl = {
   kwd_const  : kwd_const;
@@ -247,26 +249,28 @@ and type_vars = (type_var, comma) nsepseq par reg
    add or modify some, please make sure they remain in order. *)
 
 and type_expr =
-  T_Ctor    of type_ctor_app reg
+  T_Cart    of cartesian
+| T_Ctor    of type_ctor_app reg
 | T_Fun     of (type_expr * arrow * type_expr) reg
 | T_Int     of (lexeme * Z.t) reg
-| T_ModPath of type_name module_path reg
+| T_ModPath of type_expr module_path reg
 | T_Par     of type_expr par reg
-| T_Cart    of cartesian
-| T_Record  of field_decl reg injection reg
+| T_Record  of field_decl reg compound reg
 | T_String  of lexeme reg
 | T_Sum     of sum_type reg
 | T_Var     of variable
 
-(* Application of type constructors *)
-
-and type_ctor_app = type_ctor module_path reg * type_tuple option
+(* Type expressions selected from a module *)
 
 and 'a module_path = {
   module_path : (module_name, dot) nsepseq;
   selector    : dot;
   field       : 'a
 }
+
+(* Application of type constructors *)
+
+and type_ctor_app = type_ctor module_path reg * type_tuple
 
 and type_tuple = (type_expr, comma) nsepseq par reg
 
@@ -284,11 +288,12 @@ and field_decl = {
 
 (* Injections *)
 
-and 'a injection = {
-  kind       : iterable;
+and 'a compound = {
+  kind       : compound_type;
   enclosing  : enclosing;
   elements   : ('a, semi) sepseq;
-  terminator : semi option
+  terminator : semi option;
+  attributes : attributes
 }
 
 and enclosing =
@@ -336,19 +341,16 @@ and var_decl = {
    add or modify some, please make sure they remain in order. *)
 
 and instruction =
-  I_Assign      of assignment reg
-| I_Call        of call
-| I_Case        of test_clause case reg
-| I_Cond        of (test_clause, test_clause) conditional reg
-| I_For         of for_int reg
-| I_ForIn       of for_in reg
-| I_MapPatch    of binding patch reg
-| I_MapRem      of removal reg
-| I_RecordPatch of expr field patch reg
-| I_Skip        of kwd_skip
-| I_SetPatch    of expr patch reg
-| I_SetRem      of removal reg
-| I_While       of while_loop reg
+  I_Assign of assignment reg
+| I_Call   of call
+| I_Case   of test_clause case reg
+| I_Cond   of (test_clause, test_clause) conditional reg
+| I_For    of for_int reg
+| I_ForIn  of for_in reg
+| I_Patch  of patch reg
+| I_Remove of removal reg
+| I_Skip   of kwd_skip
+| I_While  of while_loop reg
 
 (* Assignment *)
 
@@ -413,7 +415,7 @@ and ('if_so, 'if_not) conditional = {
 
 and for_int = {
   kwd_for : kwd_for;
-  binder  : variable;
+  index   : variable;
   assign  : assign;
   init    : expr;
   kwd_to  : kwd_to;
@@ -436,11 +438,11 @@ and for_in = {
 
 (* Patches *)
 
-and 'a patch = {
+and patch = {
   kwd_patch  : kwd_patch;
   collection : expr;
   kwd_with   : kwd_with;
-  delta      : 'a injection reg
+  delta      : expr
 }
 
 and binding = {
@@ -455,7 +457,6 @@ and removal = {
   kwd_remove : kwd_remove;
   item       : expr;
   kwd_from   : kwd_from;
-  keyword    : removable;
   collection : expr
 }
 
@@ -475,21 +476,25 @@ and while_loop = {
 and pattern =
   P_Bytes  of (lexeme * Hex.t) reg
 | P_Cons   of (pattern, cons) nsepseq reg
-| P_Ctor   of data_ctor_pattern
+| P_Ctor   of data_ctor_pattern reg
 | P_Int    of (lexeme * Z.t) reg
-| P_List   of pattern injection reg
+| P_List   of pattern compound reg
 | P_Nat    of (lexeme * Z.t) reg
 | P_Nil    of kwd_nil
 | P_Par    of pattern par reg
-| P_Record of pattern field reg injection reg
+| P_Record of record_pattern reg
 | P_String of lexeme reg
 | P_Tuple  of tuple_pattern
 | P_Typed  of typed_pattern reg
 | P_Var    of var_pattern reg
 
+(* Record pattern *)
+
+and record_pattern = (var_pattern, pattern) field reg compound
+
 (* Pattern for data constructor application *)
 
-and data_ctor_pattern = (ctor module_path reg * tuple_pattern option) reg
+and data_ctor_pattern = ctor module_path reg * tuple_pattern option
 
 and tuple_pattern = (pattern, comma) nsepseq par reg
 
@@ -500,19 +505,19 @@ and typed_pattern = {
   type_annot : type_annotation
 }
 
-(* Record pattern *)
+(* Record fields *)
 
-and 'rhs field =
-  Punned   of punned
-| Complete of 'rhs full_field
+and ('lhs, 'rhs) field =
+  Punned   of 'lhs punned
+| Complete of ('lhs, 'rhs) full_field
 
-and punned = {
-  pun        : field_name;  (* Can be "_" *)
+and 'lhs punned = {
+  pun        : 'lhs;  (* Can be "_" *)
   attributes : attributes
 }
 
-and 'rhs full_field = {
-  field_name : field_name; (* Cannot be "_" *)
+and ('lhs, 'rhs) full_field = {
+  field_lhs  : 'lhs; (* Cannot be "_" *)
   assign     : equal;
   field_rhs  : 'rhs;
   attributes : attributes
@@ -526,7 +531,7 @@ and 'rhs full_field = {
 and expr =
   E_Add       of plus bin_op reg               (* "+"   *)
 | E_And       of kwd_and bin_op reg            (* "and" *)
-| E_BigMap    of binding reg injection reg
+| E_BigMap    of binding reg compound reg
 | E_Block     of block_with reg
 | E_Bytes     of (lexeme * Hex.t) reg
 | E_Call      of call
@@ -543,9 +548,9 @@ and expr =
 | E_Gt        of gt bin_op reg                 (* ">"   *)
 | E_Int       of (lexeme * Z.t) reg
 | E_Leq       of leq bin_op reg                (* "<="  *)
-| E_List      of expr injection reg
+| E_List      of expr compound reg
 | E_Lt        of lt bin_op reg                 (* "<"   *)
-| E_Map       of binding reg injection reg
+| E_Map       of binding reg compound reg
 | E_MapLookup of map_lookup reg
 | E_Mod       of kwd_mod bin_op reg            (* "mod" *)
 | E_Mult      of times bin_op reg              (* "*"   *)
@@ -558,7 +563,7 @@ and expr =
 | E_Or        of kwd_or bin_op reg             (* "or"  *)
 | E_Par       of expr par reg
 | E_Record    of record_expr reg
-| E_Set       of expr injection reg
+| E_Set       of expr compound reg
 | E_SetMem    of set_membership reg
 | E_String    of lexeme reg
 | E_Sub       of minus bin_op reg              (* "a-b" *)
@@ -619,7 +624,7 @@ and fun_expr = {
 (* Map lookup *)
 
 and map_lookup = {
-  map   : path;
+  map   : expr;
   index : expr brackets reg
 }
 
@@ -643,7 +648,7 @@ and selection =
 
 (* Record expression *)
 
-and record_expr = expr field reg injection
+and record_expr = (path, expr) field reg compound
 
 (* Set membership *)
 
@@ -657,18 +662,12 @@ and set_membership = {
 
 and typed_expr = expr * type_annotation
 
-(* Record update *)
+(* Updates *)
 
 and update = {
-  record   : expr;
-  kwd_with : kwd_with;
-  updates  : field_path_assignment reg injection reg
-}
-
-and field_path_assignment = {
-  field_lhs : path;
-  assign    : equal;
-  field_rhs : expr
+  structure : expr;
+  kwd_with  : kwd_with;
+  update    : expr
 }
 
 (* PROJECTING REGIONS *)
@@ -776,19 +775,16 @@ let path_to_region = function
    please make sure they remain in order. *)
 
 let instr_to_region = function
-  I_Assign      {region; _}
-| I_Call        {region; _}
-| I_Case        {region; _}
-| I_Cond        {region; _}
-| I_For         {region; _}
-| I_ForIn       {region; _}
-| I_MapPatch    {region; _}
-| I_MapRem      {region; _}
-| I_RecordPatch {region; _}
-| I_Skip         region
-| I_SetPatch    {region; _}
-| I_SetRem      {region; _}
-| I_While       {region; _}
+  I_Assign {region; _}
+| I_Call   {region; _}
+| I_Case   {region; _}
+| I_Cond   {region; _}
+| I_For    {region; _}
+| I_ForIn  {region; _}
+| I_Patch  {region; _}
+| I_Remove {region; _}
+| I_Skip    region
+| I_While  {region; _}
   -> region
 
 let test_clause_to_region = function

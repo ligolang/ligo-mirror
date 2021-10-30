@@ -241,7 +241,8 @@ let small      = ['a'-'z']
 let capital    = ['A'-'Z']
 let letter     = small | capital
 let ident      = small (letter | '_' | digit)*
-                 | '_' (letter | '_' (letter | digit) | digit)+
+               | '_' (letter | '_' (letter | digit) | digit)+
+let ext_ident  = (letter | digit | '_' | ':')+
 let uident     = capital (letter | '_' | digit)*
 let attr       = letter (letter | '_' | ':' | digit)*
 let hexa_digit = digit | ['A'-'F' 'a'-'f']
@@ -278,7 +279,7 @@ let symbol =
    through recursive calls. *)
 
 rule scan state = parse
-  ident                   { mk_ident         state lexbuf }
+  ident | '@' ext_ident   { mk_ident         state lexbuf }
 | uident                  { mk_uident        state lexbuf }
 | bytes                   { mk_bytes bytes   state lexbuf }
 | nat "n"                 { mk_nat   nat     state lexbuf }
