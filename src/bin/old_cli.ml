@@ -246,12 +246,29 @@ let generator =
     info ~docv ~doc ["generator" ; "g"] in
   value @@ opt string "random" info
 
+let esy_installation_json = 
+  let open Arg in
+  let info =
+    let docv = "ESY_INSTALLATION_JSON" in
+    let doc = "$(docv) is path to installation.json of esy project." in
+    info ~docv ~doc ["esy-installation-json"] in
+  value @@ opt (some string) None info
+  
+let esy_lock_file = 
+  let open Arg in
+  let info =
+    let docv = "ESY_LOCK_FILE" in
+    let doc = "$(docv) is path to lock file of esy project." in
+    info ~docv ~doc ["esy-lock-file"] in
+  value @@ opt (some string) None info
+  
+
 module Api = Ligo_api
 let compile_file =
-  let f source_file entry_point oc_views syntax infer protocol_version display_format disable_typecheck michelson_format output_file warn werror =
+  let f source_file entry_point oc_views syntax infer protocol_version display_format disable_typecheck michelson_format output_file warn werror esy_installation_json esy_lock_file =
     return_result ~warn ?output_file @@
-    Api.Compile.contract ~werror source_file entry_point oc_views syntax infer protocol_version display_format disable_typecheck michelson_format [] in
-  let term = Term.(const f $ source_file 0 $ entry_point 1 $ on_chain_views $ syntax $ infer $ protocol_version $ display_format $ disable_michelson_typechecking $ michelson_code_format $ output_file $ warn $ werror) in
+    Api.Compile.contract ~werror source_file entry_point oc_views syntax infer protocol_version display_format disable_typecheck michelson_format [] esy_installation_json esy_lock_file in
+  let term = Term.(const f $ source_file 0 $ entry_point 1 $ on_chain_views $ syntax $ infer $ protocol_version $ display_format $ disable_michelson_typechecking $ michelson_code_format $ output_file $ warn $ werror $ esy_installation_json $ esy_lock_file) in
   let cmdname = "compile-contract" in
   let doc = "Subcommand: Compile a contract." in
   let man = [`S Manpage.s_description;
@@ -618,12 +635,12 @@ let get_scope =
   in (Term.ret term , Term.info ~man ~doc cmdname)
 
 let test =
-  let f source_file syntax steps infer protocol_version display_format =
+  let f source_file syntax steps infer protocol_version display_format esy_installation_json esy_lock_file =
     return_result @@
-    Api.Run.test source_file syntax steps infer protocol_version display_format
+    Api.Run.test source_file syntax steps infer protocol_version display_format esy_installation_json esy_lock_file
   in
   let term =
-    Term.(const f $ source_file 0 $ syntax $ steps $ infer $ protocol_version $ display_format) in
+    Term.(const f $ source_file 0 $ syntax $ steps $ infer $ protocol_version $ display_format $ esy_installation_json $ esy_lock_file) in
   let cmdname = "test" in
   let doc = "Subcommand: Test a contract with the LIGO test framework (BETA)." in
   let man = [`S Manpage.s_description;

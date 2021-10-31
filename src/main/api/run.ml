@@ -5,7 +5,7 @@ module Compile = Ligo_compile
 module Helpers   = Ligo_compile.Helpers
 module Run = Ligo_run.Of_michelson
 
-let test source_file syntax steps infer protocol_version display_format =
+let test source_file syntax steps infer protocol_version display_format esy_installation_json esy_lock_file =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (Ligo_interpreter.Formatter.tests_format) get_warnings @@
       fun ~raise ->

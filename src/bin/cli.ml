@@ -224,15 +224,29 @@ let generator =
   Clic.parameter @@
   fun _ s -> Proto_alpha_utils.Error_monad.return s
 
+let esy_installation_json =
+  let docv = "ESY_INSTALLATION_JSON" in
+  let doc = "The path to installation.json of esy project." in
+  Clic.arg ~doc ~long:"esy-installation-json" ~placeholder:docv @@
+  Clic.parameter @@
+  fun _ s -> Proto_alpha_utils.Error_monad.return s
+
+let esy_lock_file = 
+  let docv = "ESY_LOCK_FILE" in
+  let doc = "The path to lock file of esy project." in
+  Clic.arg ~doc ~long:"esy-lock-file" ~placeholder:docv @@
+  Clic.parameter @@
+  fun _ s -> Proto_alpha_utils.Error_monad.return s
+
 let global_options = Clic.no_options
 
 module Api = Ligo_api
 
 let compile_group = Clic.{name="compile";title="Commands for compiling from Ligo to Michelson"}
 let compile_file =
-  let f (entry_point, oc_views, syntax, infer, protocol_version, display_format, disable_typecheck, michelson_format, output_file, warn, werror, michelson_comments) source_file () =
+  let f (entry_point, oc_views, syntax, infer, protocol_version, display_format, disable_typecheck, michelson_format, output_file, warn, werror, michelson_comments, esy_installation_json, esy_lock_file) source_file () =
     return_result ~warn ?output_file @@
-    Api.Compile.contract ~werror source_file entry_point oc_views syntax infer protocol_version display_format disable_typecheck michelson_format michelson_comments in
+    Api.Compile.contract ~werror source_file entry_point oc_views syntax infer protocol_version display_format disable_typecheck michelson_format michelson_comments esy_installation_json esy_lock_file in
   let _doc = "Subcommand: Compile a contract." in
   let desc =     "This sub-command compiles a contract to Michelson \
                  code. It expects a source file and an entrypoint \
@@ -242,7 +256,7 @@ let compile_file =
 
     ~group:compile_group
     ~desc
-    Clic.(args12 entry_point on_chain_views syntax infer protocol_version display_format disable_michelson_typechecking michelson_code_format output_file warn werror michelson_comments)
+    Clic.(args14 entry_point on_chain_views syntax infer protocol_version display_format disable_michelson_typechecking michelson_code_format output_file warn werror michelson_comments esy_installation_json esy_lock_file)
     Clic.(prefixes ["compile"; "contract"] @@ source_file @@ stop)
     f
 
@@ -366,9 +380,9 @@ let mutate_ast =
 (** Run commands *)
 let run_group = Clic.{name="run";title="Commands for executing Ligo code"}
 let test =
-  let f (syntax, steps, infer, protocol_version, display_format) source_file () =
+  let f (syntax, steps, infer, protocol_version, display_format, esy_installation_json, esy_lock_file) source_file () =
     return_result @@
-    Api.Run.test source_file syntax steps infer protocol_version display_format
+    Api.Run.test source_file syntax steps infer protocol_version display_format esy_installation_json esy_lock_file
   in
   let _doc = "Subcommand: Test a contract with the LIGO test framework (BETA)." in
   let desc =    "This sub-command tests a LIGO contract using a LIGO \
@@ -377,7 +391,7 @@ let test =
                  procedure should rely on this sub-command alone."
   in
   Clic.command ~group:run_group ~desc
-    Clic.(args5 syntax steps infer protocol_version display_format)
+    Clic.(args7 syntax steps infer protocol_version display_format esy_installation_json esy_lock_file)
     Clic.(prefixes ["run";"test"] @@ source_file @@ stop)
     f
 

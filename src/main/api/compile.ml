@@ -7,7 +7,7 @@ module Run = Ligo_run.Of_michelson
 let no_comment node =
   Tezos_micheline.Micheline.(inject_locations (fun _ -> Simple_utils.Location.generated) (strip_locations node))
 
-let contract ?werror source_file entry_point declared_views syntax infer protocol_version display_format disable_typecheck michelson_code_format michelson_comments =
+let contract ?werror source_file entry_point declared_views syntax infer protocol_version display_format disable_typecheck michelson_code_format michelson_comments esy_installation_json esy_lock_file =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ?werror ~display_format (Formatter.Michelson_formatter.michelson_format michelson_code_format michelson_comments) get_warnings @@
       fun ~raise ->
