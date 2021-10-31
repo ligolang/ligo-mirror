@@ -233,11 +233,12 @@ let terminate_decl semi = function
 %on_error_reduce type_name_expr
 %on_error_reduce nseq(__anonymous_2)
 %on_error_reduce field_decl
-(*%on_error_reduce field_assignment*)
 %on_error_reduce test_clause(closed_instr)
 %on_error_reduce base_expr(closed_expr)
 %on_error_reduce base_expr(expr)
 %on_error_reduce base_instr(closed_instr,closed_expr)
+%on_error_reduce bin_op(disj_expr_level,Or,conj_expr_level)
+%on_error_reduce bin_op(conj_expr_level,And,set_mem_level)
 %on_error_reduce bin_op(add_expr_level,PLUS,mult_expr_level)
 %on_error_reduce bin_op(add_expr_level,MINUS,mult_expr_level)
 %on_error_reduce nseq(__anonymous_0(field_pattern,SEMI))
@@ -249,10 +250,8 @@ let terminate_decl semi = function
 %on_error_reduce nseq(__anonymous_0(field_decl,SEMI))
 %on_error_reduce nseq(__anonymous_0(field_path_assignment,SEMI))
 %on_error_reduce nseq(__anonymous_0(binding,SEMI))
-(*%on_error_reduce nseq(__anonymous_0(field_assignment,SEMI))*)
 %on_error_reduce nseq(__anonymous_0(core_pattern,SEMI))
 %on_error_reduce nseq(__anonymous_0(expr,SEMI))
-(*%on_error_reduce nsepseq(field_assignment,SEMI)*)
 %on_error_reduce nseq(__anonymous_0(statement,SEMI))
 %on_error_reduce nsepseq(case_clause(expr),VBAR)
 %on_error_reduce nsepseq(core_pattern,SEMI)
@@ -265,7 +264,6 @@ let terminate_decl semi = function
 %on_error_reduce update_expr_level
 %on_error_reduce nsepseq(param_decl,SEMI)
 %on_error_reduce nsepseq(selection,DOT)
-(*%on_error_reduce nsepseq(field_path_assignment,SEMI)*)
 %on_error_reduce field_path
 %on_error_reduce nsepseq(binding,SEMI)
 %on_error_reduce nsepseq(expr,SEMI)
@@ -451,8 +449,7 @@ type_params:
    Foo of string * int]: is it [t -> Foo of (string * int)] or [t ->
    (Foo of string) * int]? In OCaml, the closest type expressions are
    polymorphic variants, and they require delimiters in this case,
-   like so: [t -> [`Foo of string * int]]. Anyhow, this is why
-   [sum_type] is parameterised. *)
+   like so: [t -> [`Foo of string * int]]. *)
 
 type_expr:
   fun_type_level | sum_type { $1 }
@@ -486,13 +483,11 @@ core_type:
 
 (* Type names as type expressions *)
 
-type_name_expr:
-  type_name { T_Var $1 }
+type_name_expr: type_name { T_Var $1 }
 
 (* Parenthesised type expression *)
 
-par_type_expr:
-  par(type_expr) { T_Par $1 }
+par_type_expr: par(type_expr) { T_Par $1 }
 
 (* Types selected from a module *)
 
@@ -515,8 +510,7 @@ type_ctor_app:
 | "set"     par(type_expr) { apply_type_ctor "set"     $1 $2        }
 | "list"    par(type_expr) { apply_type_ctor "list"    $1 $2        }
 
-type_tuple:
-  par(nsepseq(type_expr,",")) { $1 }
+type_tuple: par(nsepseq(type_expr,",")) { $1 }
 
 (* Type qualifications
 
@@ -591,8 +585,7 @@ variant:
     and value  = {ctor=$2; args=$3; attributes=$1}
     in {region; value} }
 
-of_type_expr:
-  "of" fun_type_level { $1,$2 }
+of_type_expr: "of" fun_type_level { $1,$2 }
 
 (* Record types *)
 
@@ -600,7 +593,7 @@ record_type:
   compound("record",field_decl) { $1 mk_record }
 
 (* When the type annotation is missing in a field declaration, the
-   type of the field is taken to be have the name of the field. *)
+   type of the field is the name of the field. *)
 
 field_decl:
   attributes field_name ioption(type_annotation) {
@@ -609,17 +602,16 @@ field_decl:
                | Some (_, t) -> type_expr_to_region t in
     let region = match $1 with
                          [] -> cover $2.region stop
-                 | start::_ -> cover start.region stop in
-    let value = {attributes=$1; field_name=$2; field_type=$3}
+                 | start::_ -> cover start.region stop
+    and value = {attributes=$1; field_name=$2; field_type=$3}
     in {region; value} }
 
-  (* Inlining the definition of the non-terminal [type_annotation]
-     enables the syntactic context of its occurrences, yielding more
-     precise syntax error messages. (Otherwise we have only one error
-     message about a type annotation in all contexts). *)
+(* Inlining the definition of the non-terminal [type_annotation]
+   enables the syntactic context of its occurrences, yielding more
+   precise syntax error messages. (Otherwise we have only one error
+   message about a type annotation in all contexts). *)
 
-%inline type_annotation:
-  ":" type_expr { $1,$2 }
+%inline type_annotation: ":" type_expr { $1,$2 }
 
 (* Constant declarations *)
 
@@ -655,8 +647,7 @@ fun_decl:
                   return=$8; terminator=None}
     in {region; value} }
 
-parameters:
-  par(nsepseq(param_decl,";")) { $1 }
+parameters: par(nsepseq(param_decl,";")) { $1 }
 
 param_decl:
   param_kind var_pattern ioption(param_type) {
@@ -674,8 +665,7 @@ param_kind:
 
 var_pattern:
   attributes variable {
-    let value = {variable=$2; attributes=$1}
-    in {$2 with value}
+    {$2 with value = {variable=$2; attributes=$1}}
   }
 | "_" { mk_wild_attr $1 }
 
@@ -787,15 +777,15 @@ base_instr(right_instr,right_expr):
 
 if_then_instr(right_instr):
   "if" expr "then" test_clause(right_instr) {
-     let region = cover $1 (test_clause_to_region $4) in
-     let value  = {kwd_if=$1; test=$2; kwd_then=$3; if_so=$4; if_not=None }
+     let region = cover $1 (test_clause_to_region $4)
+     and value  = {kwd_if=$1; test=$2; kwd_then=$3; if_so=$4; if_not=None }
      in I_Cond {region; value} }
 
 if_then_else_instr(right_instr):
   "if" expr "then" test_clause(closed_instr)
   "else" test_clause(right_instr) {
-     let region = cover $1 (test_clause_to_region $6) in
-     let value  = {kwd_if=$1; test=$2; kwd_then=$3; if_so=$4;
+     let region = cover $1 (test_clause_to_region $6)
+     and value  = {kwd_if=$1; test=$2; kwd_then=$3; if_so=$4;
                    if_not = Some ($5,$6) }
      in {region; value} }
 
@@ -820,8 +810,7 @@ patch_instr(right_expr):
 
 (* Procedure calls *)
 
-call_instr:
-  call_expr { $1 }
+call_instr: call_expr { $1 }
 
 (* Generic case construct. A case construct features pattern
    matching and it can either be an instruction or an expression,
@@ -886,8 +875,7 @@ test_clause(instr):
   instr { ClauseInstr $1 }
 | block { ClauseBlock $1 }
 
-block:
-  terse_block | verb_block { $1 }
+block: terse_block | verb_block { $1 }
 
 terse_block:
   "block"? "{" sep_or_term_list(statement,";") "}" {
@@ -919,9 +907,7 @@ assignment(right_expr):
     and value  = {lhs=$1; assign=$2; rhs=$3}
     in {region; value} }
 
-lhs:
-  path_expr  { $1 }
-| map_lookup { E_MapLookup $1 }
+lhs: path_expr | map_lookup { $1 }
 
 (* Loops *)
 
@@ -953,8 +939,7 @@ for_in:
                   iterated=$4; expr=$5; block=$6}
     in {region; value} }
 
-step_clause:
-  "step" expr { $1,$2 }
+step_clause: "step" expr { $1,$2 }
 
 (* The inlining of the non-terminal [collection] enables the exact
    syntactic context to become available for syntax error messages,
@@ -966,8 +951,7 @@ step_clause:
 
 (* EXPRESSIONS *)
 
-interactive_expr:
-  expr EOF { $1 }
+interactive_expr: expr EOF { $1 }
 
 (* Our definition of [expr] aims at solving the "dangling else"
    problem in the grammar itself. That syntactical ambiguity arises
@@ -1054,35 +1038,32 @@ base_expr(right_expr):
 
 if_then_expr(right_expr):
   "if" expr "then" right_expr {
-     let region = cover $1 (expr_to_region $4) in
-     let value = {kwd_if=$1; test=$2; kwd_then=$3; if_so=$4; if_not=None }
+     let region = cover $1 (expr_to_region $4)
+     and value = {kwd_if=$1; test=$2; kwd_then=$3; if_so=$4; if_not=None }
      in E_Cond {region; value} }
 
 if_then_else_expr(right_expr):
   "if" expr "then" closed_expr "else" right_expr {
-     let region = cover $1 (expr_to_region $6) in
-     let value = {
-       kwd_if=$1; test=$2; kwd_then=$3; if_so=$4; if_not = Some ($5,$6) }
+     let region = cover $1 (expr_to_region $6)
+     and value = {kwd_if=$1; test=$2; kwd_then=$3; if_so=$4;
+                  if_not = Some ($5,$6) }
      in {region; value} }
 
-closed_expr:
-  base_expr(closed_expr) { $1 }
+closed_expr: base_expr(closed_expr) { $1 }
 
 (* Block expressions *)
 
 block_with(right_expr):
   block "with" right_expr {
-    let stop   = expr_to_region $3 in
-    let region = cover $1.region stop in
-    let value  = {block=$1; kwd_with=$2; expr=$3}
+    let region = cover $1.region (expr_to_region $3)
+    and value  = {block=$1; kwd_with=$2; expr=$3}
     in {region; value} }
 
 (* Functional expressions (a.k.a. lambdas) *)
 
 fun_expr(right_expr):
   attributes "function" parameters ioption(type_annotation) "is" right_expr {
-    let stop   = expr_to_region $6 in
-    let region = cover $2 stop
+    let region = cover $2 (expr_to_region $6)
     and value  = {kwd_function=$2; param=$3; ret_type=$4;
                   kwd_is=$5; return=$6; attributes=$1}
     in {region; value} }
@@ -1090,24 +1071,12 @@ fun_expr(right_expr):
 (* Resuming stratification of [base_expr] with Boolean expressions *)
 
 disj_expr_level:
-  disj_expr_level "or" conj_expr_level { (* Left-associative *)
-    let start  = expr_to_region $1
-    and stop   = expr_to_region $3 in
-    let region = cover start stop
-    and value  = {arg1=$1; op=$2; arg2=$3}
-    in E_Or {region; value}
-  }
-| conj_expr_level { $1 }
+  bin_op(disj_expr_level,"or",conj_expr_level) { E_Or $1 }
+| conj_expr_level                              { $1 }
 
 conj_expr_level:
-  conj_expr_level "and" set_mem_level { (* Left-associative *)
-    let start  = expr_to_region $1
-    and stop   = expr_to_region $3 in
-    let region = cover start stop
-    and value  = {arg1=$1; op=$2; arg2=$3}
-    in E_And {region; value}
-  }
-| set_mem_level { $1 }
+  bin_op(conj_expr_level,"and",set_mem_level) { E_And $1 }
+| set_mem_level                               { $1 }
 
 (* Set membership *)
 
@@ -1213,14 +1182,13 @@ core_expr:
 | set_expr        { E_Set       $1 }
 | par(typed_expr) { E_Typed     $1 }
 | call_expr       { E_Call      $1 }
-| map_lookup      { E_MapLookup $1 }
+| map_lookup
 | par_expr
 | path_expr       { $1 }
 
 (* Parenthesised expressions *)
 
-par_expr:
-  par(expr) { E_Par $1 }
+par_expr: par(expr) { E_Par $1 }
 
 (* Map expressions (extensional definitions) *)
 
@@ -1256,36 +1224,25 @@ list_expr:
    name. This is a feature inspired by OCaml:
 
   https://ocaml.org/releases/4.12/htmlman/coreexamples.html#s%3Atut-recvariants
- *)
+
+   Note that [field_path_assignment] starts with a [field_path]
+   instead of a [field_name]. This is because we wanted the production
+   [patch] to allow an expression after [with]. It is up to the tree
+   abstraction pass to filter out those field path assigmnents that
+   are not field paths in the context of a record expression _not_
+   used as a patch. *)
 
 record_expr:
   compound("record",field_path_assignment) { $1 mk_record }
 
-(*
-record_update:
-  core_expr "with" compound("record",field_path_assignment) {
-    let updates = $3 mk_record in
-    let region  = cover (expr_to_region $1) updates.region
-    and value   = {record=$1; kwd_with=$2; updates}
-    in {region; value} }
-
-field_assignment:
-  field_name "=" expr {
-    let region = cover $1.region (expr_to_region $3)
-    and value  = Complete {field_name=$1; assign=$2;
+field_path_assignment:
+  field_path "=" expr {
+    let region = cover (expr_to_region $1) (expr_to_region $3)
+    and value  = Complete {field_lhs=$1; assign=$2;
                            field_rhs=$3; attributes=[]}
     in {region; value}
   }
 | field_name { {$1 with value = Punned $1} }
-*)
-
-field_path_assignment:
-  field_path "=" expr {
-    let region = cover (expr_to_region $1) (expr_to_region $3)
-    and value  = {field_lhs=$1; assign=$2; field_rhs=$3}
-    in {region; value}
-| field_name {} (* TODO Punning *)
-}
 
   (* The rule [compound] derives some of the most common compound
    constructs of PascaLIGO, typically definitions by extension of
@@ -1324,20 +1281,17 @@ verb_compound(Kind,element):
 
 (* Constructed expressions *)
 
-ctor_expr:
-  ctor_app(arguments) { $1 }
+ctor_expr: ctor_app(arguments) { $1 }
 
 ctor_app(payload):
   ctor payload { mk_reg (cover $1.region $2.region) ($1, Some $2) }
 | ctor         { {$1 with value = ($1, None)} }
 
-arguments:
-  par(nsepseq(expr,",")) { $1 }
+arguments: par(nsepseq(expr,",")) { $1 }
 
 (* Tuples of expressions *)
 
-tuple_expr:
-  par(tuple(expr)) { $1 }
+tuple_expr: par(tuple(expr)) { $1 }
 
 tuple(item):
   item "," nsepseq(item,",") { Utils.nsepseq_cons $1 $2 $3 }
@@ -1346,14 +1300,12 @@ tuple(item):
 
 call_expr:
   path_expr arguments {
-    let start  = expr_to_region $1 in
-    let region = cover start $2.region
+    let region = cover (expr_to_region) $2.region
     in mk_reg region ($1,$2) }
 
 (* Typed expressions *)
 
-typed_expr:
-  disj_expr_level type_annotation { $1,$2 }
+typed_expr: disj_expr_level type_annotation { $1,$2 }
 
 (* Path expressions
 
@@ -1369,21 +1321,18 @@ typed_expr:
  *)
 
 path_expr:
-  value_in_module | local_path { $1 }
+  value_in_module { E_ModPath $1 }
+| local_path      { $1 }
 
 value_in_module:
-  module_path(field_path) {
-    E_ModPath (mk_mod_path $1 expr_to_region) }
-| module_path("or" { E_Var $1 }) {
-    E_ModPath (mk_mod_path $1 expr_to_region) }
-| module_path("and" {E_Var $1 }) {
-    E_ModPath (mk_mod_path $1 expr_to_region) }
+  module_path(field_path)
+| module_path("or" { E_Var $1 })
+| module_path("and" {E_Var $1 }) { mk_mod_path $1 expr_to_region }
 
 field_path:
   record_or_tuple "." nsepseq(selection,".") {
-    let start  = $1.region
-    and stop   = nsepseq_to_region selection_to_region $3 in
-    let region = cover start stop
+    let stop   = nsepseq_to_region selection_to_region $3 in
+    let region = cover ($1.region) stop
     and value  = {record=$1; selector=$2; field_path=$3}
     in E_Proj {region; value}
   }
@@ -1420,15 +1369,12 @@ local_path:
 *)
 
 map_lookup:
-  path_expr brackets(expr) {
-    let region = cover (expr_to_region $1) $2.region
-    and value  = {map=$1; index=$2}
-    in {region; value}
-  }
-| par_expr brackets(expr) {
+  map_path brackets(expr) {
     let region = cover (expr_to_region $1) $2.region
     and value  = {map=$1; index=$2}
     in {region; value} }
+
+map_path: path_expr | par_expr { $1 }
 
 (* Updates *)
 
@@ -1444,16 +1390,16 @@ update:
 
 code_inj:
   "[%lang" expr "]" {
-    let region   = cover $1.region $3
-    and value    = {language=$1; code=$2; rbracket=$3}
+    let region = cover $1.region $3
+    and value  = {language=$1; code=$2; rbracket=$3}
     in {region; value} }
 
 (* PATTERNS *)
 
 pattern:
   core_pattern "#" nsepseq(core_pattern,"#") {
-    let value  = Utils.nsepseq_cons $1 $2 $3 in
-    let region = nsepseq_to_region pattern_to_region value
+    let value  = Utils.nsepseq_cons $1 $2 $3
+    an region = nsepseq_to_region pattern_to_region value
     in P_Cons {region; value}
   }
 | core_pattern { $1 }
@@ -1479,21 +1425,17 @@ list_pattern:
 
 (* Tuple pattern *)
 
-tuple_pattern:
-  par(tuple(pattern)) { $1 }
+tuple_pattern: par(tuple(pattern)) { $1 }
 
 (* Constructed patterns (note how we do not reuse [tuple_pattern] in
    order to obtain more syntactic contexts for the error messages:
    discriminate between tuple patterns and constructor parameters. *)
 
-ctor_pattern:
-  ctor_app(ctor_params) { $1 }
+ctor_pattern: ctor_app(ctor_params) { $1 }
 
-ctor_params:
-  par(tuple(ctor_param_pattern)) { $1 }
+ctor_params: par(tuple(ctor_param_pattern)) { $1 }
 
-ctor_param_pattern:
-  pattern { $1 }
+ctor_param_pattern: pattern { $1 }
 
 (* Record patterns *)
 
@@ -1502,8 +1444,7 @@ record_pattern:
 
 field_pattern:
   field_name "=" core_pattern {
-    let stop   = pattern_to_region $3 in
-    let region = cover $1.region stop
+    let region = cover $1.region (pattern_to_region $3)
     and value  = Complete {field_name=$1; assign=$2;
                            field_rhs=$3; attributes=[]}
     in {region; value}

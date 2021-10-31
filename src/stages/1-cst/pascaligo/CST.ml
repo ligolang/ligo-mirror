@@ -512,12 +512,12 @@ and ('lhs, 'rhs) field =
 | Complete of ('lhs, 'rhs) full_field
 
 and 'lhs punned = {
-  pun        : 'lhs;  (* Can be "_" *)
+  pun        : 'lhs;
   attributes : attributes
 }
 
 and ('lhs, 'rhs) full_field = {
-  field_lhs  : 'lhs; (* Cannot be "_" *)
+  field_lhs  : 'lhs;
   assign     : equal;
   field_rhs  : 'rhs;
   attributes : attributes
