@@ -58,9 +58,10 @@ module ModuleResolutions = struct
     let resolve p =
       Yojson.Basic.Util.member p installation |> JsonHelpers.string
     in
-    (resolve root, Map.String.fold (fun k v m ->
-      Map.String.add (resolve k) (List.map ~f:resolve v) m
-    ) graph Map.String.empty)
+    (resolve root, Map.String.fold (fun k v xs ->
+      let paths = resolve k :: (List.map ~f:resolve v) in 
+      ((resolve k), paths) :: xs
+    ) graph [])
 
   let find_dependencies lock_file = 
     let open Yojson.Basic.Util in

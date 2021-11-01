@@ -227,6 +227,35 @@ let rec last_mode = function
 
 (* Finding a file to #include *)
 
+let find_external_file file dirs = 
+  let starts_with ~prefix s =
+    let s1 = String.length prefix in
+    let s2 = String.length s in
+    let rec aux i =
+      if i >= s1 || i >= s2 then true
+      else if prefix.[i] = s.[i] then aux (i + 1)
+      else false
+    in
+    s2 >= s1 && aux 0
+  in
+  let segs = Fpath.segs @@ Fpath.v file in
+  if List.length segs > 1 then
+    let file_name = String.concat Filename.dir_sep (List.tl segs) in
+    let pkg_name = (List.hd @@ segs) 
+      |> String.split_on_char '-' 
+      |> String.concat "_" in
+    let dir = List.find_opt (fun dir ->
+      let basename = (Fpath.basename @@ Fpath.v dir)
+        |> String.split_on_char '-' 
+        |> String.concat "_" in
+      starts_with ~prefix:pkg_name basename
+    ) dirs in
+    Option.map (fun dir -> 
+      let path = dir ^ Filename.dir_sep ^ file_name in
+      (path, open_in path)
+    ) dir
+  else None
+
 let rec find file_path = function
          [] -> None
 | dir::dirs ->
@@ -243,7 +272,7 @@ let find dir file dirs =
   try Some (path, open_in path) with
     Sys_error _ ->
       let base = Filename.basename file in
-      if base = file then find file dirs else None
+      if base = file then find file dirs else find_external_file file dirs 
 
 (* PRINTING *)
 

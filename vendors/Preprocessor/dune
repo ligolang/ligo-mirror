@@ -9,7 +9,8 @@
     simple-utils
     ;; Third party
     getopt
-    str)
+    str
+    fpath)
   (modules Version CLI E_Parser E_Lexer E_AST API PreprocMainGen))
 
 ;; Building the lexers of the preprocessor

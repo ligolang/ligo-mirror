@@ -1,6 +1,6 @@
 open Environment
 
-type module_resolutions = (string * string list Simple_utils.Map.String.t) option
+type module_resolutions = (string * (string * string list) list) option
 
 type t = {
   init_env : Ast_typed.environment ;
