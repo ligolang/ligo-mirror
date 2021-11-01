@@ -54,13 +54,13 @@ module ModuleResolutions = struct
     let string_list json = List.map ~f:string (list json)
   end
 
-  let resolve_paths installation graph =
+  let resolve_paths installation graph root =
     let resolve p =
       Yojson.Basic.Util.member p installation |> JsonHelpers.string
     in
-    Map.String.fold (fun k v m ->
+    (resolve root, Map.String.fold (fun k v m ->
       Map.String.add (resolve k) (List.map ~f:resolve v) m
-    ) graph Map.String.empty
+    ) graph Map.String.empty)
 
   let find_dependencies lock_file = 
     let open Yojson.Basic.Util in
@@ -72,15 +72,15 @@ module ModuleResolutions = struct
       let graph = Map.String.add dep deps graph in
       List.fold_left ~f:(fun graph dep -> dfs dep graph) ~init:graph deps
     in
-    dfs root dep_graph
+    root, dfs root dep_graph
     
   let make ~installation ~lock =
     match installation, lock with
     | Some installation_json, Some lock_file  ->
       let installation_json = Yojson.Basic.from_file installation_json in
       let lock_file_json = Yojson.Basic.from_file lock_file in
-      let dependencies = find_dependencies lock_file_json in
-      Some (resolve_paths installation_json dependencies)
+      let root, dependencies = find_dependencies lock_file_json in
+      Some (resolve_paths installation_json dependencies root)
     | Some _, None
     | None, Some _ -> 
       failwith "only one of installation.json or esy.lock/index.json is provided, please provide both"
