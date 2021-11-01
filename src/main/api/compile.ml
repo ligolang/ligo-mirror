@@ -13,7 +13,8 @@ let contract ?werror source_file entry_point declared_views syntax infer protoco
       fun ~raise ->
       let options =
           let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
-          Compiler_options.make ~infer ~protocol_version ()
+          let module_resolutions = Api_helpers.ModuleResolutions.make ~installation:esy_installation_json ~lock:esy_lock_file in
+          Compiler_options.make ~infer ~protocol_version ~module_resolutions ()
       in
       let code,env = Build.build_contract ~raise ~add_warning ~options syntax entry_point source_file in
       let views =
