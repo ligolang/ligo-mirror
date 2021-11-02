@@ -23,4 +23,19 @@
  (kind ppx_deriver)
  (modules ppx_only_interpreter_tags)
  (preprocess (pps ppxlib.metaquot))
- (libraries ppxlib))
+ (libraries ppxlib)
+)
+
+(library
+  (name ppx_map)
+  (kind ppx_rewriter)
+  (libraries
+    base
+    simple-utils
+    ppxlib)
+  (modules ppx_map)
+  (preprocess (pps ppxlib.metaquot))
+  (flags (:standard -open Simple_utils
+           ;; SOMEDAY remove this
+           -w -9))
+)
