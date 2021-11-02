@@ -1002,7 +1002,7 @@ and compile_module_as_record ~raise module_name (module_env : _ SMap.t) (lst : A
       (record,env)
     end
     else
-      (e_a_unit,env)
+      (e_a_unit (),env)
   in
   let record,env = module_as_record ~raise module_env lst in
   let module_env = SMap.add module_name (get_type_expression record) env in

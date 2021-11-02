@@ -8,6 +8,23 @@
     stage_common
     UnionFind
   )
+  (modules ast_typed combinators compare compare_enum environment formatter helpers misc reasons to_yojson types PP PP_annotated)
+;;  (modules_without_implementation generated_fold_x)
+  (flags (:standard -open Simple_utils
+           ;; SOMEDAY remove this
+           -w -9))
+  (preprocess (pps ppx_map))
+)
+
+(library
+  (name ppx_map)
+  (kind ppx_rewriter)
+  (libraries
+    base
+    simple-utils
+    ppxlib)
+  (modules ppx_map)
+  (preprocess (pps ppxlib.metaquot))
   (flags (:standard -open Simple_utils
            ;; SOMEDAY remove this
            -w -9))
