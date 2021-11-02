@@ -59,7 +59,7 @@ module ModuleResolutions = struct
       Yojson.Basic.Util.member p installation |> JsonHelpers.string
     in
     (resolve root, Map.String.fold (fun k v xs ->
-      let paths = resolve k :: (List.map ~f:resolve v) in 
+      let paths = List.sort ~compare:String.compare @@ (List.map ~f:resolve v) in 
       ((resolve k), paths) :: xs
     ) graph [])
 
