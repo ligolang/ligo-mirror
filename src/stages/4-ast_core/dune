@@ -9,5 +9,6 @@
     UnionFind
   )
   (flags (:standard -open Simple_utils ))
+  (preprocess (pps ppx_map))
 )
 
