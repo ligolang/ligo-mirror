@@ -778,7 +778,8 @@ base_instr(right_instr,right_expr):
 if_then_instr(right_instr):
   "if" expr "then" test_clause(right_instr) {
      let region = cover $1 (test_clause_to_region $4)
-     and value  = {kwd_if=$1; test=$2; kwd_then=$3; if_so=$4; if_not=None }
+     and value  = {kwd_if=$1; test=$2; kwd_then=$3; if_so=$4;
+                   if_not=None}
      in I_Cond {region; value} }
 
 if_then_else_instr(right_instr):

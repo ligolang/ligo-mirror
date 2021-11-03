@@ -168,7 +168,7 @@ and declaration =
 | D_ModAlias  of module_alias reg
 | D_Type      of type_decl    reg
 
-(* Declarations of constants *)
+(* Constant declaration *)
 
 and const_decl = {
   kwd_const  : kwd_const;
@@ -260,17 +260,15 @@ and type_expr =
 | T_Sum     of sum_type reg
 | T_Var     of variable
 
-(* Type expressions selected from a module *)
+(* Application of type constructors *)
+
+and type_ctor_app = type_ctor module_path reg * type_tuple
 
 and 'a module_path = {
   module_path : (module_name, dot) nsepseq;
   selector    : dot;
   field       : 'a
 }
-
-(* Application of type constructors *)
-
-and type_ctor_app = type_ctor module_path reg * type_tuple
 
 and type_tuple = (type_expr, comma) nsepseq par reg
 
