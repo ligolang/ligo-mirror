@@ -20,6 +20,15 @@ let extract_payload = function
               Pstr_eval ({ pexp_desc =
                              Pexp_tuple [
                                  { pexp_desc = Pexp_ident id ; _ } ;
+                                 { pexp_desc = Pexp_constant (Pconst_string (rid, _, _)) ; _ }
+                               ]
+                  ; _ }, _)
+          ; _ }] ->
+     Some (extract_ident id.txt, [rid])
+  | PStr [{ pstr_desc =
+              Pstr_eval ({ pexp_desc =
+                             Pexp_tuple [
+                                 { pexp_desc = Pexp_ident id ; _ } ;
                                  { pexp_desc = Pexp_tuple l ; _ }
                                ]
                   ; _ }, _)
