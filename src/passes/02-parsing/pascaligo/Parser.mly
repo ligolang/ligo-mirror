@@ -929,7 +929,7 @@ step_clause: "step" expr { $1,$2 }
 
 for_in:
   "for" variable "->" variable "in" ioption("map") expr block {
-    let bind_to  = Some ($3,$4)
+    let bind_to  = Some ($3,$4) in
     let region   = cover $1 $7.region in
     let value    = {kwd_for=$1; var=$2; bind_to; kwd_in=$5;
                     expr=$6; block=$7}
@@ -1249,8 +1249,8 @@ compound(Kind,element):
 
 terse_compound(Kind,element):
   attributes Kind "[" ioption(sep_or_term_list(element,";")) "]" {
-    fun mk_kwd ->
-      let kind, enclosing = mk_kwd $2, Brackets ($3,$5)
+    fun _mk_kwd ->
+      let kind, enclosing = $2, Brackets ($3,$5)
       and elements, terminator =
         match $4 with
           Some (elts, term) -> Some elts, term
@@ -1261,8 +1261,8 @@ terse_compound(Kind,element):
 
 verb_compound(Kind,element):
   attributes Kind ioption(sep_or_term_list(element,";")) "end" {
-    fun mk_kwd ->
-      let kind, enclosing = mk_kwd $2, End $4
+    fun _mk_kwd ->
+      let kind, enclosing = $2, End $4
       and elements, terminator =
         match $3 with
           Some (elts, term) -> Some elts, term
@@ -1390,8 +1390,8 @@ code_inj:
 
 pattern:
   core_pattern "#" nsepseq(core_pattern,"#") {
-    let value  = Utils.nsepseq_cons $1 $2 $3
-    an region = nsepseq_to_region pattern_to_region value
+    let value  = Utils.nsepseq_cons $1 $2 $3 in
+    let region = nsepseq_to_region pattern_to_region value
     in P_Cons {region; value}
   }
 | core_pattern { $1 }
