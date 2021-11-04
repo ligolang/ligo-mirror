@@ -1,6 +1,6 @@
 interactive_expr: Begin Case Verbatim Of LBRACKET WILD ARROW Skip With
 ##
-## Ends in an error in state: 692.
+## Ends in an error in state: 697.
 ##
 ## terse_case(test_clause(instruction)) -> Case expr Of LBRACKET cases(test_clause(instruction)) . RBRACKET [ VBAR SEMI RBRACKET RBRACE End Else ]
 ##
@@ -11,12 +11,12 @@ interactive_expr: Begin Case Verbatim Of LBRACKET WILD ARROW Skip With
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 685, spurious reduction of production nsepseq(case_clause(test_clause(instruction)),VBAR) -> case_clause(test_clause(instruction))
-## In state 682, spurious reduction of production cases(test_clause(instruction)) -> nsepseq(case_clause(test_clause(instruction)),VBAR)
+## In state 690, spurious reduction of production nsepseq(case_clause(test_clause(instruction)),VBAR) -> case_clause(test_clause(instruction))
+## In state 687, spurious reduction of production cases(test_clause(instruction)) -> nsepseq(case_clause(test_clause(instruction)),VBAR)
 ##
 interactive_expr: Begin Case UIdent Of LBRACKET VBAR UIdent ARROW Skip While
 ##
-## Ends in an error in state: 690.
+## Ends in an error in state: 695.
 ##
 ## terse_case(test_clause(instruction)) -> Case expr Of LBRACKET VBAR cases(test_clause(instruction)) . RBRACKET [ VBAR SEMI RBRACKET RBRACE End Else ]
 ##
@@ -27,8 +27,8 @@ interactive_expr: Begin Case UIdent Of LBRACKET VBAR UIdent ARROW Skip While
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 685, spurious reduction of production nsepseq(case_clause(test_clause(instruction)),VBAR) -> case_clause(test_clause(instruction))
-## In state 682, spurious reduction of production cases(test_clause(instruction)) -> nsepseq(case_clause(test_clause(instruction)),VBAR)
+## In state 690, spurious reduction of production nsepseq(case_clause(test_clause(instruction)),VBAR) -> case_clause(test_clause(instruction))
+## In state 687, spurious reduction of production cases(test_clause(instruction)) -> nsepseq(case_clause(test_clause(instruction)),VBAR)
 ##
 
 Ill-formed case instruction.
@@ -41,7 +41,7 @@ a block of statements, separated by an arrow '->'.
 
 interactive_expr: Case UIdent Of LBRACKET VBAR UIdent ARROW UIdent While
 ##
-## Ends in an error in state: 755.
+## Ends in an error in state: 760.
 ##
 ## terse_case(expr) -> Case expr Of LBRACKET VBAR cases(expr) . RBRACKET [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End Else EOF Directive Const COMMA Block Begin Attr ARROW ]
 ##
@@ -67,13 +67,13 @@ interactive_expr: Case UIdent Of LBRACKET VBAR UIdent ARROW UIdent While
 ## In state 438, spurious reduction of production disj_expr_level -> conj_expr_level
 ## In state 378, spurious reduction of production base_expr(expr) -> disj_expr_level
 ## In state 445, spurious reduction of production expr -> base_expr(expr)
-## In state 746, spurious reduction of production case_clause(expr) -> pattern ARROW expr
-## In state 750, spurious reduction of production nsepseq(case_clause(expr),VBAR) -> case_clause(expr)
-## In state 747, spurious reduction of production cases(expr) -> nsepseq(case_clause(expr),VBAR)
+## In state 751, spurious reduction of production case_clause(expr) -> pattern ARROW expr
+## In state 755, spurious reduction of production nsepseq(case_clause(expr),VBAR) -> case_clause(expr)
+## In state 752, spurious reduction of production cases(expr) -> nsepseq(case_clause(expr),VBAR)
 ##
 interactive_expr: Case UIdent Of LBRACKET UIdent ARROW UIdent While
 ##
-## Ends in an error in state: 757.
+## Ends in an error in state: 762.
 ##
 ## terse_case(expr) -> Case expr Of LBRACKET cases(expr) . RBRACKET [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End Else EOF Directive Const COMMA Block Begin Attr ARROW ]
 ##
@@ -99,9 +99,9 @@ interactive_expr: Case UIdent Of LBRACKET UIdent ARROW UIdent While
 ## In state 438, spurious reduction of production disj_expr_level -> conj_expr_level
 ## In state 378, spurious reduction of production base_expr(expr) -> disj_expr_level
 ## In state 445, spurious reduction of production expr -> base_expr(expr)
-## In state 746, spurious reduction of production case_clause(expr) -> pattern ARROW expr
-## In state 750, spurious reduction of production nsepseq(case_clause(expr),VBAR) -> case_clause(expr)
-## In state 747, spurious reduction of production cases(expr) -> nsepseq(case_clause(expr),VBAR)
+## In state 751, spurious reduction of production case_clause(expr) -> pattern ARROW expr
+## In state 755, spurious reduction of production nsepseq(case_clause(expr),VBAR) -> case_clause(expr)
+## In state 752, spurious reduction of production cases(expr) -> nsepseq(case_clause(expr),VBAR)
 ##
 
 Ill-formed case expression.
@@ -114,7 +114,7 @@ by an arrow '->'.
 
 interactive_expr: Begin Case UIdent Of VBAR With
 ##
-## Ends in an error in state: 655.
+## Ends in an error in state: 660.
 ##
 ## verb_case(test_clause(instruction)) -> Case expr Of VBAR . cases(test_clause(instruction)) End [ VBAR SEMI RBRACKET RBRACE End Else ]
 ##
@@ -123,7 +123,7 @@ interactive_expr: Begin Case UIdent Of VBAR With
 ##
 interactive_expr: Begin Case UIdent Of LBRACKET VBAR With
 ##
-## Ends in an error in state: 689.
+## Ends in an error in state: 694.
 ##
 ## terse_case(test_clause(instruction)) -> Case expr Of LBRACKET VBAR . cases(test_clause(instruction)) RBRACKET [ VBAR SEMI RBRACKET RBRACE End Else ]
 ##
@@ -132,7 +132,7 @@ interactive_expr: Begin Case UIdent Of LBRACKET VBAR With
 ##
 interactive_expr: Begin Case Verbatim Of WILD ARROW Skip VBAR With
 ##
-## Ends in an error in state: 686.
+## Ends in an error in state: 691.
 ##
 ## nsepseq(case_clause(test_clause(instruction)),VBAR) -> case_clause(test_clause(instruction)) VBAR . nsepseq(case_clause(test_clause(instruction)),VBAR) [ RBRACKET End ]
 ##
@@ -147,7 +147,7 @@ a block of statements, separated by an arrow '->'.
 
 interactive_expr: Begin Case Verbatim Of LBRACKET With
 ##
-## Ends in an error in state: 688.
+## Ends in an error in state: 693.
 ##
 ## terse_case(test_clause(instruction)) -> Case expr Of LBRACKET . cases(test_clause(instruction)) RBRACKET [ VBAR SEMI RBRACKET RBRACE End Else ]
 ## terse_case(test_clause(instruction)) -> Case expr Of LBRACKET . VBAR cases(test_clause(instruction)) RBRACKET [ VBAR SEMI RBRACKET RBRACE End Else ]
@@ -163,7 +163,7 @@ At this point, one of the following is expected:
 
 interactive_expr: Begin Case Verbatim Of With
 ##
-## Ends in an error in state: 654.
+## Ends in an error in state: 659.
 ##
 ## terse_case(test_clause(instruction)) -> Case expr Of . LBRACKET cases(test_clause(instruction)) RBRACKET [ VBAR SEMI RBRACKET RBRACE End Else ]
 ## terse_case(test_clause(instruction)) -> Case expr Of . LBRACKET VBAR cases(test_clause(instruction)) RBRACKET [ VBAR SEMI RBRACKET RBRACE End Else ]
@@ -184,7 +184,7 @@ a block of statements, separated by an arrow '->'.
 
 interactive_expr: Begin Case Verbatim Of WILD ARROW Skip With
 ##
-## Ends in an error in state: 694.
+## Ends in an error in state: 699.
 ##
 ## verb_case(test_clause(instruction)) -> Case expr Of cases(test_clause(instruction)) . End [ VBAR SEMI RBRACKET RBRACE End Else ]
 ##
@@ -195,12 +195,12 @@ interactive_expr: Begin Case Verbatim Of WILD ARROW Skip With
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 685, spurious reduction of production nsepseq(case_clause(test_clause(instruction)),VBAR) -> case_clause(test_clause(instruction))
-## In state 682, spurious reduction of production cases(test_clause(instruction)) -> nsepseq(case_clause(test_clause(instruction)),VBAR)
+## In state 690, spurious reduction of production nsepseq(case_clause(test_clause(instruction)),VBAR) -> case_clause(test_clause(instruction))
+## In state 687, spurious reduction of production cases(test_clause(instruction)) -> nsepseq(case_clause(test_clause(instruction)),VBAR)
 ##
 interactive_expr: Begin Case UIdent Of VBAR UIdent ARROW Skip While
 ##
-## Ends in an error in state: 683.
+## Ends in an error in state: 688.
 ##
 ## verb_case(test_clause(instruction)) -> Case expr Of VBAR cases(test_clause(instruction)) . End [ VBAR SEMI RBRACKET RBRACE End Else ]
 ##
@@ -211,8 +211,8 @@ interactive_expr: Begin Case UIdent Of VBAR UIdent ARROW Skip While
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 685, spurious reduction of production nsepseq(case_clause(test_clause(instruction)),VBAR) -> case_clause(test_clause(instruction))
-## In state 682, spurious reduction of production cases(test_clause(instruction)) -> nsepseq(case_clause(test_clause(instruction)),VBAR)
+## In state 690, spurious reduction of production nsepseq(case_clause(test_clause(instruction)),VBAR) -> case_clause(test_clause(instruction))
+## In state 687, spurious reduction of production cases(test_clause(instruction)) -> nsepseq(case_clause(test_clause(instruction)),VBAR)
 ##
 
 Ill-formed case instruction.
@@ -225,7 +225,7 @@ a block of statements, separated by an arrow '->'.
 
 interactive_expr: Begin Case Verbatim Of WILD ARROW With
 ##
-## Ends in an error in state: 657.
+## Ends in an error in state: 662.
 ##
 ## case_clause(test_clause(instruction)) -> pattern ARROW . test_clause(instruction) [ VBAR RBRACKET End ]
 ##
@@ -242,7 +242,7 @@ Note: A block is either delimited by '{' and '}' (terse dialect) or
 
 interactive_expr: Begin Case Verbatim Of WILD With
 ##
-## Ends in an error in state: 656.
+## Ends in an error in state: 661.
 ##
 ## case_clause(test_clause(instruction)) -> pattern . ARROW test_clause(instruction) [ VBAR RBRACKET End ]
 ##
@@ -266,7 +266,7 @@ Note: A block is either delimited by '{' and '}' (terse dialect) or
 
 interactive_expr: Begin Case With
 ##
-## Ends in an error in state: 652.
+## Ends in an error in state: 657.
 ##
 ## terse_case(test_clause(instruction)) -> Case . expr Of LBRACKET cases(test_clause(instruction)) RBRACKET [ VBAR SEMI RBRACKET RBRACE End Else ]
 ## terse_case(test_clause(instruction)) -> Case . expr Of LBRACKET VBAR cases(test_clause(instruction)) RBRACKET [ VBAR SEMI RBRACKET RBRACE End Else ]
@@ -301,63 +301,9 @@ At this point, the selection symbol '.' is expected, followed by either
   * the qualified name of a value, like 'A.B.c.2.d';
   * a value name.
 
-interactive_expr: Begin For Ident ARROW Ident In With
-##
-## Ends in an error in state: 648.
-##
-## for_in -> For Ident ARROW Ident In . Map expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
-##
-## The known suffix of the stack is as follows:
-## For Ident ARROW Ident In
-##
-
-Ill-formed iteration over a map.
-At this point, the keyword 'map' is expected.
-
-interactive_expr: Begin For Ident ARROW Ident In Map With
-##
-## Ends in an error in state: 649.
-##
-## for_in -> For Ident ARROW Ident In Map . expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
-##
-## The known suffix of the stack is as follows:
-## For Ident ARROW Ident In Map
-##
-
-Ill-formed iteration over a map.
-At this point, a map is expected as an expression.
-
-interactive_expr: Begin For Ident ARROW Ident With
-##
-## Ends in an error in state: 647.
-##
-## for_in -> For Ident ARROW Ident . In Map expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
-##
-## The known suffix of the stack is as follows:
-## For Ident ARROW Ident
-##
-
-Ill-formed iteration over a map.
-At this point, the keywords 'in map' are expected, followed by the map
-as an expression.
-
-interactive_expr: Begin For Ident ARROW With
-##
-## Ends in an error in state: 646.
-##
-## for_in -> For Ident ARROW . Ident In Map expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
-##
-## The known suffix of the stack is as follows:
-## For Ident ARROW
-##
-
-Ill-formed iteration over a map.
-At this point, a variable denoting values in a map binding (as opposed
-to keys) is expected.
-
 interactive_expr: Begin For Ident ASS Verbatim To Verbatim Step Verbatim Attr
 ##
-## Ends in an error in state: 643.
+## Ends in an error in state: 639.
 ##
 ## for_int -> For Ident ASS expr To expr step_clause . block [ VBAR SEMI RBRACKET RBRACE End Else ]
 ##
@@ -380,7 +326,7 @@ interactive_expr: Begin For Ident ASS Verbatim To Verbatim Step Verbatim Attr
 ## In state 438, spurious reduction of production disj_expr_level -> conj_expr_level
 ## In state 378, spurious reduction of production base_expr(expr) -> disj_expr_level
 ## In state 445, spurious reduction of production expr -> base_expr(expr)
-## In state 642, spurious reduction of production step_clause -> Step expr
+## In state 638, spurious reduction of production step_clause -> Step expr
 ##
 
 Ill-formed iteration over a numerical interval.
@@ -391,7 +337,7 @@ Note: A block is either delimited by '{' and '}' (terse dialect) or
 
 interactive_expr: Begin For Ident ASS Verbatim To Verbatim Step With
 ##
-## Ends in an error in state: 641.
+## Ends in an error in state: 637.
 ##
 ## step_clause -> Step . expr [ LBRACE Block Begin ]
 ##
@@ -404,7 +350,7 @@ At this point, the index increment is expected as an expression.
 
 interactive_expr: Begin For Ident ASS Verbatim To With
 ##
-## Ends in an error in state: 639.
+## Ends in an error in state: 635.
 ##
 ## for_int -> For Ident ASS expr To . expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
 ## for_int -> For Ident ASS expr To . expr step_clause block [ VBAR SEMI RBRACKET RBRACE End Else ]
@@ -419,7 +365,7 @@ expression.
 
 interactive_expr: Begin For Ident ASS With
 ##
-## Ends in an error in state: 637.
+## Ends in an error in state: 633.
 ##
 ## for_int -> For Ident ASS . expr To expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
 ## for_int -> For Ident ASS . expr To expr step_clause block [ VBAR SEMI RBRACKET RBRACE End Else ]
@@ -434,12 +380,12 @@ expected.
 
 interactive_expr: Begin For Ident In List UIdent While
 ##
-## Ends in an error in state: 635.
+## Ends in an error in state: 793.
 ##
-## for_in -> For Ident In List expr . block [ VBAR SEMI RBRACKET RBRACE End Else ]
+## verb_compound(List,expr) -> List sep_or_term_list(expr,SEMI) . End [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
 ##
 ## The known suffix of the stack is as follows:
-## For Ident In List expr
+## List sep_or_term_list(expr,SEMI)
 ##
 ## WARNING: This example involves spurious reductions.
 ## This implies that, although the LR(1) items shown above provide an
@@ -460,6 +406,8 @@ interactive_expr: Begin For Ident In List UIdent While
 ## In state 438, spurious reduction of production disj_expr_level -> conj_expr_level
 ## In state 378, spurious reduction of production base_expr(expr) -> disj_expr_level
 ## In state 445, spurious reduction of production expr -> base_expr(expr)
+## In state 464, spurious reduction of production nsepseq(expr,SEMI) -> expr
+## In state 463, spurious reduction of production sep_or_term_list(expr,SEMI) -> nsepseq(expr,SEMI)
 ##
 
 Ill-formed iteration over a list.
@@ -468,8 +416,9 @@ expected as a block of statements (instructions and declarations).
 
 interactive_expr: Begin For Ident ARROW Ident In Map UIdent While
 ##
-## Ends in an error in state: 650.
+## Ends in an error in state: 653.
 ##
+## binding -> expr . ARROW expr [ SEMI End ]
 ## for_in -> For Ident ARROW Ident In Map expr . block [ VBAR SEMI RBRACKET RBRACE End Else ]
 ##
 ## The known suffix of the stack is as follows:
@@ -502,12 +451,12 @@ expected as a block of statements (instructions and declarations).
 
 interactive_expr: Begin For Ident In Set UIdent While
 ##
-## Ends in an error in state: 632.
+## Ends in an error in state: 806.
 ##
-## for_in -> For Ident In Set expr . block [ VBAR SEMI RBRACKET RBRACE End Else ]
+## verb_compound(Set,expr) -> Set sep_or_term_list(expr,SEMI) . End [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
 ##
 ## The known suffix of the stack is as follows:
-## For Ident In Set expr
+## Set sep_or_term_list(expr,SEMI)
 ##
 ## WARNING: This example involves spurious reductions.
 ## This implies that, although the LR(1) items shown above provide an
@@ -528,6 +477,8 @@ interactive_expr: Begin For Ident In Set UIdent While
 ## In state 438, spurious reduction of production disj_expr_level -> conj_expr_level
 ## In state 378, spurious reduction of production base_expr(expr) -> disj_expr_level
 ## In state 445, spurious reduction of production expr -> base_expr(expr)
+## In state 464, spurious reduction of production nsepseq(expr,SEMI) -> expr
+## In state 463, spurious reduction of production sep_or_term_list(expr,SEMI) -> nsepseq(expr,SEMI)
 ##
 
 Ill-formed iteration over a set.
@@ -536,12 +487,15 @@ block of statements (instructions and declarations).
 
 interactive_expr: Begin For Ident In List With
 ##
-## Ends in an error in state: 634.
+## Ends in an error in state: 175.
 ##
-## for_in -> For Ident In List . expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
+## terse_compound(List,expr) -> List . LBRACKET RBRACKET [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
+## terse_compound(List,expr) -> List . LBRACKET sep_or_term_list(expr,SEMI) RBRACKET [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
+## verb_compound(List,expr) -> List . End [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
+## verb_compound(List,expr) -> List . sep_or_term_list(expr,SEMI) End [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
 ##
 ## The known suffix of the stack is as follows:
-## For Ident In List
+## List
 ##
 
 Ill-formed iteration over a list.
@@ -549,12 +503,15 @@ At this point, the list is expected as an expression.
 
 interactive_expr: Begin For Ident In Set With
 ##
-## Ends in an error in state: 631.
+## Ends in an error in state: 147.
 ##
-## for_in -> For Ident In Set . expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
+## terse_compound(Set,expr) -> Set . LBRACKET RBRACKET [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
+## terse_compound(Set,expr) -> Set . LBRACKET sep_or_term_list(expr,SEMI) RBRACKET [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
+## verb_compound(Set,expr) -> Set . End [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
+## verb_compound(Set,expr) -> Set . sep_or_term_list(expr,SEMI) End [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
 ##
 ## The known suffix of the stack is as follows:
-## For Ident In Set
+## Set
 ##
 
 Ill-formed iteration over a set.
@@ -564,8 +521,7 @@ interactive_expr: Begin For Ident In With
 ##
 ## Ends in an error in state: 630.
 ##
-## for_in -> For Ident In . Set expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
-## for_in -> For Ident In . List expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
+## for_in -> For Ident In . expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
 ##
 ## The known suffix of the stack is as follows:
 ## For Ident In
@@ -578,9 +534,9 @@ interactive_expr: Begin For Ident With
 ##
 ## Ends in an error in state: 629.
 ##
+## for_in -> For Ident . ARROW Ident In expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
 ## for_in -> For Ident . ARROW Ident In Map expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
-## for_in -> For Ident . In Set expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
-## for_in -> For Ident . In List expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
+## for_in -> For Ident . In expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
 ## for_int -> For Ident . ASS expr To expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
 ## for_int -> For Ident . ASS expr To expr step_clause block [ VBAR SEMI RBRACKET RBRACE End Else ]
 ##
@@ -598,9 +554,9 @@ interactive_expr: Begin For With
 ##
 ## Ends in an error in state: 628.
 ##
+## for_in -> For . Ident ARROW Ident In expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
 ## for_in -> For . Ident ARROW Ident In Map expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
-## for_in -> For . Ident In Set expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
-## for_in -> For . Ident In List expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
+## for_in -> For . Ident In expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
 ## for_int -> For . Ident ASS expr To expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
 ## for_int -> For . Ident ASS expr To expr step_clause block [ VBAR SEMI RBRACKET RBRACE End Else ]
 ##
@@ -617,7 +573,7 @@ At this point, one of the following is expected:
 
 interactive_expr: Begin Ident ASS With
 ##
-## Ends in an error in state: 668.
+## Ends in an error in state: 673.
 ##
 ## assignment(expr) -> lhs ASS . expr [ VBAR SEMI RBRACKET RBRACE End ]
 ##
@@ -626,7 +582,7 @@ interactive_expr: Begin Ident ASS With
 ##
 interactive_expr: Begin If UIdent Then Ident ASS With
 ##
-## Ends in an error in state: 705.
+## Ends in an error in state: 710.
 ##
 ## assignment(closed_expr) -> lhs ASS . closed_expr [ Else ]
 ## assignment(expr) -> lhs ASS . expr [ VBAR SEMI RBRACKET RBRACE End ]
@@ -640,7 +596,7 @@ At this point, the right-hand side is expected as an expression.
 
 interactive_expr: Begin Ident With
 ##
-## Ends in an error in state: 667.
+## Ends in an error in state: 672.
 ##
 ## assignment(expr) -> lhs . ASS expr [ VBAR SEMI RBRACKET RBRACE End ]
 ##
@@ -654,11 +610,11 @@ interactive_expr: Begin Ident With
 ## In state 180, spurious reduction of production field_path -> Ident
 ## In state 375, spurious reduction of production local_path -> field_path
 ## In state 370, spurious reduction of production path_expr -> local_path
-## In state 663, spurious reduction of production lhs -> path_expr
+## In state 668, spurious reduction of production lhs -> path_expr
 ##
 interactive_expr: Begin If UIdent Then Ident With
 ##
-## Ends in an error in state: 704.
+## Ends in an error in state: 709.
 ##
 ## assignment(closed_expr) -> lhs . ASS closed_expr [ Else ]
 ## assignment(expr) -> lhs . ASS expr [ VBAR SEMI RBRACKET RBRACE End ]
@@ -673,7 +629,7 @@ interactive_expr: Begin If UIdent Then Ident With
 ## In state 180, spurious reduction of production field_path -> Ident
 ## In state 375, spurious reduction of production local_path -> field_path
 ## In state 370, spurious reduction of production path_expr -> local_path
-## In state 663, spurious reduction of production lhs -> path_expr
+## In state 668, spurious reduction of production lhs -> path_expr
 ##
 
 Ill-formed assignment.
@@ -682,7 +638,7 @@ symbol ':=' is expected, followed by an expression.
 
 interactive_expr: Begin If Verbatim Then Skip Else With
 ##
-## Ends in an error in state: 717.
+## Ends in an error in state: 722.
 ##
 ## if_then_else_instr(instruction) -> If expr Then test_clause(closed_instr) Else . test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
 ##
@@ -691,7 +647,7 @@ interactive_expr: Begin If Verbatim Then Skip Else With
 ##
 interactive_expr: Begin If UIdent Then If UIdent Then Skip Else With
 ##
-## Ends in an error in state: 699.
+## Ends in an error in state: 704.
 ##
 ## if_then_else_instr(closed_instr) -> If expr Then test_clause(closed_instr) Else . test_clause(closed_instr) [ Else ]
 ## if_then_else_instr(instruction) -> If expr Then test_clause(closed_instr) Else . test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
@@ -709,7 +665,7 @@ Note: A block, in this context, is either delimited by '{' and '}'
 
 interactive_expr: Begin If Verbatim Then Skip With
 ##
-## Ends in an error in state: 716.
+## Ends in an error in state: 721.
 ##
 ## if_then_else_instr(instruction) -> If expr Then test_clause(closed_instr) . Else test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
 ##
@@ -721,12 +677,12 @@ interactive_expr: Begin If Verbatim Then Skip With
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
 ## In state 580, spurious reduction of production base_instr(closed_instr,closed_expr) -> Skip
-## In state 714, spurious reduction of production closed_instr -> base_instr(closed_instr,closed_expr)
-## In state 710, spurious reduction of production test_clause(closed_instr) -> closed_instr
+## In state 719, spurious reduction of production closed_instr -> base_instr(closed_instr,closed_expr)
+## In state 715, spurious reduction of production test_clause(closed_instr) -> closed_instr
 ##
 interactive_expr: Begin If UIdent Then If UIdent Then Skip With
 ##
-## Ends in an error in state: 698.
+## Ends in an error in state: 703.
 ##
 ## if_then_else_instr(closed_instr) -> If expr Then test_clause(closed_instr) . Else test_clause(closed_instr) [ Else ]
 ## if_then_else_instr(instruction) -> If expr Then test_clause(closed_instr) . Else test_clause(instruction) [ VBAR SEMI RBRACKET RBRACE End ]
@@ -739,8 +695,8 @@ interactive_expr: Begin If UIdent Then If UIdent Then Skip With
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
 ## In state 580, spurious reduction of production base_instr(closed_instr,closed_expr) -> Skip
-## In state 714, spurious reduction of production closed_instr -> base_instr(closed_instr,closed_expr)
-## In state 710, spurious reduction of production test_clause(closed_instr) -> closed_instr
+## In state 719, spurious reduction of production closed_instr -> base_instr(closed_instr,closed_expr)
+## In state 715, spurious reduction of production test_clause(closed_instr) -> closed_instr
 ##
 
 Ill-formed conditional instruction.
@@ -1070,7 +1026,7 @@ block.
 
 interactive_expr: Begin Skip With
 ##
-## Ends in an error in state: 734.
+## Ends in an error in state: 739.
 ##
 ## verb_block -> Begin sep_or_term_list(statement,SEMI) . End [ With VBAR SEMI RBRACKET RBRACE End Else ]
 ##
@@ -1081,8 +1037,8 @@ interactive_expr: Begin Skip With
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 719, spurious reduction of production nsepseq(statement,SEMI) -> statement
-## In state 728, spurious reduction of production sep_or_term_list(statement,SEMI) -> nsepseq(statement,SEMI)
+## In state 724, spurious reduction of production nsepseq(statement,SEMI) -> statement
+## In state 733, spurious reduction of production sep_or_term_list(statement,SEMI) -> nsepseq(statement,SEMI)
 ##
 
 Ill-formed block of statements.
@@ -1245,7 +1201,7 @@ separated by an arrow '->'.
 
 interactive_expr: Block LBRACE Skip With
 ##
-## Ends in an error in state: 725.
+## Ends in an error in state: 730.
 ##
 ## terse_block -> option(Block) LBRACE sep_or_term_list(statement,SEMI) . RBRACE [ With VBAR SEMI RBRACKET RBRACE End Else ]
 ##
@@ -1256,8 +1212,8 @@ interactive_expr: Block LBRACE Skip With
 ## This implies that, although the LR(1) items shown above provide an
 ## accurate view of the past (what has been recognized so far), they
 ## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 719, spurious reduction of production nsepseq(statement,SEMI) -> statement
-## In state 728, spurious reduction of production sep_or_term_list(statement,SEMI) -> nsepseq(statement,SEMI)
+## In state 724, spurious reduction of production nsepseq(statement,SEMI) -> statement
+## In state 733, spurious reduction of production sep_or_term_list(statement,SEMI) -> nsepseq(statement,SEMI)
 ##
 
 Ill-formed block of statements.
@@ -1284,7 +1240,7 @@ Note: A statement is either an instruction or a declaration.
 
 interactive_expr: Case Verbatim Of LBRACKET With
 ##
-## Ends in an error in state: 753.
+## Ends in an error in state: 758.
 ##
 ## terse_case(expr) -> Case expr Of LBRACKET . cases(expr) RBRACKET [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End Else EOF Directive Const COMMA Block Begin Attr ARROW ]
 ## terse_case(expr) -> Case expr Of LBRACKET . VBAR cases(expr) RBRACKET [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End Else EOF Directive Const COMMA Block Begin Attr ARROW ]
@@ -1301,7 +1257,7 @@ At this point, one of the following is expected:
 
 interactive_expr: Case Verbatim Of With
 ##
-## Ends in an error in state: 742.
+## Ends in an error in state: 747.
 ##
 ## terse_case(expr) -> Case expr Of . LBRACKET cases(expr) RBRACKET [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End Else EOF Directive Const COMMA Block Begin Attr ARROW ]
 ## terse_case(expr) -> Case expr Of . LBRACKET VBAR cases(expr) RBRACKET [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End Else EOF Directive Const COMMA Block Begin Attr ARROW ]
@@ -1321,7 +1277,7 @@ At this point, one of the following is expected:
 
 interactive_expr: Case Verbatim Of WILD ARROW Bytes VBAR With
 ##
-## Ends in an error in state: 751.
+## Ends in an error in state: 756.
 ##
 ## nsepseq(case_clause(expr),VBAR) -> case_clause(expr) VBAR . nsepseq(case_clause(expr),VBAR) [ RBRACKET End ]
 ##
@@ -1330,7 +1286,7 @@ interactive_expr: Case Verbatim Of WILD ARROW Bytes VBAR With
 ##
 interactive_expr: Case UIdent Of VBAR With
 ##
-## Ends in an error in state: 743.
+## Ends in an error in state: 748.
 ##
 ## verb_case(expr) -> Case expr Of VBAR . cases(expr) End [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End Else EOF Directive Const COMMA Block Begin Attr ARROW ]
 ##
@@ -1339,7 +1295,7 @@ interactive_expr: Case UIdent Of VBAR With
 ##
 interactive_expr: Case UIdent Of LBRACKET VBAR With
 ##
-## Ends in an error in state: 754.
+## Ends in an error in state: 759.
 ##
 ## terse_case(expr) -> Case expr Of LBRACKET VBAR . cases(expr) RBRACKET [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End Else EOF Directive Const COMMA Block Begin Attr ARROW ]
 ##
@@ -1508,7 +1464,7 @@ At this point, one of the following is expected:
 
 interactive_expr: Case Verbatim Of WILD ARROW With
 ##
-## Ends in an error in state: 745.
+## Ends in an error in state: 750.
 ##
 ## case_clause(expr) -> pattern ARROW . expr [ VBAR RBRACKET End ]
 ##
@@ -1544,7 +1500,7 @@ At this point, a non-empty list is expected as a pattern.
 
 interactive_expr: Case Verbatim Of WILD With
 ##
-## Ends in an error in state: 744.
+## Ends in an error in state: 749.
 ##
 ## case_clause(expr) -> pattern . ARROW expr [ VBAR RBRACKET End ]
 ##
@@ -1636,7 +1592,7 @@ interactive_expr: If UIdent Then Function LPAR Const Ident RPAR COLON UIdent ARR
 ##
 interactive_expr: Function LPAR Const Ident RPAR COLON UIdent ARROW
 ##
-## Ends in an error in state: 762.
+## Ends in an error in state: 767.
 ##
 ## fun_expr(expr) -> Function parameters COLON type_expr . Is expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
 ##
@@ -1708,7 +1664,7 @@ interactive_expr: If UIdent Then Function LPAR Const Ident RPAR COLON Ident Is W
 ##
 interactive_expr: Function LPAR Const Ident RPAR COLON WILD Is With
 ##
-## Ends in an error in state: 763.
+## Ends in an error in state: 768.
 ##
 ## fun_expr(expr) -> Function parameters COLON type_expr Is . expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
 ##
@@ -1959,7 +1915,7 @@ At this point, a key is expected as an expression.
 
 interactive_expr: Ident LPAR Verbatim COMMA With
 ##
-## Ends in an error in state: 776.
+## Ends in an error in state: 781.
 ##
 ## nsepseq(expr,COMMA) -> expr COMMA . nsepseq(expr,COMMA) [ RPAR ]
 ##
@@ -1981,7 +1937,7 @@ At this point, an argument is expected as an expression.
 
 interactive_expr: Ident While
 ##
-## Ends in an error in state: 828.
+## Ends in an error in state: 826.
 ##
 ## interactive_expr -> expr . EOF [ # ]
 ##
@@ -2030,7 +1986,7 @@ At this point, a record is expected, starting with the keyword
 
 interactive_expr: If Verbatim Then Verbatim Else With
 ##
-## Ends in an error in state: 767.
+## Ends in an error in state: 772.
 ##
 ## if_then_else_expr(expr) -> If expr Then closed_expr Else . expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
 ##
@@ -2054,7 +2010,7 @@ expression.
 
 interactive_expr: If Verbatim Then With
 ##
-## Ends in an error in state: 765.
+## Ends in an error in state: 770.
 ##
 ## if_then_else_expr(expr) -> If expr Then . closed_expr Else expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
 ## if_then_expr(expr) -> If expr Then . expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
@@ -2080,7 +2036,7 @@ expression.
 
 interactive_expr: LPAR Verbatim COLON Ident With
 ##
-## Ends in an error in state: 768.
+## Ends in an error in state: 773.
 ##
 ## par(typed_expr) -> LPAR typed_expr . RPAR [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
 ##
@@ -2096,7 +2052,7 @@ interactive_expr: LPAR Verbatim COLON Ident With
 ## In state 77, spurious reduction of production cartesian_level -> core_type
 ## In state 85, spurious reduction of production fun_type_level -> cartesian_level
 ## In state 76, spurious reduction of production type_expr -> fun_type_level
-## In state 780, spurious reduction of production typed_expr -> disj_expr_level COLON type_expr
+## In state 785, spurious reduction of production typed_expr -> disj_expr_level COLON type_expr
 ##
 
 Ill-formed typed expression.
@@ -2105,7 +2061,7 @@ expected.
 
 interactive_expr: LPAR Verbatim COMMA With
 ##
-## Ends in an error in state: 773.
+## Ends in an error in state: 778.
 ##
 ## tuple(expr) -> expr COMMA . nsepseq(expr,COMMA) [ RPAR ]
 ##
@@ -2147,7 +2103,7 @@ string containing the code to inject.
 
 interactive_expr: List LBRACKET With
 ##
-## Ends in an error in state: 783.
+## Ends in an error in state: 788.
 ##
 ## terse_compound(List,expr) -> List LBRACKET . RBRACKET [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
 ## terse_compound(List,expr) -> List LBRACKET . sep_or_term_list(expr,SEMI) RBRACKET [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
@@ -2171,18 +2127,6 @@ At this point, one of the following is expected:
   * elements as expressions separated by semicolons ';';
   * a closing bracket ']' if the list is empty.
 
-interactive_expr: List With
-##
-## Ends in an error in state: 175.
-##
-## terse_compound(List,expr) -> List . LBRACKET RBRACKET [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
-## terse_compound(List,expr) -> List . LBRACKET sep_or_term_list(expr,SEMI) RBRACKET [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
-## verb_compound(List,expr) -> List . End [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
-## verb_compound(List,expr) -> List . sep_or_term_list(expr,SEMI) End [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
-##
-## The known suffix of the stack is as follows:
-## List
-##
 interactive_expr: Attr List With
 ##
 ## Ends in an error in state: 457.
@@ -2376,7 +2320,7 @@ operators, or use parentheses.
 
 interactive_expr: Map LBRACKET With
 ##
-## Ends in an error in state: 791.
+## Ends in an error in state: 646.
 ##
 ## terse_compound(Map,binding) -> Map LBRACKET . RBRACKET [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
 ## terse_compound(Map,binding) -> Map LBRACKET . sep_or_term_list(binding,SEMI) RBRACKET [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
@@ -2532,7 +2476,7 @@ interactive_expr: Record LBRACKET Ident EQ UIdent End
 ## In state 438, spurious reduction of production disj_expr_level -> conj_expr_level
 ## In state 378, spurious reduction of production base_expr(expr) -> disj_expr_level
 ## In state 445, spurious reduction of production expr -> base_expr(expr)
-## In state 799, spurious reduction of production field_path_assignment -> field_path EQ expr
+## In state 797, spurious reduction of production field_path_assignment -> field_path EQ expr
 ## In state 163, spurious reduction of production nsepseq(field_path_assignment,SEMI) -> field_path_assignment
 ## In state 162, spurious reduction of production sep_or_term_list(field_path_assignment,SEMI) -> nsepseq(field_path_assignment,SEMI)
 ##
@@ -2560,7 +2504,7 @@ expected.
 
 interactive_expr: Set LBRACKET With
 ##
-## Ends in an error in state: 803.
+## Ends in an error in state: 801.
 ##
 ## terse_compound(Set,expr) -> Set LBRACKET . RBRACKET [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
 ## terse_compound(Set,expr) -> Set LBRACKET . sep_or_term_list(expr,SEMI) RBRACKET [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
@@ -2584,18 +2528,6 @@ At this point, one of the following is expected:
   * elements as expressions separated by semicolons ';';
   * a closing bracket ']' if the set is empty.
 
-interactive_expr: Set With
-##
-## Ends in an error in state: 147.
-##
-## terse_compound(Set,expr) -> Set . LBRACKET RBRACKET [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
-## terse_compound(Set,expr) -> Set . LBRACKET sep_or_term_list(expr,SEMI) RBRACKET [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
-## verb_compound(Set,expr) -> Set . End [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
-## verb_compound(Set,expr) -> Set . sep_or_term_list(expr,SEMI) End [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
-##
-## The known suffix of the stack is as follows:
-## Set
-##
 interactive_expr: Attr Set With
 ##
 ## Ends in an error in state: 225.
@@ -2797,7 +2729,7 @@ operators, or use parentheses.
 
 interactive_expr: With
 ##
-## Ends in an error in state: 826.
+## Ends in an error in state: 824.
 ##
 ## interactive_expr' -> . interactive_expr [ # ]
 ##
@@ -2926,7 +2858,7 @@ contract: Attr Function Ident LPAR Const Ident RPAR COLON UIdent Is With
 ##
 contract: Recursive Function Ident LPAR Const Ident RPAR COLON WILD Is With
 ##
-## Ends in an error in state: 816.
+## Ends in an error in state: 814.
 ##
 ## fun_decl -> Recursive Function Ident parameters COLON type_expr Is . expr [ Type SEMI Recursive RBRACE Module Function End EOF Directive Const Attr ]
 ##
@@ -2967,7 +2899,7 @@ contract: Function Ident LPAR Const Ident RPAR COLON Ident With
 ##
 contract: Recursive Function Ident LPAR Const Ident RPAR COLON String With
 ##
-## Ends in an error in state: 815.
+## Ends in an error in state: 813.
 ##
 ## fun_decl -> Recursive Function Ident parameters COLON type_expr . Is expr [ Type SEMI Recursive RBRACE Module Function End EOF Directive Const Attr ]
 ##
@@ -3589,7 +3521,7 @@ constant.
 
 interactive_expr: Map Verbatim ARROW Bytes SEMI With
 ##
-## Ends in an error in state: 796.
+## Ends in an error in state: 651.
 ##
 ## verb_compound(Map,binding) -> Map sep_or_term_list(binding,SEMI) . End [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
 ##
@@ -3688,7 +3620,7 @@ is expected:
 
 interactive_expr: Record Ident EQ Bytes SEMI With
 ##
-## Ends in an error in state: 801.
+## Ends in an error in state: 799.
 ##
 ## verb_compound(Record,field_path_assignment) -> Record sep_or_term_list(field_path_assignment,SEMI) . End [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
 ##
@@ -3920,7 +3852,7 @@ expected:
 
 contract: Type Ident Is UIdent With
 ##
-## Ends in an error in state: 823.
+## Ends in an error in state: 821.
 ##
 ## contract -> nseq(top_declaration) . EOF [ # ]
 ##
@@ -3937,9 +3869,9 @@ contract: Type Ident Is UIdent With
 ## In state 53, spurious reduction of production type_expr -> sum_type
 ## In state 116, spurious reduction of production type_decl -> Type Ident Is type_expr
 ## In state 534, spurious reduction of production declaration -> type_decl
-## In state 821, spurious reduction of production option(SEMI) ->
-## In state 822, spurious reduction of production top_declaration -> declaration option(SEMI)
-## In state 819, spurious reduction of production nseq(top_declaration) -> top_declaration
+## In state 819, spurious reduction of production option(SEMI) ->
+## In state 820, spurious reduction of production top_declaration -> declaration option(SEMI)
+## In state 817, spurious reduction of production nseq(top_declaration) -> top_declaration
 ##
 
 Ill-formed contract.
@@ -4380,7 +4312,7 @@ interactive_expr: UIdent With Record LBRACKET Ident EQ UIdent While
 ## In state 438, spurious reduction of production disj_expr_level -> conj_expr_level
 ## In state 378, spurious reduction of production base_expr(expr) -> disj_expr_level
 ## In state 445, spurious reduction of production expr -> base_expr(expr)
-## In state 799, spurious reduction of production field_path_assignment -> field_path EQ expr
+## In state 797, spurious reduction of production field_path_assignment -> field_path EQ expr
 ##
 
 Ill-formed record update.
@@ -4635,7 +4567,7 @@ interactive_expr: If UIdent Then If UIdent While
 ##
 interactive_expr: If UIdent While
 ##
-## Ends in an error in state: 764.
+## Ends in an error in state: 769.
 ##
 ## if_then_else_expr(expr) -> If expr . Then closed_expr Else expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
 ## if_then_expr(expr) -> If expr . Then expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
@@ -4734,7 +4666,7 @@ expression whose value is that of the block.
 
 interactive_expr: Begin For Ident ASS UIdent While
 ##
-## Ends in an error in state: 638.
+## Ends in an error in state: 634.
 ##
 ## for_int -> For Ident ASS expr . To expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
 ## for_int -> For Ident ASS expr . To expr step_clause block [ VBAR SEMI RBRACKET RBRACE End Else ]
@@ -4770,7 +4702,7 @@ final value of the index.
 
 interactive_expr: Begin For Ident ASS UIdent To UIdent While
 ##
-## Ends in an error in state: 640.
+## Ends in an error in state: 636.
 ##
 ## for_int -> For Ident ASS expr To expr . block [ VBAR SEMI RBRACKET RBRACE End Else ]
 ## for_int -> For Ident ASS expr To expr . step_clause block [ VBAR SEMI RBRACKET RBRACE End Else ]
@@ -4809,7 +4741,7 @@ following is expected:
 
 interactive_expr: Begin Case UIdent While
 ##
-## Ends in an error in state: 653.
+## Ends in an error in state: 658.
 ##
 ## terse_case(test_clause(instruction)) -> Case expr . Of LBRACKET cases(test_clause(instruction)) RBRACKET [ VBAR SEMI RBRACKET RBRACE End Else ]
 ## terse_case(test_clause(instruction)) -> Case expr . Of LBRACKET VBAR cases(test_clause(instruction)) RBRACKET [ VBAR SEMI RBRACKET RBRACE End Else ]
@@ -4849,7 +4781,7 @@ a block of statements, separated by an arrow '->'.
 
 interactive_expr: Begin LPAR UIdent RPAR With
 ##
-## Ends in an error in state: 665.
+## Ends in an error in state: 670.
 ##
 ## local_path -> par_expr . DOT nsepseq(selection,DOT) [ LPAR LBRACKET ASS ]
 ## map_path -> par_expr . [ LBRACKET ]
@@ -4900,7 +4832,7 @@ expected.
 
 interactive_expr: Begin While UIdent While
 ##
-## Ends in an error in state: 732.
+## Ends in an error in state: 737.
 ##
 ## while_loop -> While expr . block [ VBAR SEMI RBRACKET RBRACE End Else ]
 ##
@@ -4934,7 +4866,7 @@ expected as a block of statements (instructions and declarations).
 
 interactive_expr: BigMap LBRACKET UIdent ARROW UIdent While
 ##
-## Ends in an error in state: 736.
+## Ends in an error in state: 741.
 ##
 ## terse_compound(BigMap,binding) -> BigMap LBRACKET sep_or_term_list(binding,SEMI) . RBRACKET [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
 ##
@@ -5041,7 +4973,7 @@ followed by an expression whose value is associated to the key.
 
 interactive_expr: BigMap UIdent ARROW UIdent While
 ##
-## Ends in an error in state: 739.
+## Ends in an error in state: 744.
 ##
 ## verb_compound(BigMap,binding) -> BigMap sep_or_term_list(binding,SEMI) . End [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
 ##
@@ -5114,7 +5046,7 @@ separated by an arrow '->'.
 
 interactive_expr: Case UIdent While
 ##
-## Ends in an error in state: 741.
+## Ends in an error in state: 746.
 ##
 ## terse_case(expr) -> Case expr . Of LBRACKET cases(expr) RBRACKET [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End Else EOF Directive Const COMMA Block Begin Attr ARROW ]
 ## terse_case(expr) -> Case expr . Of LBRACKET VBAR cases(expr) RBRACKET [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End Else EOF Directive Const COMMA Block Begin Attr ARROW ]
@@ -5154,7 +5086,7 @@ separated by an arrow '->'.
 
 interactive_expr: Case UIdent Of UIdent ARROW UIdent While
 ##
-## Ends in an error in state: 759.
+## Ends in an error in state: 764.
 ##
 ## verb_case(expr) -> Case expr Of cases(expr) . End [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End Else EOF Directive Const COMMA Block Begin Attr ARROW ]
 ##
@@ -5180,13 +5112,13 @@ interactive_expr: Case UIdent Of UIdent ARROW UIdent While
 ## In state 438, spurious reduction of production disj_expr_level -> conj_expr_level
 ## In state 378, spurious reduction of production base_expr(expr) -> disj_expr_level
 ## In state 445, spurious reduction of production expr -> base_expr(expr)
-## In state 746, spurious reduction of production case_clause(expr) -> pattern ARROW expr
-## In state 750, spurious reduction of production nsepseq(case_clause(expr),VBAR) -> case_clause(expr)
-## In state 747, spurious reduction of production cases(expr) -> nsepseq(case_clause(expr),VBAR)
+## In state 751, spurious reduction of production case_clause(expr) -> pattern ARROW expr
+## In state 755, spurious reduction of production nsepseq(case_clause(expr),VBAR) -> case_clause(expr)
+## In state 752, spurious reduction of production cases(expr) -> nsepseq(case_clause(expr),VBAR)
 ##
 interactive_expr: Case UIdent Of VBAR UIdent ARROW UIdent While
 ##
-## Ends in an error in state: 748.
+## Ends in an error in state: 753.
 ##
 ## verb_case(expr) -> Case expr Of VBAR cases(expr) . End [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End Else EOF Directive Const COMMA Block Begin Attr ARROW ]
 ##
@@ -5212,9 +5144,9 @@ interactive_expr: Case UIdent Of VBAR UIdent ARROW UIdent While
 ## In state 438, spurious reduction of production disj_expr_level -> conj_expr_level
 ## In state 378, spurious reduction of production base_expr(expr) -> disj_expr_level
 ## In state 445, spurious reduction of production expr -> base_expr(expr)
-## In state 746, spurious reduction of production case_clause(expr) -> pattern ARROW expr
-## In state 750, spurious reduction of production nsepseq(case_clause(expr),VBAR) -> case_clause(expr)
-## In state 747, spurious reduction of production cases(expr) -> nsepseq(case_clause(expr),VBAR)
+## In state 751, spurious reduction of production case_clause(expr) -> pattern ARROW expr
+## In state 755, spurious reduction of production nsepseq(case_clause(expr),VBAR) -> case_clause(expr)
+## In state 752, spurious reduction of production cases(expr) -> nsepseq(case_clause(expr),VBAR)
 ##
 
 Ill-formed case expression.
@@ -5227,7 +5159,7 @@ by an arrow '->'.
 
 interactive_expr: LPAR UIdent COMMA UIdent While
 ##
-## Ends in an error in state: 775.
+## Ends in an error in state: 780.
 ##
 ## nsepseq(expr,COMMA) -> expr . [ RPAR ]
 ## nsepseq(expr,COMMA) -> expr . COMMA nsepseq(expr,COMMA) [ RPAR ]
@@ -5264,7 +5196,7 @@ expected:
 
 interactive_expr: LPAR UIdent While
 ##
-## Ends in an error in state: 772.
+## Ends in an error in state: 777.
 ##
 ## par(expr) -> LPAR expr . RPAR [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACKET LBRACE GT GE Function From End Else EQ EOF Directive DOT Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
 ## tuple(expr) -> expr . COMMA nsepseq(expr,COMMA) [ RPAR ]
@@ -5289,7 +5221,7 @@ interactive_expr: LPAR UIdent While
 ## In state 417, spurious reduction of production set_mem_level -> comp_expr_level
 ## In state 230, spurious reduction of production conj_expr_level -> set_mem_level
 ## In state 438, spurious reduction of production disj_expr_level -> conj_expr_level
-## In state 778, spurious reduction of production base_expr(expr) -> disj_expr_level
+## In state 783, spurious reduction of production base_expr(expr) -> disj_expr_level
 ## In state 445, spurious reduction of production expr -> base_expr(expr)
 ##
 
@@ -5302,7 +5234,7 @@ expected:
 
 interactive_expr: Lang UIdent While
 ##
-## Ends in an error in state: 781.
+## Ends in an error in state: 786.
 ##
 ## code_inj -> Lang expr . RBRACKET [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
 ##
@@ -5336,7 +5268,7 @@ complete, then a closing bracket ']' is expected.
 
 interactive_expr: List LBRACKET UIdent While
 ##
-## Ends in an error in state: 785.
+## Ends in an error in state: 790.
 ##
 ## terse_compound(List,expr) -> List LBRACKET sep_or_term_list(expr,SEMI) . RBRACKET [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
 ##
@@ -5403,37 +5335,6 @@ is expected:
   * a semicolon ';' followed by another element as an expression;
   * a closing bracket ']' if the list is complete.
 
-interactive_expr: List UIdent While
-##
-## Ends in an error in state: 788.
-##
-## verb_compound(List,expr) -> List sep_or_term_list(expr,SEMI) . End [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
-##
-## The known suffix of the stack is as follows:
-## List sep_or_term_list(expr,SEMI)
-##
-## WARNING: This example involves spurious reductions.
-## This implies that, although the LR(1) items shown above provide an
-## accurate view of the past (what has been recognized so far), they
-## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 144, spurious reduction of production ctor_app(arguments) -> UIdent
-## In state 381, spurious reduction of production ctor_expr -> ctor_app(arguments)
-## In state 380, spurious reduction of production core_expr -> ctor_expr
-## In state 382, spurious reduction of production update_expr_level -> core_expr
-## In state 200, spurious reduction of production unary_expr_level -> update_expr_level
-## In state 205, spurious reduction of production mult_expr_level -> unary_expr_level
-## In state 359, spurious reduction of production add_expr_level -> mult_expr_level
-## In state 403, spurious reduction of production cons_expr_level -> add_expr_level
-## In state 393, spurious reduction of production cat_expr_level -> cons_expr_level
-## In state 430, spurious reduction of production comp_expr_level -> cat_expr_level
-## In state 417, spurious reduction of production set_mem_level -> comp_expr_level
-## In state 230, spurious reduction of production conj_expr_level -> set_mem_level
-## In state 438, spurious reduction of production disj_expr_level -> conj_expr_level
-## In state 378, spurious reduction of production base_expr(expr) -> disj_expr_level
-## In state 445, spurious reduction of production expr -> base_expr(expr)
-## In state 464, spurious reduction of production nsepseq(expr,SEMI) -> expr
-## In state 463, spurious reduction of production sep_or_term_list(expr,SEMI) -> nsepseq(expr,SEMI)
-##
 interactive_expr: Attr List UIdent While
 ##
 ## Ends in an error in state: 469.
@@ -5474,7 +5375,7 @@ is expected:
 
 interactive_expr: Map LBRACKET UIdent ARROW UIdent While
 ##
-## Ends in an error in state: 793.
+## Ends in an error in state: 648.
 ##
 ## terse_compound(Map,binding) -> Map LBRACKET sep_or_term_list(binding,SEMI) . RBRACKET [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
 ##
@@ -5569,7 +5470,7 @@ following is expected:
 
 interactive_expr: Set LBRACKET UIdent While
 ##
-## Ends in an error in state: 805.
+## Ends in an error in state: 803.
 ##
 ## terse_compound(Set,expr) -> Set LBRACKET sep_or_term_list(expr,SEMI) . RBRACKET [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
 ##
@@ -5638,43 +5539,12 @@ expected:
 
 interactive_expr: Attr Set UIdent While
 ##
-## Ends in an error in state: 730.
+## Ends in an error in state: 735.
 ##
 ## verb_compound(Set,expr) -> nseq(Attr) Set sep_or_term_list(expr,SEMI) . End [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
 ##
 ## The known suffix of the stack is as follows:
 ## nseq(Attr) Set sep_or_term_list(expr,SEMI)
-##
-## WARNING: This example involves spurious reductions.
-## This implies that, although the LR(1) items shown above provide an
-## accurate view of the past (what has been recognized so far), they
-## may provide an INCOMPLETE view of the future (what was expected next).
-## In state 144, spurious reduction of production ctor_app(arguments) -> UIdent
-## In state 381, spurious reduction of production ctor_expr -> ctor_app(arguments)
-## In state 380, spurious reduction of production core_expr -> ctor_expr
-## In state 382, spurious reduction of production update_expr_level -> core_expr
-## In state 200, spurious reduction of production unary_expr_level -> update_expr_level
-## In state 205, spurious reduction of production mult_expr_level -> unary_expr_level
-## In state 359, spurious reduction of production add_expr_level -> mult_expr_level
-## In state 403, spurious reduction of production cons_expr_level -> add_expr_level
-## In state 393, spurious reduction of production cat_expr_level -> cons_expr_level
-## In state 430, spurious reduction of production comp_expr_level -> cat_expr_level
-## In state 417, spurious reduction of production set_mem_level -> comp_expr_level
-## In state 230, spurious reduction of production conj_expr_level -> set_mem_level
-## In state 438, spurious reduction of production disj_expr_level -> conj_expr_level
-## In state 378, spurious reduction of production base_expr(expr) -> disj_expr_level
-## In state 445, spurious reduction of production expr -> base_expr(expr)
-## In state 464, spurious reduction of production nsepseq(expr,SEMI) -> expr
-## In state 463, spurious reduction of production sep_or_term_list(expr,SEMI) -> nsepseq(expr,SEMI)
-##
-interactive_expr: Set UIdent While
-##
-## Ends in an error in state: 808.
-##
-## verb_compound(Set,expr) -> Set sep_or_term_list(expr,SEMI) . End [ With VBAR Type To Then TIMES Step SLASH SHARP SEMI Recursive RPAR RBRACKET RBRACE PLUS Or Of NE Module Mod MINUS LT LE LBRACE GT GE Function From End Else EQ EOF Directive Contains Const COMMA COLON CARET Block Begin Attr And ARROW ]
-##
-## The known suffix of the stack is as follows:
-## Set sep_or_term_list(expr,SEMI)
 ##
 ## WARNING: This example involves spurious reductions.
 ## This implies that, although the LR(1) items shown above provide an
@@ -5786,7 +5656,7 @@ contract: Attr Function Ident LPAR Const Ident RPAR COLON With
 ##
 contract: Recursive Function Ident LPAR Const Ident RPAR COLON With
 ##
-## Ends in an error in state: 814.
+## Ends in an error in state: 812.
 ##
 ## fun_decl -> Recursive Function Ident parameters COLON . type_expr Is expr [ Type SEMI Recursive RBRACE Module Function End EOF Directive Const Attr ]
 ##
@@ -5828,7 +5698,7 @@ interactive_expr: If UIdent Then Function LPAR Const Ident RPAR COLON With
 ##
 interactive_expr: Function LPAR Const Ident RPAR COLON With
 ##
-## Ends in an error in state: 761.
+## Ends in an error in state: 766.
 ##
 ## fun_expr(expr) -> Function parameters COLON . type_expr Is expr [ VBAR Type To Then Step SEMI Recursive RPAR RBRACKET RBRACE Of Module LBRACE Function From End EOF Directive Const COMMA Block Begin Attr ARROW ]
 ##
@@ -5841,7 +5711,7 @@ At this point, the return type is expected.
 
 interactive_expr: LPAR UIdent COLON With
 ##
-## Ends in an error in state: 779.
+## Ends in an error in state: 784.
 ##
 ## typed_expr -> disj_expr_level COLON . type_expr [ RPAR ]
 ##
@@ -5967,3 +5837,137 @@ expected:
   * another attribute;
   * the keyword 'function', 'big_map', 'list', 'map', 'record', or
     'set'.
+
+interactive_expr: Begin For Ident In UIdent While
+##
+## Ends in an error in state: 631.
+##
+## for_in -> For Ident In expr . block [ VBAR SEMI RBRACKET RBRACE End Else ]
+##
+## The known suffix of the stack is as follows:
+## For Ident In expr
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 144, spurious reduction of production ctor_app(arguments) -> UIdent
+## In state 381, spurious reduction of production ctor_expr -> ctor_app(arguments)
+## In state 380, spurious reduction of production core_expr -> ctor_expr
+## In state 382, spurious reduction of production update_expr_level -> core_expr
+## In state 200, spurious reduction of production unary_expr_level -> update_expr_level
+## In state 205, spurious reduction of production mult_expr_level -> unary_expr_level
+## In state 359, spurious reduction of production add_expr_level -> mult_expr_level
+## In state 403, spurious reduction of production cons_expr_level -> add_expr_level
+## In state 393, spurious reduction of production cat_expr_level -> cons_expr_level
+## In state 430, spurious reduction of production comp_expr_level -> cat_expr_level
+## In state 417, spurious reduction of production set_mem_level -> comp_expr_level
+## In state 230, spurious reduction of production conj_expr_level -> set_mem_level
+## In state 438, spurious reduction of production disj_expr_level -> conj_expr_level
+## In state 378, spurious reduction of production base_expr(expr) -> disj_expr_level
+## In state 445, spurious reduction of production expr -> base_expr(expr)
+##
+
+Ill-formed iteration over a set or list.
+At this point, if the collection is complete, the loop body is
+expected as a block of statements (instructions and declarations).
+
+interactive_expr: Begin For Ident ARROW With
+##
+## Ends in an error in state: 642.
+##
+## for_in -> For Ident ARROW . Ident In expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
+## for_in -> For Ident ARROW . Ident In Map expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
+##
+## The known suffix of the stack is as follows:
+## For Ident ARROW
+##
+
+Ill-formed iteration over a map.
+At this point, the value (as opposed to the key) of the binding is
+expected as a variable.
+
+interactive_expr: Begin For Ident ARROW Ident With
+##
+## Ends in an error in state: 643.
+##
+## for_in -> For Ident ARROW Ident . In expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
+## for_in -> For Ident ARROW Ident . In Map expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
+##
+## The known suffix of the stack is as follows:
+## For Ident ARROW Ident
+##
+
+Ill-formed iteration over a map.
+At this point, the keyword 'in' is expected, followed by the map as an
+expression.
+
+interactive_expr: Begin For Ident ARROW Ident In With
+##
+## Ends in an error in state: 644.
+##
+## for_in -> For Ident ARROW Ident In . expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
+## for_in -> For Ident ARROW Ident In . Map expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
+##
+## The known suffix of the stack is as follows:
+## For Ident ARROW Ident In
+##
+
+Ill-formed iteration over a map.
+At this point, the map is expected as an expression.
+
+interactive_expr: Begin For Ident ARROW Ident In Map With
+##
+## Ends in an error in state: 645.
+##
+## for_in -> For Ident ARROW Ident In Map . expr block [ VBAR SEMI RBRACKET RBRACE End Else ]
+## terse_compound(Map,binding) -> Map . LBRACKET RBRACKET [ With TIMES SLASH SHARP PLUS Or NE Mod MINUS LT LE LBRACE GT GE EQ Contains CARET Block Begin And ]
+## terse_compound(Map,binding) -> Map . LBRACKET sep_or_term_list(binding,SEMI) RBRACKET [ With TIMES SLASH SHARP PLUS Or NE Mod MINUS LT LE LBRACE GT GE EQ Contains CARET Block Begin And ]
+## verb_compound(Map,binding) -> Map . End [ With TIMES SLASH SHARP PLUS Or NE Mod MINUS LT LE LBRACE GT GE EQ Contains CARET Block Begin And ]
+## verb_compound(Map,binding) -> Map . sep_or_term_list(binding,SEMI) End [ With TIMES SLASH SHARP PLUS Or NE Mod MINUS LT LE LBRACE GT GE EQ Contains CARET Block Begin And ]
+##
+## The known suffix of the stack is as follows:
+## For Ident ARROW Ident In Map
+##
+
+Ill-formed iteration over a map.
+At this point, one of the following is expected:
+  * a map as an expression;
+  * key/value bindings separated by semicolons ';';
+  * brackets '[]' or the keyword 'end' if the map is empty.
+Note: A binding is made of two expressions (a key and a value)
+separated by an arrow '->'.
+
+interactive_expr: Begin For Ident ARROW Ident In UIdent While
+##
+## Ends in an error in state: 655.
+##
+## for_in -> For Ident ARROW Ident In expr . block [ VBAR SEMI RBRACKET RBRACE End Else ]
+##
+## The known suffix of the stack is as follows:
+## For Ident ARROW Ident In expr
+##
+## WARNING: This example involves spurious reductions.
+## This implies that, although the LR(1) items shown above provide an
+## accurate view of the past (what has been recognized so far), they
+## may provide an INCOMPLETE view of the future (what was expected next).
+## In state 144, spurious reduction of production ctor_app(arguments) -> UIdent
+## In state 381, spurious reduction of production ctor_expr -> ctor_app(arguments)
+## In state 380, spurious reduction of production core_expr -> ctor_expr
+## In state 382, spurious reduction of production update_expr_level -> core_expr
+## In state 200, spurious reduction of production unary_expr_level -> update_expr_level
+## In state 205, spurious reduction of production mult_expr_level -> unary_expr_level
+## In state 359, spurious reduction of production add_expr_level -> mult_expr_level
+## In state 403, spurious reduction of production cons_expr_level -> add_expr_level
+## In state 393, spurious reduction of production cat_expr_level -> cons_expr_level
+## In state 430, spurious reduction of production comp_expr_level -> cat_expr_level
+## In state 417, spurious reduction of production set_mem_level -> comp_expr_level
+## In state 230, spurious reduction of production conj_expr_level -> set_mem_level
+## In state 438, spurious reduction of production disj_expr_level -> conj_expr_level
+## In state 378, spurious reduction of production base_expr(expr) -> disj_expr_level
+## In state 445, spurious reduction of production expr -> base_expr(expr)
+##
+
+Ill-formed iteration over a map.
+At this point, the body of the loop is expected as a block of
+statements (instructions and declarations).
