@@ -928,7 +928,7 @@ for_int:
 step_clause: "step" expr { $1,$2 }
 
 for_in:
-  "for" variable "->" variable "in" expr block {
+  "for" variable "->" variable "in" ioption("map") expr block {
     let bind_to  = Some ($3,$4)
     let region   = cover $1 $7.region in
     let value    = {kwd_for=$1; var=$2; bind_to; kwd_in=$5;
