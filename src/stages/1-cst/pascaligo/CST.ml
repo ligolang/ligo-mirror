@@ -249,16 +249,16 @@ and type_vars = (type_var, comma) nsepseq par reg
    add or modify some, please make sure they remain in order. *)
 
 and type_expr =
-  T_Cart    of cartesian
-| T_Ctor    of type_ctor_app reg
-| T_Fun     of (type_expr * arrow * type_expr) reg
-| T_Int     of (lexeme * Z.t) reg
-| T_ModPath of type_expr module_path reg
-| T_Par     of type_expr par reg
-| T_Record  of field_decl reg compound reg
-| T_String  of lexeme reg
-| T_Sum     of sum_type reg
-| T_Var     of variable
+  T_Cart    of cartesian                             (*    x * y * z                                         *)
+| T_Ctor    of type_ctor_app reg                     (*    A.B.t(x,y,z)                                      *)
+| T_Fun     of (type_expr * arrow * type_expr) reg   (*    x -> y                                            *)
+| T_Int     of (lexeme * Z.t) reg                    (*    42                                                *)
+| T_ModPath of type_expr module_path reg             (*    A.B.(x * y)                                       *)
+| T_Par     of type_expr par reg                     (*    (t)                                               *)
+| T_Record  of field_decl reg compound reg           (*    [@a2] record [ a ; [@a1] b : t ]                  *)
+| T_String  of lexeme reg                            (*    "x"                                               *)
+| T_Sum     of sum_type reg                          (*    [@a2] | [@aa] A | B of t                          *)
+| T_Var     of variable                              (*    x                                                 *)
 
 (* Cartesian products *)
 
@@ -280,14 +280,14 @@ and type_tuple = (type_expr, comma) nsepseq par reg
 
 and field_decl = {
   field_name : field_name;
-  field_type : type_annotation option;
+  field_type : type_annotation option; (* type punning *)
   attributes : attributes
 }
 
 (* Compound constructs (lists, sets, records, maps) *)
 
 and 'a compound = {
-  kind       : compound_type;
+  kind       : Region.t ;
   enclosing  : enclosing;
   elements   : ('a, semi) sepseq;
   terminator : semi option;
