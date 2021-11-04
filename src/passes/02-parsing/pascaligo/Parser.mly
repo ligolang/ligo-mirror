@@ -925,30 +925,21 @@ for_int:
                   kwd_to=$5; bound=$6; step=$7; block=$8}
     in {region; value} }
 
-for_in:
-  "for" variable "->" variable "in" "map" expr block {
-    let bind_to  = Some ($3,$4)
-    and iterated = `Map $6 in
-    let region   = cover $1 $8.region in
-    let value    = {kwd_for=$1; var=$2; bind_to; kwd_in=$5;
-                    iterated; expr=$7; block=$8}
-    in {region; value}
-  }
-| "for" variable "in" collection expr block {
-    let region = cover $1 $6.region in
-    let value  = {kwd_for=$1; var=$2; bind_to=None; kwd_in=$3;
-                  iterated=$4; expr=$5; block=$6}
-    in {region; value} }
-
 step_clause: "step" expr { $1,$2 }
 
-(* The inlining of the non-terminal [collection] enables the exact
-   syntactic context to become available for syntax error messages,
-   that is, the kind of collection will be known. *)
-
-%inline collection:
-  "set"  { `Set  $1 }
-| "list" { `List $1 }
+for_in:
+  "for" variable "->" variable "in" expr block {
+    let bind_to  = Some ($3,$4)
+    let region   = cover $1 $7.region in
+    let value    = {kwd_for=$1; var=$2; bind_to; kwd_in=$5;
+                    expr=$6; block=$8}
+    in {region; value}
+  }
+| "for" variable "in" expr block {
+    let region = cover $1 $5.region in
+    let value  = {kwd_for=$1; var=$2; bind_to=None; kwd_in=$3;
+                  expr=$4; block=$5}
+    in {region; value} }
 
 (* EXPRESSIONS *)
 

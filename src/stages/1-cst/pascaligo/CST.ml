@@ -260,6 +260,10 @@ and type_expr =
 | T_Sum     of sum_type reg
 | T_Var     of variable
 
+(* Cartesian products *)
+
+and cartesian = (type_expr, times) nsepseq reg
+
 (* Application of type constructors *)
 
 and type_ctor_app = type_ctor module_path reg * type_tuple
@@ -272,10 +276,6 @@ and 'a module_path = {
 
 and type_tuple = (type_expr, comma) nsepseq par reg
 
-(* Cartesian types *)
-
-and cartesian = (type_expr, times) nsepseq reg
-
 (* Record types *)
 
 and field_decl = {
@@ -284,7 +284,7 @@ and field_decl = {
   attributes : attributes
 }
 
-(* Injections *)
+(* Compound constructs (lists, sets, records, maps) *)
 
 and 'a compound = {
   kind       : compound_type;
@@ -321,7 +321,7 @@ and statement =
 
 and statements = (statement, semi) nsepseq
 
-(* Variable declaration (not valid at the top-level) *)
+(* Variable declaration (invalid at the top-level) *)
 
 and var_decl = {
   kwd_var    : kwd_var;
@@ -429,7 +429,6 @@ and for_in = {
   var      : variable;
   bind_to  : (arrow * variable) option;
   kwd_in   : kwd_in;
-  iterated : iterable;
   expr     : expr;
   block    : block reg
 }
