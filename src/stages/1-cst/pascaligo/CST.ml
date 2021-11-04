@@ -433,13 +433,13 @@ and for_in = {
   block    : block reg
 }
 
-(* Patches *)
+(* Patches (maps, records, sets) *)
 
 and patch = {
   kwd_patch  : kwd_patch;
   collection : expr;
   kwd_with   : kwd_with;
-  delta      : expr
+  patch      : expr
 }
 
 and binding = {

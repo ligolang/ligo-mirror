@@ -806,7 +806,7 @@ remove_instr(right_expr):
 patch_instr(right_expr):
   "patch" core_expr "with" right_expr {
     let region = cover $1 (expr_to_region $4)
-    and value  = {kwd_patch=$1; collection=$2; kwd_with=$3; delta=$4}
+    and value  = {kwd_patch=$1; collection=$2; kwd_with=$3; patch=$4}
     in {region; value} }
 
 (* Procedure calls *)
