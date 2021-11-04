@@ -932,7 +932,7 @@ for_in:
     let bind_to  = Some ($3,$4)
     let region   = cover $1 $7.region in
     let value    = {kwd_for=$1; var=$2; bind_to; kwd_in=$5;
-                    expr=$6; block=$8}
+                    expr=$6; block=$7}
     in {region; value}
   }
 | "for" variable "in" expr block {
