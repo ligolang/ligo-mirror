@@ -737,7 +737,7 @@ var_decl:
 (* INSTRUCTIONS *)
 
 (* The rule [base_instr] is parameterised by an expression
-   [right_expr] because [assignment], [map_remove] and [set_remove]
+   [right_expr] because [assignment], [remove_instr] and [patch_instr]
    can derive [right_expr] to the right. This has an impact on the
    so-called "dangling else" problem because both [instruction] and
    [expr] have conditionals. For example
