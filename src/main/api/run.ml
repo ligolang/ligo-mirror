@@ -10,19 +10,19 @@ let test source_file syntax steps infer protocol_version display_format esy_proj
     format_result ~display_format (Ligo_interpreter.Formatter.tests_format) get_warnings @@
       fun ~raise ->
       let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
-      let options = Compiler_options.make ~infer ~test:true ~protocol_version () in
+      let options = Compiler_options.make ~infer ~test:true ~protocol_version ?esy_project_path () in
       let typed,_ = Build.combined_contract ~raise ~add_warning ~options syntax source_file in
       let typed   = Self_ast_typed.monomorphise_module typed in
       let _,typed = trace ~raise Main_errors.self_ast_typed_tracer @@ Self_ast_typed.morph_module options.init_env typed in
       let steps = int_of_string steps in
-      Interpreter.eval_test ~raise ~steps ~protocol_version typed
+      Interpreter.eval_test ~raise ~steps ~protocol_version ~options typed
 
 let dry_run source_file entry_point input storage amount balance sender source now syntax infer protocol_version display_format werror esy_project_path =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~werror ~display_format (Decompile.Formatter.expression_format) get_warnings @@
       fun ~raise ->
       let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
-      let options = Compiler_options.make ~infer ~protocol_version () in
+      let options = Compiler_options.make ~infer ~protocol_version ?esy_project_path () in
       let mini_c_prg,typed_prg,env = Build.build_contract_use ~raise ~add_warning ~options syntax source_file in
       let michelson_prg   = Compile.Of_mini_c.aggregate_and_compile_contract ~raise ~options mini_c_prg entry_point in
       let parameter_ty =
@@ -44,7 +44,7 @@ let interpret expression init_file syntax infer protocol_version amount balance 
       fun ~raise ->
       let options =
         let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
-        Compiler_options.make ~infer ~protocol_version ()
+        Compiler_options.make ~infer ~protocol_version ?esy_project_path ()
       in
       let (mini_c_exp, typed_exp), _, decl_list = Build.build_expression ~raise ~add_warning ~options syntax expression init_file in
       let compiled_exp   = Ligo_compile.Of_mini_c.aggregate_and_compile_expression ~raise ~options decl_list mini_c_exp in
@@ -58,7 +58,7 @@ let evaluate_call source_file entry_point parameter amount balance sender source
       fun ~raise ->
       let options =
         let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
-        Compiler_options.make ~infer ~protocol_version ()
+        Compiler_options.make ~infer ~protocol_version ?esy_project_path ()
       in
       let mini_c_prg,typed_prg,env = Build.build_contract_use ~raise ~add_warning ~options syntax source_file in
       let meta             = Compile.Of_source.extract_meta ~raise syntax source_file in
@@ -82,7 +82,7 @@ let evaluate_expr source_file entry_point amount balance sender source now synta
       fun ~raise ->
       let options =
         let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
-        Compiler_options.make ~infer ~protocol_version ()
+        Compiler_options.make ~infer ~protocol_version ?esy_project_path ()
       in
       let mini_c,typed_prg,_ = Build.build_contract_use ~raise ~add_warning ~options syntax source_file in
       let (exp,_)       = trace_option ~raise Main_errors.main_entrypoint_not_found @@ Mini_c.get_entry mini_c entry_point in

@@ -6,6 +6,7 @@ let contract source_file new_syntax syntax new_dialect display_format =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (Parsing.Formatter.ppx_format) get_warnings @@
       fun ~raise ->
+      (* MELWYN TODO: handle module resolutions here *)
       let options         = Compiler_options.make () in
       let meta       = Compile.Of_source.extract_meta ~raise syntax source_file in
       let c_unit,_   = Compile.Utils.to_c_unit ~raise ~options ~meta source_file in
@@ -21,6 +22,7 @@ let expression expression new_syntax syntax new_dialect display_format =
     format_result ~display_format (Parsing.Formatter.ppx_format) (fun _ -> []) @@
       fun ~raise ->
       (* Compiling chain *)
+      (* MELWYN TODO: handle module resolutions here *)
       let options            = Compiler_options.make () in
       let meta          = Compile.Of_source.make_meta ~raise syntax None in
       let c_unit_expr,_ = Compile.Of_source.compile_string ~raise ~options ~meta expression in

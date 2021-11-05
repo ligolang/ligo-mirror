@@ -82,10 +82,11 @@ type state = { env : Ast_typed.environment;
                protocol : Environment.Protocols.t;
                decl_list : Mini_c.program;
                dry_run_opts : Run.options;
+               esy_project_path : string option;
               }
 
 let try_eval ~raise state s =
-  let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol () in
+  let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol ?esy_project_path:state.esy_project_path () in
   let options = {options with init_env = state.env } in
   let typed_exp,env = Ligo_compile.Utils.type_expression_string ~raise ~options:options state.syntax s state.env in
   let env,applied = trace ~raise Main_errors.self_ast_typed_tracer @@ Self_ast_typed.morph_expression env typed_exp in
@@ -102,7 +103,7 @@ let try_eval ~raise state s =
     raise.raise `Repl_unexpected
 
 let try_contract ~raise state s =
-  let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol () in
+  let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol ?esy_project_path:state.esy_project_path () in
   let options = {options with init_env = state.env } in
   try
     try_with (fun ~raise ->
@@ -129,7 +130,7 @@ let try_contract ~raise state s =
      raise.raise `Repl_unexpected
 
 let import_file ~raise state file_name module_name =
-  let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol () in
+  let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol ?esy_project_path:state.esy_project_path () in
   let options = {options with init_env = state.env } in
   let module_,env = Build.combined_contract ~raise ~add_warning ~options (variant_to_syntax state.syntax) file_name in
   let env = Ast_typed.Environment.add_module ~public:true module_name env state.env in
@@ -140,7 +141,7 @@ let import_file ~raise state file_name module_name =
   (state, Just_ok)
 
 let use_file ~raise state s =
-  let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol () in
+  let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol ?esy_project_path:state.esy_project_path () in
   let options = {options with init_env = state.env } in
   (* Missing typer environment? *)
   let mini_c,(Ast_typed.Module_Fully_Typed module'),env = Build.build_contract_use ~raise ~add_warning ~options (variant_to_syntax state.syntax) s in
@@ -200,13 +201,14 @@ Included directives:
   #use \"file_path\";;
   #import \"file_path\" \"module_name\";;"
 
-let make_initial_state syntax protocol infer dry_run_opts =
+let make_initial_state syntax protocol infer dry_run_opts esy_project_path =
   { env = Environment.default protocol;
     decl_list = [];
     syntax = syntax;
     infer = infer;
     protocol = protocol;
     dry_run_opts = dry_run_opts;
+    esy_project_path = esy_project_path;
   }
 
 let rec read_input prompt delim =
@@ -234,7 +236,7 @@ let rec loop syntax display_format state n =
 
 let main syntax display_format protocol typer_switch dry_run_opts init_file esy_project_path =
   print_endline welcome_msg;
-  let state = make_initial_state syntax protocol typer_switch dry_run_opts in
+  let state = make_initial_state syntax protocol typer_switch dry_run_opts esy_project_path in
   let state = match init_file with
     | None -> state
     | Some file_name -> let c = use_file state file_name in

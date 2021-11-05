@@ -13,7 +13,7 @@ let contract ?werror source_file entry_point declared_views syntax infer protoco
       fun ~raise ->
       let options =
           let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
-          Compiler_options.make ~infer ~protocol_version ()
+          Compiler_options.make ~infer ~protocol_version ?esy_project_path ()
       in
       let code,env = Build.build_contract ~raise ~add_warning ~options syntax entry_point source_file in
       let views =
@@ -27,7 +27,7 @@ let expression expression syntax infer protocol_version init_file display_format
       fun ~raise ->
       let options =
         let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
-        Compiler_options.make ~infer ~protocol_version ()
+        Compiler_options.make ~infer ~protocol_version ?esy_project_path ()
       in
       let (mini_c_exp,_), _, decl_list = Build.build_expression ~raise ~add_warning ~options syntax expression init_file in
       let compiled_exp   = Ligo_compile.Of_mini_c.aggregate_and_compile_expression ~raise ~options decl_list mini_c_exp in

@@ -13,7 +13,7 @@ let dependency_graph source_file syntax display_format esy_project_path =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (BuildSystem.Formatter.graph_format) get_warnings @@
       fun ~raise ->
-      let options = Compiler_options.make () in
+      let options = Compiler_options.make ?esy_project_path () in
       let g,_ = Build.dependency_graph ~raise ~add_warning ~options syntax Env source_file in
       (g,source_file)
 
@@ -21,6 +21,7 @@ let preprocess source_file syntax display_format =
     format_result ~display_format Parsing.Formatter.ppx_format (fun _ -> []) @@
     fun ~raise ->
     fst @@
+    (* MELWYN TODO: handle module resolutions here *)
     let options   = Compiler_options.make () in
     let meta = Compile.Of_source.extract_meta ~raise syntax source_file in
     Compile.Of_source.compile ~raise ~options ~meta source_file
@@ -28,6 +29,7 @@ let preprocess source_file syntax display_format =
 let cst source_file syntax display_format =
     format_result ~display_format (Parsing.Formatter.ppx_format) (fun _ -> []) @@
       fun ~raise ->
+      (* MELWYN TODO: handle module resolutions here *)
       let options = Compiler_options.make () in
       let meta = Compile.Of_source.extract_meta ~raise syntax source_file in
       Compile.Utils.pretty_print_cst ~raise ~options ~meta source_file
@@ -36,6 +38,7 @@ let ast source_file syntax display_format =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (Ast_imperative.Formatter.module_format) get_warnings @@
       fun ~raise ->
+      (* MELWYN TODO: handle module resolutions here *)
       let options       = Compiler_options.make () in
       let meta     = Compile.Of_source.extract_meta ~raise syntax source_file in
       let c_unit,_ = Compile.Utils.to_c_unit ~raise ~options ~meta source_file in
@@ -45,6 +48,7 @@ let ast_sugar source_file syntax display_format =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (Ast_sugar.Formatter.module_format) get_warnings @@
       fun ~raise ->
+      (* MELWYN TODO: handle module resolutions here *)
       let options = Compiler_options.make () in
       let meta     = Compile.Of_source.extract_meta ~raise syntax source_file in
       let c_unit,_ = Compile.Utils.to_c_unit ~raise ~options ~meta source_file in
@@ -59,12 +63,13 @@ let ast_core source_file syntax infer protocol_version display_format esy_projec
          (it still needs to infer+typecheck the dependencies) *)
         let options = (* TODO: options should be computed outside of the API *)
           let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
-          Compiler_options.make ~infer ~protocol_version ()
+          Compiler_options.make ~infer ~protocol_version ?esy_project_path ()
         in
         let inferred_core = Build.infer_contract ~raise ~add_warning ~options syntax Env source_file in
         inferred_core
     else
       (* Print the ast as-is without inferring and typechecking dependencies *)
+      (* MELWYN TODO: handle module resolutions here *)
         let options = Compiler_options.make ~infer () in
         let meta     = Compile.Of_source.extract_meta ~raise syntax source_file in
         let c_unit,_ = Compile.Utils.to_c_unit ~raise ~options ~meta source_file in
@@ -76,7 +81,7 @@ let ast_typed source_file syntax infer protocol_version display_format esy_proje
     fun ~raise ->
       let options = (* TODO: options should be computed outside of the API *)
         let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
-        Compiler_options.make ~infer ~protocol_version ()
+        Compiler_options.make ~infer ~protocol_version ?esy_project_path ()
       in
       let typed,_ = Build.type_contract ~raise ~add_warning ~options syntax Env source_file in
       let typed = Self_ast_typed.monomorphise_module typed in
@@ -88,7 +93,7 @@ let ast_combined  source_file syntax infer protocol_version display_format esy_p
     fun ~raise ->
       let options = (* TODO: options should be computed outside of the API *)
         let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
-        Compiler_options.make ~infer ~protocol_version ()
+        Compiler_options.make ~infer ~protocol_version ?esy_project_path ()
       in
       let typed,_ = Build.combined_contract ~raise ~add_warning ~options syntax source_file in
       typed
@@ -99,7 +104,7 @@ let mini_c source_file syntax infer protocol_version display_format optimize esy
     fun ~raise ->
       let options = (* TODO: options should be computed outside of the API *)
         let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
-        Compiler_options.make ~infer ~protocol_version ()
+        Compiler_options.make ~infer ~protocol_version ?esy_project_path ()
       in
       let mini_c,_ = Build.build_mini_c ~raise ~add_warning ~options syntax Env source_file in
       match optimize with

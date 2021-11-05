@@ -23,6 +23,7 @@ let mutate_ast source_file syntax infer protocol_version libs display_format see
     let module Fuzzer = Fuzz.Ast_imperative.Mutator(Gen) in
     let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
     let options       = Compiler_options.make ~infer ~protocol_version ~libs () in
+    (* MELWYN TODO: handle module resolutions here *)
     let meta     = Compile.Of_source.extract_meta ~raise syntax source_file in
     let c_unit,_ = Compile.Utils.to_c_unit ~raise ~options ~meta source_file in
     let imperative_prg = Compile.Utils.to_imperative ~raise ~add_warning ~options ~meta c_unit source_file in
@@ -43,6 +44,7 @@ let mutate_cst source_file syntax infer protocol_version libs display_format see
     let module Gen : Fuzz.Monad = (val get_module : Fuzz.Monad) in
     let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
     let options   = Compiler_options.make ~infer ~protocol_version ~libs () in
+    (* MELWYN TODO: handle module resolutions here *)
     let meta     = Compile.Of_source.extract_meta ~raise syntax source_file in
     let c_unit,_ = Compile.Utils.to_c_unit ~raise ~options ~meta source_file in
     match meta with
