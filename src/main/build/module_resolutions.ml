@@ -10,6 +10,8 @@ module JsonHelpers = struct
   let string_list json = List.map ~f:string (list json)
 end
 
+type t = string * (string * string list) list 
+
 let resolve_paths installation graph root =
   let resolve p =
     Yojson.Basic.Util.member p installation |> JsonHelpers.string
@@ -44,7 +46,7 @@ let make project_path =
     Some (resolve_paths installation_json dependencies root)
   | None -> None
 
-let get_includes path (module_resolutions : Compiler_options.module_resolutions) =
+let get_includes path module_resolutions =
   let starts_with ~prefix s =
     let s1 = String.length prefix in
     let s2 = String.length s in

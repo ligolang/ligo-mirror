@@ -56,7 +56,7 @@ module Command = struct
   let eval
     : type a.
       raise:Errors.interpreter_error raise ->
-      module_resolutions: Compiler_options.module_resolutions ->
+      module_resolutions: Build.Module_resolutions.t option ->
       a t ->
       Tezos_state.context ->
       execution_trace ref option ->
@@ -322,7 +322,7 @@ type 'a t =
 let rec eval
   : type a.
     raise:Errors.interpreter_error raise ->
-    module_resolutions:Compiler_options.module_resolutions ->
+    module_resolutions:Build.Module_resolutions.t option ->
     a t ->
     Tezos_state.context ->
     execution_trace ref option ->
