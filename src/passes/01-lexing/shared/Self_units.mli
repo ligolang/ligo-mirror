@@ -1,16 +1,24 @@
 (* Vendor dependencies *)
 
-module Region = Simple_utils.Region
-module Unit   = LexerLib.Unit
+module Region  = Simple_utils.Region
+module Options = LexerLib.Options
+module Unit    = LexerLib.Unit
 
 (* Signature *)
 
 module type S =
   sig
-    type token
+    type lex_unit
 
-    type message = string Region.reg
+    type units = lex_unit list
 
-    val filter :
-      (token Unit.t list, message) result -> (token list, message) result
+    type error = {
+      used_units : units;
+      message    : string Region.reg
+    }
+
+    val filter : units -> (units, error) result
   end
+
+module Make (Options : Options.S) (Token : Token.S)
+       : S with type lex_unit = Token.t Unit.t

@@ -33,7 +33,8 @@
 
 (* Vendor dependencies *)
 
-module Region = Simple_utils.Region
+module Region    = Simple_utils.Region
+module Directive = LexerLib.Directive
 
 (* TOKENS *)
 
@@ -70,19 +71,20 @@ module type S =
     type  lang_err = Unsupported_lang_syntax
     type   kwd_err = Invalid_keyword
 
-    val mk_int      : lexeme -> Region.t -> (token,   int_err) result
-    val mk_nat      : lexeme -> Region.t -> (token,   nat_err) result
-    val mk_mutez    : lexeme -> Region.t -> (token, mutez_err) result
-    val mk_sym      : lexeme -> Region.t -> (token,   sym_err) result
-    val mk_kwd      : lexeme -> Region.t -> (token,   kwd_err) result
-    val mk_ident    : lexeme -> Region.t -> token
-    val mk_string   : lexeme -> Region.t -> token
-    val mk_verbatim : lexeme -> Region.t -> token
-    val mk_bytes    : lexeme -> Region.t -> token
-    val mk_uident   : lexeme -> Region.t -> token
-    val mk_attr     : lexeme -> Region.t -> token
-    val mk_lang     : lexeme Region.reg -> Region.t -> (token, lang_err) result
-    val mk_eof      : Region.t -> token
+    val mk_directive : Directive.t -> token
+    val mk_int       : lexeme -> Region.t -> (token,   int_err) result
+    val mk_nat       : lexeme -> Region.t -> (token,   nat_err) result
+    val mk_mutez     : lexeme -> Region.t -> (token, mutez_err) result
+    val mk_sym       : lexeme -> Region.t -> (token,   sym_err) result
+    val mk_kwd       : lexeme -> Region.t -> (token,   kwd_err) result
+    val mk_ident     : lexeme -> Region.t -> token
+    val mk_string    : lexeme -> Region.t -> token
+    val mk_verbatim  : lexeme -> Region.t -> token
+    val mk_bytes     : lexeme -> Region.t -> token
+    val mk_uident    : lexeme -> Region.t -> token
+    val mk_attr      : lexeme -> Region.t -> token
+    val mk_lang      : lexeme Region.reg -> Region.t -> (token, lang_err) result
+    val mk_eof       : Region.t -> token
 
     (* Predicates *)
 

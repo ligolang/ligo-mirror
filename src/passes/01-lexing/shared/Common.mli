@@ -1,8 +1,8 @@
 (* Vendors dependencies *)
 
-module Trace = Simple_utils.Trace
-
-module type CONFIG = Preprocessor.Config.S
+module Trace  = Simple_utils.Trace
+module Config = Preprocessor.Config
+module Unit   = LexerLib.Unit
 
 (* Making lexers *)
 
@@ -36,5 +36,5 @@ module type S =
     val lex_channel : raise:raise -> directories -> in_channel -> Token.t list
   end
 
-module Make (Config : CONFIG) (Token : Token.S)
+module Make (Config : Config.S) (Token : Token.S)
        : S with module Token = Token

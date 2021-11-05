@@ -8,13 +8,17 @@
 (* VENDOR DEPENDENCIES *)
 
 module Region = Simple_utils.Region
-module State  = LexerLib.State
-module Thread = LexerLib.Thread
-module Client = LexerLib.Client (* For the interface only *)
+
+module Options   = LexerLib.Options   (* For instantiation only *)
+module Unit      = LexerLib.Unit      (* For instantiation only *)
+module Client    = LexerLib.Client    (* For the interface only *)
+module Directive = LexerLib.Directive (* For verbatim only: TO BE REMOVED *)
+module State     = LexerLib.State
+module Thread    = LexerLib.Thread
 
 (* The functorised interface *)
 
-module Make (Token : Token.S) =
+module Make (Options : Options.S) (Token : Token.S) =
   struct
     type token = Token.t
 
@@ -275,12 +279,21 @@ rule scan state = parse
            in fail region (Unexpected_character c) }
 
 (* Scanning verbatim strings with or without inclusion of Michelson code *)
+(* TODO: Move to preprocessor *)
 
 and scan_verbatim verb_close thread state = parse
   '#' blank* (natural as line) blank+ '"' (string as file) '"'
   (blank+ ('1' | '2'))? blank* (nl | eof) {
-    let state = state#push_linemarker ~line ~file lexbuf
-    in scan_verbatim verb_close thread state lexbuf }
+      let State.{state; region; _} = state#sync lexbuf in
+      let flag      = None in
+      let linenum   = int_of_string line in
+      let value     = linenum, file, flag in
+      let directive = Directive.Linemarker Region.{value; region} in
+      let state     = state#push_directive directive in
+      let pos       = region#start#add_nl in
+      let pos       = (pos#set_file file)#set_line linenum in
+      let state     = state#set_pos pos
+      in scan_verbatim verb_close thread state lexbuf }
 
 | "`" | "|}" as lexeme {
         if verb_close = lexeme then

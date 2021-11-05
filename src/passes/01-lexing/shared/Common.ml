@@ -1,9 +1,9 @@
 (* Vendors dependencies *)
 
-module Trace = Simple_utils.Trace
-
-module type CONFIG  = Preprocessor.Config.S
-module type OPTIONS = LexerLib.Options.S
+module Trace   = Simple_utils.Trace
+module Config  = Preprocessor.Config
+module Options = LexerLib.Options
+module Unit    = LexerLib.Unit
 
 (* Making lexers *)
 
@@ -24,6 +24,8 @@ module type S =
 
     (* Lexing various sources *)
 
+    (* TODO: Do we want to pass the original file name, if any? *)
+
     val from_file    : raise:raise -> directories -> file_path  -> Token.t list
     val from_string  : raise:raise -> directories -> string     -> Token.t list
     val from_buffer  : raise:raise -> directories -> Buffer.t   -> Token.t list
@@ -37,7 +39,7 @@ module type S =
     val lex_channel : raise:raise -> directories -> in_channel -> Token.t list
   end
 
-module Make (Config : CONFIG) (Token : Token.S) =
+module Make (Config : Config.S) (Token : Token.S) =
   struct
     module Token = Token
 
@@ -52,48 +54,53 @@ module Make (Config : CONFIG) (Token : Token.S) =
 
     type raise = Errors.t Trace.raise
 
-    (* Instantiating the client lexer *)
-
-    module Client = Lexer.Make (Token)
-
     (* Partially instantiating the final lexer *)
 
-    module Scan (Options : OPTIONS) =
-      LexerLib.API.Make (Config) (Options) (Token) (Client)
+    module Scan (Options : Options.S) =
+      LexerLib.API.Make (Config) (Lexer.Make (Options) (Token))
 
     (* Partial option module *)
 
     module PreOptions = (* TODO Flow from the compiler CLI *)
       struct
-        let show_pp    = false
-        let offsets    = true
-        let preprocess = true
-        let mode       = `Point
-        let command    = None
+        type post_pass = Pass of int | All
+
+        let show_pp     = false
+        let offsets     = true
+        let preprocess  = true
+        let postprocess = Some All
+        let mode        = `Point
+        let command     = None
       end
 
-    (* Lifting [Stdlib.result] to [Trace.raise]. *)
+    (* Filtering out the markup *)
 
-    let lift ~(raise:raise) = function
-      Ok tokens -> tokens
-    | Error (_, msg) -> raise.raise @@ Errors.generic msg
+    let filter_tokens units : Token.t list =
+      let apply tokens = function
+        `Token token -> token :: tokens
+      | `Markup _    -> tokens
+      | `Directive d -> Token.mk_directive d :: tokens
+      in List.fold_left apply [] units |> List.rev
+
     (* Lexing a file *)
 
-    let from_file ~raise dirs file_path =
+    let from_file ~(raise:raise) dirs file =
       let module Options =
         struct
-          let input = Some file_path
+          let input = Some file
           let dirs  = dirs
           include PreOptions
         end in
-      let open Scan (Options)
-      in Tokens.from_file file_path |> lift ~raise
-
+     let open Scan (Options)
+     in match from_file file with
+          Ok units -> filter_tokens units
+        | Error {message; _} ->
+            raise.raise @@ Errors.generic message
     let lex_file = from_file
 
     (* Lexing a string *)
 
-    let from_string ~raise dirs string =
+    let from_string ~(raise:raise) dirs string =
      let module Options =
         struct
           let input = None
@@ -101,13 +108,16 @@ module Make (Config : CONFIG) (Token : Token.S) =
           include PreOptions
         end in
      let open Scan (Options)
-     in Tokens.from_string string |> lift ~raise
+     in match from_string ~file:"" string with
+          Ok units -> filter_tokens units
+        | Error {message; _} ->
+            raise.raise @@ Errors.generic message
 
     let lex_string = from_string
 
     (* Lexing a string buffer *)
 
-    let from_buffer ~raise dirs buffer =
+    let from_buffer ~(raise:raise) dirs buffer =
      let module Options =
         struct
           let input = None
@@ -115,13 +125,16 @@ module Make (Config : CONFIG) (Token : Token.S) =
           include PreOptions
         end in
      let open Scan (Options)
-     in Tokens.from_buffer buffer |> lift ~raise
+     in match from_buffer buffer with
+          Ok units -> filter_tokens units
+        | Error {message; _} ->
+            raise.raise @@ Errors.generic message
 
     let lex_buffer = from_buffer
 
     (* Lexing an input channel *)
 
-    let from_channel ~raise dirs channel =
+    let from_channel ~(raise:raise) dirs channel =
      let module Options =
         struct
           let input = None
@@ -129,7 +142,10 @@ module Make (Config : CONFIG) (Token : Token.S) =
           include PreOptions
         end in
      let open Scan (Options)
-     in Tokens.from_channel channel |> lift ~raise
+     in match from_channel ~file:"" channel with
+          Ok units -> filter_tokens units
+        | Error {message; _} ->
+            raise.raise @@ Errors.generic message
 
     let lex_channel = from_channel
   end

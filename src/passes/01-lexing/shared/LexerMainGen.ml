@@ -1,20 +1,22 @@
 (* Vendor dependencies *)
 
-module Region = Simple_utils.Region
+module Region  = Simple_utils.Region
+module Std     = Simple_utils.Std
+module Config  = Preprocessor.Config
+module Options = LexerLib.Options
+module Client  = LexerLib.Client
+module Unit    = LexerLib.Unit
 
-module type CONFIG  = Preprocessor.Config.S
-module type OPTIONS = LexerLib.Options.S
+(* CLI errors *)
 
-(* Internal dependencies *)
-
-module type TOKEN = Token.S
+let red msg = Printf.sprintf "\027[31m%s\027[0m" msg
 
 (* The functor *)
 
-module Make (Config      : CONFIG)
-            (Options     : OPTIONS)
-            (Token       : TOKEN)
-            (Self_tokens : Self_tokens.S with type token = Token.t) =
+module Make (Config     : Config.S)
+            (Options    : Options.S)
+            (Token      : Token.S)
+            (Self_units : Self_units.S with type lex_unit = Token.t Unit.t) =
   struct
     (* Reading the preprocessor CLI *)
 
@@ -24,49 +26,100 @@ module Make (Config      : CONFIG)
 
     module Parameters = LexerLib.CLI.Make (PreprocParams)
 
-    (* All exits *)
-
-    let print_in_red Region.{value=msg; region} =
-      let header = region#to_string ~file:true ~offsets:true `Point
-      in Printf.eprintf "\027[31mError %s:\n%s\027[0m\n%!" header msg
-
-    let cli_error msg =
-      let msg = Printf.sprintf "Command-line error: %s\n" msg
-      in Printf.eprintf "\027[31m%s\027[0m%!" msg
-
-    let print_and_quit msg = print_string msg; flush stdout; exit 0
-
     (* Checking for errors and valid exits *)
 
-    let check_cli () =
+    type cli_status =
+      Ok
+    | Info  of string
+    | Error of string
+
+    let check_cli () : cli_status =
       match Parameters.Status.status with
         `SyntaxError  msg
       | `WrongFileExt msg
-      | `FileNotFound msg -> cli_error msg
+      | `FileNotFound msg -> Error (red msg)
       | `Help         buf
-      | `CLI          buf -> print_and_quit (Buffer.contents buf)
-      | `Version      ver -> print_and_quit (ver ^ "\n")
+      | `CLI          buf -> Info (Buffer.contents buf)
+      | `Version      ver -> Info (ver ^ "\n")
+      | `Done             -> Ok
       | `Conflict (o1,o2) ->
-           cli_error (Printf.sprintf "Choose either %s or %s." o1 o2)
-      | `Done -> ()
+           let msg = Printf.sprintf "Choose either %s or %s." o1 o2
+           in Error (red msg)
 
     (* Re-exporting *)
 
-    module Token = Token
     type token = Token.t
 
     (* Instantiation of the client lexer *)
 
-    module Client = Lexer.Make (Token)
+    module Client = Lexer.Make (Options) (Token)
 
     (* Instantiation of the final lexer *)
 
-    module Scan = LexerLib.API.Make (Config) (Options) (Token) (Client)
+    module Scan = LexerLib.API.Make (Config) (Client)
+
+    (* Errors *)
+
+    type 'item error = {
+      preprocessed : string option;
+      used_items   : 'item list;
+      message      : string Region.reg
+    }
+
+    let format_error msg : string =
+      let Region.{value; region} = msg in
+      let header = region#to_string
+                     ~file:(Options.input <> None)
+                     ~offsets:Options.offsets
+                     `Byte
+      in Printf.sprintf "%s:\n%s" header value
+
+    (* Making the preprocessor *)
+
+    module Preproc = Preprocessor.PreprocMainGen.Make (PreprocParams)
+
+    (* Scanning all tokens in the input given by the CLI. *)
+
+    type lex_unit = token Unit.t
+
+    let scan_all () : Std.t * (lex_unit list, lex_unit error) result =
+      let file =
+        match Options.input with
+          Some file when file <> "" -> file
+        | Some _ | None -> "" in
+      if Options.preprocess then
+        let std, api_result = Preproc.preprocess () in
+        match api_result with
+          Stdlib.Error (preprocessed, message) ->
+            let error = {preprocessed; used_items=[]; message}
+            in std, Stdlib.Error error
+        | Ok (preprocessed, _deps) ->
+            (* Note: Module dependencies [_deps] are dropped. TODO *)
+           let lexbuf = Lexing.from_string preprocessed in
+            match Scan.from_lexbuf ~file lexbuf with
+              Stdlib.Error {used_units; message} ->
+                let preprocessed = Some preprocessed
+                and used_items   = used_units in
+                let error        = {preprocessed; used_items; message}
+                in std, Stdlib.Error error
+            | Ok units -> std, Ok units
+      else
+        let result =
+          if file = "" then Scan.from_channel ~file stdin
+          else Scan.from_file file in
+        match result with
+          Stdlib.Error {used_units; message} ->
+            let preprocessed = None
+            and used_items   = used_units
+            and std          = Std.add_err (format_error message) Std.empty in
+            let error        = {preprocessed; used_items; message}
+            in std, Stdlib.Error error
+        | Ok units -> Std.empty, Ok units
 
     (* On the one hand, parsers generated by Menhir are functions that
        expect a parameter of type [Lexing.lexbuf -> token]. On the
        other hand, we want to enable self-passes on the tokens (See
-       module [Self_tokens]), which implies that we scan the whole
+       module [Self_units]), which implies that we scan the whole
        input before parsing. Therefore, we make believe to the
        Menhir-generated parser that we scan tokens one by one, when,
        in fact, we have lexed them all already.
@@ -74,102 +127,70 @@ module Make (Config      : CONFIG)
        We need to use global references to store information as a way
        to workaround the signature of the parser generated by Menhir.
 
-         * The global reference [window] holds a window of one or two
-           tokens, used by our parser library [ParserLib] to make
-           error messages. That reference is read by the function
-           [get_window] and updated by [set_window]. It is cleared to
-           its initial state by [clear].
-
          * The global reference [called] tells us whether the lexer
            [scan] has been called before or not. If not, this triggers
            the scanning of all the tokens; if so, a token is extracted
            from the global reference [tokens] and the window is
            updated. The reference [called] is reset by calling
-           [clear].
+           [clear]. This is useful when the process running the
+           compiler scans multiple inputs sequentially.
 
-         * The global reference [tokens] holds all the tokens from a
-           given source. The function [scan] updates it the first time
-           it is called (see [called] above).
+         * The global reference [used_tokens] holds all the tokens
+           from a given source. The function [scan] updates it the
+           first time it is called (see [called] above).
 
        In particular, when running the parsers twice, we have to call
        [clear] to reset the global state to force the scanning of all
        the tokens from the new lexing buffer.
 
        WARNING: By design, the state *is* observable from the
-       interface of this module when calling [get_window] and [clear],
-       which are exported in the signature. *)
+       interface of this module when calling [get_tokens], [clear] and
+       [check_cli], which are exported in the signature. *)
 
-    type window = <
-      last_token    : token option;
-      current_token : token  (* Including EOF *)
-    >
+    (* All tokens scanned up to a parse error: for debugging *)
 
-    let window     : window option ref    = ref None
-    let get_window : unit -> window option = fun () -> !window
+    let used_tokens : token list ref = ref []
 
-    let set_window ~current ~last : unit =
-      window := Some (object
-                        method last_token    = last
-                        method current_token = current
-                      end)
+    (* Whether the lexer has been called or not *)
 
     let called : bool ref = ref false
 
-    let clear () =
-      begin
-        window := None;
-        called := false
-      end
+    (* Resetting the lexer *)
 
-    type message = string Region.reg
-    type menhir_lexer = Lexing.lexbuf -> (token, message) Stdlib.result
+    let clear () = (used_tokens := []; called := false)
 
-    let rec scan : menhir_lexer =
+    (* Filtering out the markup *)
+
+    let filter_tokens units : token list =
+      let apply tokens = function
+        `Token token -> token :: tokens
+      | `Markup _    -> tokens
+      | `Directive d -> Token.mk_directive d :: tokens
+      in List.fold_left apply [] units |> List.rev
+
+    (* Scanning tokens one by one, based on [scan_all]. *)
+
+    let rec scan_token =
       let store : token list ref = ref [] in
       fun lexbuf ->
         if !called then
           let token =
             match !store with
               token::tokens ->
-                let last =
-                  match !window with
-                    None -> None
-                  | Some window -> Some window#current_token in
-                set_window ~current:token ~last;
+                used_tokens := token :: !used_tokens;
                 store := tokens;
                 token
             | [] -> Token.mk_eof Region.ghost
           in Stdlib.Ok token
         else
-          let lex_units = Scan.LexUnits.from_lexbuf lexbuf
-          in match Self_tokens.filter lex_units with
-               Stdlib.Ok tokens ->
-                 store  := tokens;
-                 called := true;
-                 scan lexbuf
-             | Error _ as err -> err
-
-    (* Scanning all tokens with or without a preprocessor *)
-
-    module Preproc = Preprocessor.PreprocMainGen.Make (PreprocParams)
-
-    let print_error = function
-      Stdlib.Error msg -> print_in_red msg
-    | Ok _ -> ()
-
-    let scan_all () : unit =
-      if Options.preprocess then
-        match Preproc.preprocess () with
-          Stdlib.Error _ -> () (* Already printed *)
-        | Ok (buffer, _deps) ->
-            (* Module dependencies [_deps] are dropped. *)
-            let string = Buffer.contents buffer in
-            let lexbuf = Lexing.from_string string in
-            Scan.Tokens.from_lexbuf lexbuf |> print_error
-      else
-        let lex_units =
-          match Options.input with
-            Some path -> Scan.LexUnits.from_file path
-          |      None -> Scan.LexUnits.from_channel stdin
-        in Self_tokens.filter lex_units |> print_error
+          (* We drop standard output/error *)
+          let _std, result = scan_all () in
+          match result with
+            Stdlib.Ok units ->
+              store  := filter_tokens units;
+              called := true;
+              scan_token lexbuf
+          | Error err ->
+              let used_items = filter_tokens err.used_items
+              in Error {err with used_items}
   end

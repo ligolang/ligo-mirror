@@ -20,6 +20,6 @@
      str)
   (modules
      Errors Formatter Token Common
-     Lexer Self_tokens LexerMainGen UnlexerGen)
+     Lexer Self_units LexerMainGen UnlexerGen)
   (modules_without_implementation
-     Token Self_tokens))
+     Token Self_units))
