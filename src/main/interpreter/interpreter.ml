@@ -162,10 +162,10 @@ let rec apply_comparison :
             l) ;
       fail @@ Errors.meta_lang_eval loc calltrace "Not comparable"
 
-let rec apply_operator ~raise ~steps ~protocol_version : Location.t -> calltrace -> Ast_typed.type_expression -> env -> Ast_typed.constant' -> (value * Ast_typed.type_expression) list -> value Monad.t =
+let rec apply_operator ~raise ~steps ~module_resolutions ~protocol_version : Location.t -> calltrace -> Ast_typed.type_expression -> env -> Ast_typed.constant' -> (value * Ast_typed.type_expression) list -> value Monad.t =
   fun loc calltrace expr_ty env c operands ->
   let open Monad in
-  let eval_ligo = eval_ligo ~raise ~steps ~protocol_version in
+  let eval_ligo = eval_ligo ~raise ~steps ~module_resolutions ~protocol_version in
   let types = List.map ~f:snd operands in
   let operands = List.map ~f:fst operands in
   let return_ct v = return @@ V_Ct v in
@@ -748,9 +748,9 @@ and eval_literal : Ast_typed.literal -> value Monad.t = function
      end
   | l -> Monad.fail @@ Errors.literal Location.generated l
 
-and eval_ligo ~raise ~steps ~protocol_version : Ast_typed.expression -> calltrace -> env -> value Monad.t
+and eval_ligo ~raise ~steps ~module_resolutions ~protocol_version : Ast_typed.expression -> calltrace -> env -> value Monad.t
   = fun term calltrace env ->
-    let eval_ligo ?(steps = steps - 1) = eval_ligo ~raise ~steps ~protocol_version in
+    let eval_ligo ?(steps = steps - 1) = eval_ligo ~raise ~steps ~module_resolutions ~protocol_version in
     let open Monad in
     let* () = if steps <= 0 then fail (Errors.meta_lang_eval term.location calltrace "Out of fuel") else return () in
     match term.expression_content with
@@ -785,7 +785,7 @@ and eval_ligo ~raise ~steps ~protocol_version : Ast_typed.expression -> calltrac
     )
     | E_mod_in {module_binder; rhs; let_result} ->
        let>> state = Get_state () in
-       let (item, state) = eval_module ~raise ~steps ~protocol_version (rhs, state, env) in
+       let (item, state) = eval_module ~raise ~steps ~module_resolutions ~protocol_version (rhs, state, env) in
        let>> () = Put_state state in
        let env = Env.extend_mod env module_binder item in
        eval_ligo (let_result) calltrace env
@@ -830,7 +830,7 @@ and eval_ligo ~raise ~steps ~protocol_version : Ast_typed.expression -> calltrac
           let* value = eval_ligo ae calltrace env in
           return @@ (value, ae.type_expression))
         arguments in
-      apply_operator ~raise ~steps ~protocol_version term.location calltrace term.type_expression env cons_name arguments'
+      apply_operator ~raise ~steps ~module_resolutions ~protocol_version term.location calltrace term.type_expression env cons_name arguments'
     )
     | E_constructor { constructor = Label c ; element } when String.equal c "True"
       && element.expression_content = Ast_typed.e_unit () -> return @@ V_Ct (C_bool true)
@@ -947,7 +947,7 @@ and eval_ligo ~raise ~steps ~protocol_version : Ast_typed.expression -> calltrac
          | _ -> raise.raise @@ Errors.generic_error term.location "Unsupported module path"
        in aux env term
 
-and try_eval ~raise ~steps ~protocol_version expr env state r = Monad.eval ~raise (eval_ligo ~raise ~steps ~protocol_version expr [] env) state r
+and try_eval ~raise ~steps ~module_resolutions ~protocol_version expr env state r = Monad.eval ~raise ~module_resolutions (eval_ligo ~raise ~steps ~module_resolutions ~protocol_version expr [] env) state r
 
 and resolve_module_path ~raise ~loc binders env =
   let aux (e : env) (m : module_variable) =
@@ -956,7 +956,7 @@ and resolve_module_path ~raise ~loc binders env =
     | Some e -> e in
   List.Ne.fold_left aux env binders
 
-and eval_module ~raise ~steps ~protocol_version : Ast_typed.module_fully_typed * Tezos_state.context * env -> env * Tezos_state.context =
+and eval_module ~raise ~steps ~module_resolutions ~protocol_version : Ast_typed.module_fully_typed * Tezos_state.context * env -> env * Tezos_state.context =
   fun (Module_Fully_Typed prg, initial_state, env) ->
     let aux : env * env * Tezos_state.context -> declaration location_wrap -> env * env * Tezos_state.context =
       fun (top_env,curr_env,state) el ->
@@ -964,12 +964,12 @@ and eval_module ~raise ~steps ~protocol_version : Ast_typed.module_fully_typed *
         | Ast_typed.Declaration_type _ ->
            (top_env,curr_env,state)
         | Ast_typed.Declaration_constant {binder; expr ; attr = { inline=_ ; no_mutation }} ->
-          let (v,state) = try_eval ~raise ~steps ~protocol_version expr top_env state None in
+          let (v,state) = try_eval ~raise ~steps ~module_resolutions ~protocol_version expr top_env state None in
           let curr_env' = Env.extend curr_env binder ~no_mutation (expr.type_expression, v) in
           let top_env' = Env.extend top_env binder ~no_mutation (expr.type_expression, v) in
           (top_env', curr_env',state)
         | Ast_typed.Declaration_module {module_binder; module_} ->
-          let (inner_curr_env, state) = eval_module ~raise ~steps ~protocol_version (module_, state, top_env) in
+          let (inner_curr_env, state) = eval_module ~raise ~steps ~module_resolutions ~protocol_version (module_, state, top_env) in
           let curr_env' = Env.extend_mod curr_env module_binder inner_curr_env in
           let top_env' = Env.extend_mod top_env module_binder inner_curr_env in
           (top_env', curr_env',state)
@@ -982,10 +982,10 @@ and eval_module ~raise ~steps ~protocol_version : Ast_typed.module_fully_typed *
     let (_, curr_env, state) = List.fold ~f:aux ~init:(env,[], initial_state) prg in
     (curr_env, state)
 
-let eval_test ~raise ~steps ~protocol_version : Ast_typed.module_fully_typed -> (env * (string * value) list) =
+let eval_test ~raise ~steps ~module_resolutions ~protocol_version : Ast_typed.module_fully_typed -> (env * (string * value) list) =
   fun prg ->
     let initial_state = Tezos_state.init_ctxt ~raise protocol_version [] in
-    let (env, _state) = eval_module ~raise ~steps ~protocol_version (prg, initial_state, Env.empty_env) in
+    let (env, _state) = eval_module ~raise ~steps ~module_resolutions ~protocol_version (prg, initial_state, Env.empty_env) in
     let v = Env.to_kv_list_rev (Ligo_interpreter.Environment.expressions env) in
     let aux : expression_variable * (value_expr * bool) -> (string * value) option = fun (ev, (v, _)) ->
       let ev = Location.unwrap ev in

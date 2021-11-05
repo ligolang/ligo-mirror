@@ -50,7 +50,7 @@ let ast_sugar source_file syntax display_format =
       let c_unit,_ = Compile.Utils.to_c_unit ~raise ~options ~meta source_file in
       Compile.Utils.to_sugar ~raise ~add_warning ~options ~meta c_unit source_file
 
-let ast_core source_file syntax infer protocol_version display_format =
+let ast_core source_file syntax infer protocol_version display_format esy_installation_json esy_lock_file =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (Ast_core.Formatter.module_format) get_warnings @@
     fun ~raise ->
@@ -70,7 +70,7 @@ let ast_core source_file syntax infer protocol_version display_format =
         let c_unit,_ = Compile.Utils.to_c_unit ~raise ~options ~meta source_file in
         Compile.Utils.to_core ~raise ~add_warning ~options ~meta c_unit source_file
 
-let ast_typed source_file syntax infer protocol_version display_format =
+let ast_typed source_file syntax infer protocol_version display_format esy_installation_json esy_lock_file =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (Ast_typed.Formatter.module_format_fully_typed) get_warnings @@
     fun ~raise ->
@@ -78,11 +78,12 @@ let ast_typed source_file syntax infer protocol_version display_format =
         let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
         Compiler_options.make ~infer ~protocol_version ()
       in
-      let typed,_ = Build.type_contract ~raise ~add_warning ~options syntax Env source_file in
+      let module_resolutions = Api_helpers.ModuleResolutions.make ~installation:esy_installation_json ~lock:esy_lock_file in
+      let typed,_ = Build.type_contract ~raise ~add_warning ~module_resolutions ~options syntax Env source_file in
       let typed = Self_ast_typed.monomorphise_module typed in
       typed
 
-let ast_combined  source_file syntax infer protocol_version display_format =
+let ast_combined  source_file syntax infer protocol_version display_format esy_installation_json esy_lock_file =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (Ast_typed.Formatter.module_format_fully_typed) get_warnings @@
     fun ~raise ->
@@ -93,7 +94,7 @@ let ast_combined  source_file syntax infer protocol_version display_format =
       let typed,_ = Build.combined_contract ~raise ~add_warning ~options syntax source_file in
       typed
 
-let mini_c source_file syntax infer protocol_version display_format optimize =
+let mini_c source_file syntax infer protocol_version display_format optimize esy_installation_json esy_lock_file =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (Mini_c.Formatter.program_format) get_warnings @@
     fun ~raise ->
