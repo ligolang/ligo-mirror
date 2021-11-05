@@ -234,7 +234,7 @@ let rec loop ~module_resolutions syntax display_format state n =
 
 let main syntax display_format protocol typer_switch dry_run_opts init_file esy_installation_json esy_lock_file =
   print_endline welcome_msg;
-  let module_resolutions = None in
+  let module_resolutions = Build.ModuleResolutions.make ~installation:esy_installation_json ~lock:esy_lock_file in
   let state = make_initial_state syntax protocol typer_switch dry_run_opts in
   let state = match init_file with
     | None -> state

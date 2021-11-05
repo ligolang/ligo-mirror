@@ -14,7 +14,8 @@ let dependency_graph source_file syntax display_format =
     format_result ~display_format (BuildSystem.Formatter.graph_format) get_warnings @@
       fun ~raise ->
       let options = Compiler_options.make () in
-      let g,_ = Build.dependency_graph ~raise ~add_warning ~options syntax Env source_file in
+      let module_resolutions = Build.ModuleResolutions.make ~installation:esy_installation_json ~lock:esy_lock_file in
+      let g,_ = Build.dependency_graph ~raise ~module_resolutions ~options syntax Env source_file in
       (g,source_file)
 
 let preprocess source_file syntax display_format =
@@ -61,7 +62,8 @@ let ast_core source_file syntax infer protocol_version display_format esy_instal
           let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
           Compiler_options.make ~infer ~protocol_version ()
         in
-        let inferred_core = Build.infer_contract ~raise ~add_warning ~options syntax Env source_file in
+        let module_resolutions = Build.ModuleResolutions.make ~installation:esy_installation_json ~lock:esy_lock_file in
+        let _,inferred_core,_,_ = Build.infer_contract ~raise ~add_warning ~module_resolutions ~options syntax Env source_file in
         inferred_core
     else
       (* Print the ast as-is without inferring and typechecking dependencies *)
@@ -78,7 +80,7 @@ let ast_typed source_file syntax infer protocol_version display_format esy_insta
         let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
         Compiler_options.make ~infer ~protocol_version ()
       in
-      let module_resolutions = Api_helpers.ModuleResolutions.make ~installation:esy_installation_json ~lock:esy_lock_file in
+      let module_resolutions = Build.ModuleResolutions.make ~installation:esy_installation_json ~lock:esy_lock_file in
       let typed,_ = Build.type_contract ~raise ~add_warning ~module_resolutions ~options syntax Env source_file in
       let typed = Self_ast_typed.monomorphise_module typed in
       typed
@@ -91,7 +93,8 @@ let ast_combined  source_file syntax infer protocol_version display_format esy_i
         let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
         Compiler_options.make ~infer ~protocol_version ()
       in
-      let typed,_ = Build.combined_contract ~raise ~add_warning ~options syntax source_file in
+      let module_resolutions = Build.ModuleResolutions.make ~installation:esy_installation_json ~lock:esy_lock_file in
+      let typed,_ = Build.combined_contract ~raise ~add_warning ~module_resolutions ~options syntax Env source_file in
       typed
 
 let mini_c source_file syntax infer protocol_version display_format optimize esy_installation_json esy_lock_file =
@@ -102,7 +105,8 @@ let mini_c source_file syntax infer protocol_version display_format optimize esy
         let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
         Compiler_options.make ~infer ~protocol_version ()
       in
-      let mini_c,_ = Build.build_mini_c ~raise ~add_warning ~options syntax Ligo_compile.Of_core.Env source_file in
+      let module_resolutions = Build.ModuleResolutions.make ~installation:esy_installation_json ~lock:esy_lock_file in
+      let mini_c,_ = Build.build_mini_c ~raise ~add_warning ~module_resolutions ~options syntax Env source_file in
       match optimize with
         | None -> Mini_c.Formatter.Raw mini_c
         | Some entry_point ->
