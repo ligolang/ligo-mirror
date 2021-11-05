@@ -15,10 +15,9 @@ let contract ?werror source_file entry_point declared_views syntax infer protoco
           let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
           Compiler_options.make ~infer ~protocol_version ()
       in
-      let module_resolutions = Build.Module_resolutions.make esy_project_path in
-      let code,env = Build.build_contract ~raise ~add_warning ~module_resolutions ~options syntax entry_point source_file in
+      let code,env = Build.build_contract ~raise ~add_warning ~options syntax entry_point source_file in
       let views =
-        Build.build_views ~raise ~add_warning ~module_resolutions ~options syntax entry_point (declared_views,env) source_file
+        Build.build_views ~raise ~add_warning ~options syntax entry_point (declared_views,env) source_file
       in
       Ligo_compile.Of_michelson.build_contract ~raise ~disable_typecheck code views
 

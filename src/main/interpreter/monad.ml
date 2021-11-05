@@ -56,12 +56,11 @@ module Command = struct
   let eval
     : type a.
       raise:Errors.interpreter_error raise ->
-      module_resolutions: Build.Module_resolutions.t option ->
       a t ->
       Tezos_state.context ->
       execution_trace ref option ->
       (a * Tezos_state.context)
-    = fun ~raise ~module_resolutions command ctxt _log ->
+    = fun ~raise command ctxt _log ->
     match command with
     | Set_big_map (id, kv, bigmap_ty) ->
       let (k_ty, v_ty) = trace_option ~raise (Errors.generic_error bigmap_ty.location "Expected big_map type") @@
@@ -201,7 +200,7 @@ module Command = struct
     | Compile_contract_from_file (source_file, entrypoint, views) ->
       let contract_code =
         let protocol_version = ctxt.internals.protocol_version in
-        Michelson_backend.compile_contract ~raise ~add_warning ~module_resolutions ~protocol_version source_file entrypoint views in
+        Michelson_backend.compile_contract ~raise ~add_warning ~protocol_version source_file entrypoint views in
       let size =
         let s = Ligo_compile.Of_michelson.measure ~raise contract_code in
         LT.V_Ct (C_int (Z.of_int s))
@@ -322,28 +321,27 @@ type 'a t =
 let rec eval
   : type a.
     raise:Errors.interpreter_error raise ->
-    module_resolutions:Build.Module_resolutions.t option ->
     a t ->
     Tezos_state.context ->
     execution_trace ref option ->
     a * Tezos_state.context
-  = fun ~raise ~module_resolutions e ctxt log ->
+  = fun ~raise e ctxt log ->
   match e with
   | Bind (e', f) ->
-    let (v, ctxt) = eval ~raise ~module_resolutions e' ctxt log in
-    eval ~raise ~module_resolutions (f v) ctxt log
-  | Call command -> Command.eval ~raise ~module_resolutions command ctxt log
+    let (v, ctxt) = eval ~raise e' ctxt log in
+    eval ~raise (f v) ctxt log
+  | Call command -> Command.eval ~raise command ctxt log
   | Return v -> (v, ctxt)
   | Fail_ligo err -> raise.raise err
   | Try_or (e', handler) ->
     try_with
-      (eval ~module_resolutions e' ctxt log)
+      (eval e' ctxt log)
       (function
             `Main_interpret_target_lang_error _
           | `Main_interpret_target_lang_failwith _
           | `Main_interpret_meta_lang_eval _
           | `Main_interpret_meta_lang_failwith _ ->
-            eval ~raise ~module_resolutions handler ctxt log
+            eval ~raise handler ctxt log
           | e -> raise.raise e)
 
 let fail err : 'a t = Fail_ligo err

@@ -139,7 +139,7 @@ let build_mini_c ~raise ~add_warning : options:Compiler_options.t -> _ -> _ -> f
     let mini_c       = Ligo_compile.Of_typed.compile ~raise applied in
     (mini_c,env)
 
-let build_expression ~raise ~add_warning ~module_resolutions : options:Compiler_options.t -> string -> string -> file_name option -> _ =
+let build_expression ~raise ~add_warning : options:Compiler_options.t -> string -> string -> file_name option -> _ =
   fun ~options syntax expression file_name ->
     let (module_,env) = match file_name with
       | Some init_file ->
@@ -156,13 +156,13 @@ let build_expression ~raise ~add_warning ~module_resolutions : options:Compiler_
     (mini_c_exp ,typed_exp) ,module_, decl_list
 
 (* TODO: this function could be called build_michelson_code since it does not really reflect a "contract" (no views, parameter/storage types) *)
-let build_contract ~raise ~add_warning ~module_resolutions : options:Compiler_options.t -> string -> _ -> file_name -> _ =
+let build_contract ~raise ~add_warning : options:Compiler_options.t -> string -> _ -> file_name -> _ =
   fun ~options syntax entry_point file_name ->
     let mini_c,e   = build_mini_c ~raise ~add_warning ~options syntax (Ligo_compile.Of_core.Contract entry_point) file_name in
     let michelson  = Ligo_compile.Of_mini_c.aggregate_and_compile_contract ~raise ~options mini_c entry_point in
     michelson,e
 
-let build_views ~raise ~add_warning ~module_resolutions :
+let build_views ~raise ~add_warning :
   options:Compiler_options.t -> string -> string -> string list * Ast_typed.environment -> file_name -> (string * Stacking.compiled_expression) list =
   fun ~options syntax main_name (declared_views,env) source_file ->
     let views =

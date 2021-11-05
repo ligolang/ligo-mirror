@@ -1,3 +1,6 @@
+module List = Simple_utils.List
+module Map = Simple_utils.Map
+  
 module JsonHelpers = struct
   let string json = 
     match json with

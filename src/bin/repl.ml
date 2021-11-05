@@ -128,7 +128,7 @@ let try_contract ~raise state s =
   | Failure _ ->
      raise.raise `Repl_unexpected
 
-let import_file ~raise ~module_resolutions state file_name module_name =
+let import_file ~raise state file_name module_name =
   let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol () in
   let options = {options with init_env = state.env } in
   let module_,env = Build.combined_contract ~raise ~add_warning ~options (variant_to_syntax state.syntax) file_name in
@@ -139,7 +139,7 @@ let import_file ~raise ~module_resolutions state file_name module_name =
   let state = { state with env = env; decl_list = state.decl_list @ mini_c } in
   (state, Just_ok)
 
-let use_file ~raise ~module_resolutions state s =
+let use_file ~raise state s =
   let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol () in
   let options = {options with init_env = state.env } in
   (* Missing typer environment? *)
@@ -188,10 +188,10 @@ let eval display_format state c =
        | Json -> Yojson.Safe.pretty_to_string @@ convert ~display_format:t disp in
      (0, state, out)
 
-let parse_and_eval ?module_resolutions display_format state s =
+let parse_and_eval display_format state s =
   let c = match parse s with
-    | Use s -> use_file ~module_resolutions state s
-    | Import (fn, mn) -> import_file ~module_resolutions state fn mn
+    | Use s -> use_file state s
+    | Import (fn, mn) -> import_file state fn mn
     | Expr s -> try_contract state s in
   eval display_format state c
 
@@ -221,25 +221,24 @@ let rec read_input prompt delim =
                  some @@ s ^ "\n" ^ i
               | hd :: _ -> some @@ hd
 
-let rec loop ?module_resolutions syntax display_format state n =
+let rec loop syntax display_format state n =
   let prompt = Format.sprintf "In  [%d]: " n in
   let s = read_input prompt ";;" in
   match s with
   | Some s ->
-     let k, state, out = parse_and_eval ?module_resolutions display_format state s in
+     let k, state, out = parse_and_eval display_format state s in
      let out = Format.sprintf "Out [%d]: %s" n out in
      print_endline out;
-     loop ?module_resolutions syntax display_format state (n + k)
+     loop syntax display_format state (n + k)
   | None -> ()
 
 let main syntax display_format protocol typer_switch dry_run_opts init_file esy_project_path =
   print_endline welcome_msg;
-  let module_resolutions = Build.Module_resolutions.make esy_project_path in
   let state = make_initial_state syntax protocol typer_switch dry_run_opts in
   let state = match init_file with
     | None -> state
-    | Some file_name -> let c = use_file ~module_resolutions state file_name in
+    | Some file_name -> let c = use_file state file_name in
                         let _, state, _ = eval (Ex_display_format Dev) state c in
                         state in
   LNoise.set_multiline true;
-  loop ?module_resolutions syntax display_format state 1
+  loop syntax display_format state 1

@@ -15,7 +15,7 @@ let test source_file syntax steps infer protocol_version display_format esy_proj
       let typed   = Self_ast_typed.monomorphise_module typed in
       let _,typed = trace ~raise Main_errors.self_ast_typed_tracer @@ Self_ast_typed.morph_module options.init_env typed in
       let steps = int_of_string steps in
-      Interpreter.eval_test ~raise ~steps ~module_resolutions ~protocol_version typed
+      Interpreter.eval_test ~raise ~steps ~protocol_version typed
 
 let dry_run source_file entry_point input storage amount balance sender source now syntax infer protocol_version display_format werror esy_project_path =
     Trace.warning_with @@ fun add_warning get_warnings ->
