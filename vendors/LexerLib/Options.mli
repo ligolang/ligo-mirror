@@ -23,7 +23,9 @@ module type S =
 
          * [`Tokens]: the tokens only will be printed. *)
 
-    val postprocess : int option         (* --post=<num>            *)
+    type post_pass = Pass of int | All
+
+    val postprocess : post_pass option   (* --post=none/1/2/../all  *)
     val preprocess  : bool               (* --pre                   *)
     val mode        : [`Byte | `Point]   (* --bytes                 *)
     val command     : [`Copy | `Units | `Tokens] option
