@@ -98,17 +98,16 @@ module T =
 
     let gen_sym prefix =
       let count = ref 0 in
-      fun () -> incr count;
-             prefix ^ string_of_int !count
+      fun () -> incr count; prefix ^ string_of_int !count
 
     let id_sym   = gen_sym "id"
     and ctor_sym = gen_sym "C"
 
     let concrete = function
-        (* Identifiers, labels, numbers and strings *)
+      (* Literals *)
 
-      "Ident"   -> id_sym ()
-    | "UIdent"  -> ctor_sym ()
+      "Ident"    -> id_sym ()
+    | "UIdent"   -> ctor_sym ()
     | "Int"      -> "1"
     | "Nat"      -> "1n"
     | "Mutez"    -> "1mutez"
@@ -195,6 +194,7 @@ module T =
 
     | _  -> "\\Unknown" (* Backslash meant to trigger an error *)
 
+
     (* Projections *)
 
     let sprintf = Printf.sprintf
@@ -211,7 +211,7 @@ module T =
       Str.global_replace regexp "\"" escaped
 
     let proj_token = function
-        (* Preprocessing directives *)
+      (* Preprocessing directives *)
 
       Directive d ->
         Directive.project d
@@ -417,6 +417,10 @@ module T =
       match SMap.find_opt ident keywords with
         Some mk_kwd -> Ok (mk_kwd region)
       |        None -> Error Invalid_keyword
+
+    (* Directives *)
+
+    let mk_directive dir = Directive dir
 
     (* Strings *)
 

@@ -107,10 +107,10 @@ module T =
     and ctor_sym = gen_sym "C"
 
     let concrete = function
-      (* Identifiers, labels, numbers and strings *)
+      (* Literals *)
 
-      "Ident"   -> id_sym ()
-    | "UIdent"  -> ctor_sym ()
+      "Ident"    -> id_sym ()
+    | "UIdent"   -> ctor_sym ()
     | "Int"      -> "1"
     | "Nat"      -> "1n"
     | "Mutez"    -> "1mutez"
@@ -201,6 +201,7 @@ module T =
     (* This case should not happen! *)
 
     | _  -> "\\Unknown" (* Backslash meant to trigger an error *)
+
 
     (* Projections *)
 
@@ -323,7 +324,7 @@ module T =
     | Int i
     | Nat i
     | Mutez i    -> fst i.Region.value
-    | Ident id   -> id.Region.value
+    | Ident id
     | UIdent id  -> id.Region.value
     | Attr a     -> sprintf "[@%s]" a.Region.value
     | Lang lang  -> Region.(lang.value.value)
@@ -442,6 +443,10 @@ module T =
         Some mk_kwd -> Ok (mk_kwd region)
       |        None -> Error Invalid_keyword
 
+    (* Directives *)
+
+    let mk_directive dir = Directive dir
+
     (* Strings *)
 
     let mk_string lexeme region =
@@ -486,8 +491,8 @@ module T =
           else Ok (Nat Region.{region; value = lexeme,z})
 
     type mutez_err =
-        Unsupported_mutez_syntax
-      | Non_canonical_zero_tez
+      Unsupported_mutez_syntax
+    | Non_canonical_zero_tez
 
     let mk_mutez lexeme region =
       let z = Str.(global_replace (regexp "_") "" lexeme) |>

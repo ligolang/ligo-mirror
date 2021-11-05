@@ -3,7 +3,7 @@
 (library
   (name lexing_pascaligo)
   (public_name ligo.lexing.pascaligo)
-  (modules Token Self_tokens Style)
+  (modules Token Self_units Style)
   (libraries
     ;; LIGO
     lexing_shared

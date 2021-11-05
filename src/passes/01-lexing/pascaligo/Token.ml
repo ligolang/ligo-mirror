@@ -224,7 +224,7 @@ module T =
       Str.global_replace regexp "\"" escaped
 
     let proj_token = function
-        (* Preprocessing directives *)
+      (* Preprocessing directives *)
 
       Directive d ->
         Directive.project d
@@ -248,10 +248,10 @@ module T =
         region, sprintf "Ident %S" value
     | UIdent Region.{region; value} ->
         region, sprintf "UIdent %S" value
-    | Attr Region.{region; value} ->
-        region, sprintf "Attr %S" value
     | Lang Region.{region; value} ->
         region, sprintf "Lang %S" (value.Region.value)
+    | Attr Region.{region; value} ->
+        region, sprintf "Attr %S" value
 
     (* Symbols *)
 
@@ -342,7 +342,7 @@ module T =
     | Mutez i    -> fst i.Region.value
     | Ident id
     | UIdent id  -> id.Region.value
-    | Attr a     -> a.Region.value
+    | Attr a     -> sprintf "[@%s]" a.Region.value
     | Lang lang  -> Region.(lang.value.value)
 
     (* Symbols *)
@@ -482,6 +482,10 @@ module T =
       match SMap.find_opt ident keywords with
         Some mk_kwd -> Ok (mk_kwd region)
       |        None -> Error Invalid_keyword
+
+    (* Directives *)
+
+    let mk_directive dir = Directive dir
 
     (* Strings *)
 
