@@ -9,6 +9,8 @@ type t = <
   set_line   : int -> t;
   set_offset : int -> t;
   set        : file:string -> line:int -> offset:int -> t;
+  reset_cnum : t;
+
   new_line   : string -> t;
   add_nl     : t;
 
@@ -35,7 +37,7 @@ type pos = t
 
 let sprintf = Printf.sprintf
 
-let make ~byte ~point_num ~point_bol =
+let make ~byte ~point_num ~point_bol : t =
   let () = assert (point_num >= point_bol) in
   object (self)
     val    byte      = byte
@@ -55,6 +57,9 @@ let make ~byte ~point_num ~point_bol =
 
     method set_offset offset =
       {< byte = Lexing.{byte with pos_cnum = byte.pos_bol + offset} >}
+
+    method reset_cnum =
+      {< byte = Lexing.{byte with pos_cnum = 0} >}
 
     method set ~file ~line ~offset =
       let pos = self#set_file file in
