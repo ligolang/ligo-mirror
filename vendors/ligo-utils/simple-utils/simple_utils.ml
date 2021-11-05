@@ -26,3 +26,4 @@ module Utils  = Utils
 module FQueue = FQueue
 module Argv   = Argv
 module Lexbuf = Lexbuf
+module Std    = Std
