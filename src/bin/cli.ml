@@ -224,17 +224,10 @@ let generator =
   Clic.parameter @@
   fun _ s -> Proto_alpha_utils.Error_monad.return s
 
-let esy_installation_json =
-  let docv = "ESY_INSTALLATION_JSON" in
-  let doc = "The path to installation.json of esy project." in
-  Clic.arg ~doc ~long:"esy-installation-json" ~placeholder:docv @@
-  Clic.parameter @@
-  fun _ s -> Proto_alpha_utils.Error_monad.return s
-
-let esy_lock_file = 
-  let docv = "ESY_LOCK_FILE" in
-  let doc = "The path to lock file of esy project." in
-  Clic.arg ~doc ~long:"esy-lock-file" ~placeholder:docv @@
+let esy_project_path = 
+  let docv = "ESY_PROJECT_PATH" in
+  let doc = "The path to esy project." in
+  Clic.arg ~doc ~long:"esy-project-path" ~placeholder:docv @@
   Clic.parameter @@
   fun _ s -> Proto_alpha_utils.Error_monad.return s
 
@@ -244,9 +237,9 @@ module Api = Ligo_api
 
 let compile_group = Clic.{name="compile";title="Commands for compiling from Ligo to Michelson"}
 let compile_file =
-  let f (entry_point, oc_views, syntax, infer, protocol_version, display_format, disable_typecheck, michelson_format, output_file, warn, werror, michelson_comments, esy_installation_json, esy_lock_file) source_file () =
+  let f (entry_point, oc_views, syntax, infer, protocol_version, display_format, disable_typecheck, michelson_format, output_file, warn, werror, michelson_comments, esy_project_path) source_file () =
     return_result ~warn ?output_file @@
-    Api.Compile.contract ~werror source_file entry_point oc_views syntax infer protocol_version display_format disable_typecheck michelson_format michelson_comments esy_installation_json esy_lock_file in
+    Api.Compile.contract ~werror source_file entry_point oc_views syntax infer protocol_version display_format disable_typecheck michelson_format michelson_comments esy_project_path in
   let _doc = "Subcommand: Compile a contract." in
   let desc =     "This sub-command compiles a contract to Michelson \
                  code. It expects a source file and an entrypoint \
@@ -256,14 +249,14 @@ let compile_file =
 
     ~group:compile_group
     ~desc
-    Clic.(args14 entry_point on_chain_views syntax infer protocol_version display_format disable_michelson_typechecking michelson_code_format output_file warn werror michelson_comments esy_installation_json esy_lock_file)
+    Clic.(args13 entry_point on_chain_views syntax infer protocol_version display_format disable_michelson_typechecking michelson_code_format output_file warn werror michelson_comments esy_project_path)
     Clic.(prefixes ["compile"; "contract"] @@ source_file @@ stop)
     f
 
 let compile_parameter =
-  let f (entry_point, syntax, infer, protocol_version, amount, balance, sender, source, now, display_format, michelson_format, output_file, warn, werror, esy_installation_json, esy_lock_file) source_file expression () =
+  let f (entry_point, syntax, infer, protocol_version, amount, balance, sender, source, now, display_format, michelson_format, output_file, warn, werror, esy_project_path) source_file expression () =
     return_result ~warn ?output_file @@
-    Api.Compile.parameter source_file entry_point expression syntax infer protocol_version amount balance sender source now display_format michelson_format werror esy_installation_json esy_lock_file
+    Api.Compile.parameter source_file entry_point expression syntax infer protocol_version amount balance sender source now display_format michelson_format werror esy_project_path
     in
   let _cmdname = "compile-parameter" in
   let _doc = "Subcommand: Compile parameters to a Michelson expression." in
@@ -274,14 +267,14 @@ let compile_parameter =
   Clic.command
     ~group:compile_group
     ~desc
-    Clic.(args16 entry_point syntax infer protocol_version amount balance sender source now display_format michelson_code_format output_file warn werror esy_installation_json esy_lock_file)
+    Clic.(args15 entry_point syntax infer protocol_version amount balance sender source now display_format michelson_code_format output_file warn werror esy_project_path)
     Clic.(prefixes ["compile"; "parameter"] @@ source_file @@ expression "PARAMETER" @@ stop)
     f
 
 let compile_expression =
-  let f (infer, protocol_version, init_file, display_format, without_run, michelson_format, warn, werror, esy_installation_json, esy_lock_file) syntax expression () =
+  let f (infer, protocol_version, init_file, display_format, without_run, michelson_format, warn, werror, esy_project_path) syntax expression () =
     return_result ~warn @@
-    Api.Compile.expression expression syntax infer protocol_version init_file display_format without_run michelson_format werror esy_installation_json esy_lock_file
+    Api.Compile.expression expression syntax infer protocol_version init_file display_format without_run michelson_format werror esy_project_path
     in
   let _cmdname = "compile-expression" in
   let _doc = "Subcommand: Compile to a Michelson value." in
@@ -292,14 +285,14 @@ let compile_expression =
   Clic.command
     ~group:compile_group
     ~desc
-    Clic.(args10 infer protocol_version init_file display_format without_run michelson_code_format warn werror esy_installation_json esy_lock_file)
+    Clic.(args9 infer protocol_version init_file display_format without_run michelson_code_format warn werror esy_project_path)
     Clic.(prefixes ["compile"; "expression"] @@ req_syntax @@ expression "" @@ stop)
     f
 
 let compile_storage =
-  let f (entry_point, syntax, infer, protocol_version, amount, balance, sender, source, now, display_format, michelson_format, output_file, warn, werror, esy_installation_json, esy_lock_file) source_file expression () =
+  let f (entry_point, syntax, infer, protocol_version, amount, balance, sender, source, now, display_format, michelson_format, output_file, warn, werror, esy_project_path) source_file expression () =
     return_result ~warn ?output_file @@
-    Api.Compile.storage source_file entry_point expression syntax infer protocol_version amount balance sender source now display_format michelson_format werror esy_installation_json esy_lock_file
+    Api.Compile.storage source_file entry_point expression syntax infer protocol_version amount balance sender source now display_format michelson_format werror esy_project_path
   in
   let _cmdname = "compile-storage" in
   let _doc = "Subcommand: Compile an initial storage in LIGO syntax to \
@@ -311,7 +304,7 @@ let compile_storage =
   Clic.command
     ~group:compile_group
     ~desc
-    Clic.(args16 entry_point syntax infer protocol_version amount balance sender source now display_format michelson_code_format output_file warn werror esy_installation_json esy_lock_file)
+    Clic.(args15 entry_point syntax infer protocol_version amount balance sender source now display_format michelson_code_format output_file warn werror esy_project_path)
     Clic.(prefixes ["compile";"storage"] @@ source_file @@ expression "STORAGE" @@ stop)
     f
 
@@ -380,9 +373,9 @@ let mutate_ast =
 (** Run commands *)
 let run_group = Clic.{name="run";title="Commands for executing Ligo code"}
 let test =
-  let f (syntax, steps, infer, protocol_version, display_format, esy_installation_json, esy_lock_file) source_file () =
+  let f (syntax, steps, infer, protocol_version, display_format, esy_project_path) source_file () =
     return_result @@
-    Api.Run.test source_file syntax steps infer protocol_version display_format esy_installation_json esy_lock_file
+    Api.Run.test source_file syntax steps infer protocol_version display_format esy_project_path
   in
   let _doc = "Subcommand: Test a contract with the LIGO test framework (BETA)." in
   let desc =    "This sub-command tests a LIGO contract using a LIGO \
@@ -391,14 +384,14 @@ let test =
                  procedure should rely on this sub-command alone."
   in
   Clic.command ~group:run_group ~desc
-    Clic.(args7 syntax steps infer protocol_version display_format esy_installation_json esy_lock_file)
+    Clic.(args6 syntax steps infer protocol_version display_format esy_project_path)
     Clic.(prefixes ["run";"test"] @@ source_file @@ stop)
     f
 
 let dry_run =
-  let f (entry_point, amount, balance, sender, source, now, syntax, infer, protocol_version, display_format, warn, werror, esy_installation_json, esy_lock_file) source_file input storage () =
+  let f (entry_point, amount, balance, sender, source, now, syntax, infer, protocol_version, display_format, warn, werror, esy_project_path) source_file input storage () =
     return_result ~warn @@
-    Api.Run.dry_run source_file entry_point input storage amount balance sender source now syntax infer protocol_version display_format werror esy_installation_json esy_lock_file
+    Api.Run.dry_run source_file entry_point input storage amount balance sender source now syntax infer protocol_version display_format werror esy_project_path
     in
   let _doc = "Subcommand: Run a smart-contract with the given storage and input." in
   let desc =     "This sub-command runs a LIGO contract on a given \
@@ -407,14 +400,14 @@ let dry_run =
                  implemented. The interpretation is done using \
                  Michelson's interpreter." in
   Clic.command ~group:run_group ~desc
-    Clic.(args14 entry_point amount balance sender source now syntax infer protocol_version display_format warn werror esy_installation_json esy_lock_file)
+    Clic.(args13 entry_point amount balance sender source now syntax infer protocol_version display_format warn werror esy_project_path)
     Clic.(prefixes ["run";"dry-run"] @@ source_file @@ expression "PARAMETER" @@ expression "STORAGE" @@ stop)
     f
 
 let evaluate_call ~cmdname_deprecation =
-  let f (entry_point, amount, balance, sender, source, now, syntax, infer, protocol_version, display_format, warn, werror, esy_installation_json, esy_lock_file) source_file parameter () =
+  let f (entry_point, amount, balance, sender, source, now, syntax, infer, protocol_version, display_format, warn, werror, esy_project_path) source_file parameter () =
     return_result ~warn @@
-    Api.Run.evaluate_call source_file entry_point parameter amount balance sender source now syntax infer protocol_version display_format werror esy_installation_json esy_lock_file
+    Api.Run.evaluate_call source_file entry_point parameter amount balance sender source now syntax infer protocol_version display_format werror esy_project_path
     in
   (* "run-function" was renamed to "evaluate-call", keeping both for a few versions for backward-compatibility. *)
   let cmdname = match cmdname_deprecation with
@@ -430,14 +423,14 @@ let evaluate_call ~cmdname_deprecation =
                   file where the function is implemented. The \
                   interpretation is done using Michelson's interpreter.") in
   Clic.command ~group:run_group ~desc
-    Clic.(args14 entry_point amount balance sender source now syntax infer protocol_version display_format warn werror esy_installation_json esy_lock_file)
+    Clic.(args13 entry_point amount balance sender source now syntax infer protocol_version display_format warn werror esy_project_path)
     Clic.(prefixes ["run";cmdname] @@ source_file @@ expression "PARAMETER" @@ stop)
     f
 
 let evaluate_expr ~cmdname_deprecation =
-  let f (entry_point, amount, balance, sender, source, now, syntax, infer, protocol_version, display_format, warn, werror, esy_installation_json, esy_lock_file) source_file () =
+  let f (entry_point, amount, balance, sender, source, now, syntax, infer, protocol_version, display_format, warn, werror, esy_project_path) source_file () =
     return_result ~warn @@
-    Api.Run.evaluate_expr source_file entry_point amount balance sender source now syntax infer protocol_version display_format werror esy_installation_json esy_lock_file
+    Api.Run.evaluate_expr source_file entry_point amount balance sender source now syntax infer protocol_version display_format werror esy_project_path
     in
   (* "run-function" was renamed to "evaluate-call", keeping both for a few versions for backward-compatibility. *)
   let cmdname = match cmdname_deprecation with
@@ -453,14 +446,14 @@ let evaluate_expr ~cmdname_deprecation =
                   definition is written. The interpretation is done \
                   using a Michelson interpreter.") in
   Clic.command ~group:run_group ~desc
-    Clic.(args14 entry_point amount balance sender source now syntax infer protocol_version display_format warn werror esy_installation_json esy_lock_file)
+    Clic.(args13 entry_point amount balance sender source now syntax infer protocol_version display_format warn werror esy_project_path)
     Clic.(prefixes ["run";cmdname] @@ source_file @@ stop)
     f
 
 let interpret =
-  let f (init_file, syntax, infer, protocol_version, amount, balance, sender, source, now, display_format, esy_installation_json, esy_lock_file) expression () =
+  let f (init_file, syntax, infer, protocol_version, amount, balance, sender, source, now, display_format, esy_project_path) expression () =
     return_result @@
-    Api.Run.interpret expression init_file syntax infer protocol_version amount balance sender source now display_format esy_installation_json esy_lock_file
+    Api.Run.interpret expression init_file syntax infer protocol_version amount balance sender source now display_format esy_project_path
   in
   let _doc = "Subcommand: Interpret the expression in the context initialized by the provided source file." in
   let desc = "This sub-command interprets a LIGO expression. The \
@@ -468,7 +461,7 @@ let interpret =
                  file. The interpretation is done using Michelson's \
                  interpreter." in
   Clic.command ~group:run_group ~desc
-    Clic.(args12 init_file syntax infer protocol_version amount balance sender source now display_format esy_installation_json esy_lock_file)
+    Clic.(args11 init_file syntax infer protocol_version amount balance sender source now display_format esy_project_path)
     Clic.(prefixes ["run";"interpret"] @@ expression "EXPRESSION" @@ stop)
     f
 
@@ -489,15 +482,15 @@ let list_declarations =
     f
 
 let measure_contract =
-  let f (entry_point, oc_views, syntax, infer, protocol_version, display_format, warn, werror, esy_installation_json, esy_lock_file) source_file () =
+  let f (entry_point, oc_views, syntax, infer, protocol_version, display_format, warn, werror, esy_project_path) source_file () =
     return_result ~warn @@
-    Api.Info.measure_contract source_file entry_point oc_views syntax infer protocol_version display_format werror esy_installation_json esy_lock_file
+    Api.Info.measure_contract source_file entry_point oc_views syntax infer protocol_version display_format werror esy_project_path
   in
   let _doc = "Subcommand: Measure a contract's compiled size in bytes." in
   let desc =    "This sub-command compiles a source file and measures \
                  the contract's compiled size in bytes." in
   Clic.command ~group:info_group ~desc
-    Clic.(args10 entry_point on_chain_views syntax infer protocol_version display_format warn werror esy_installation_json esy_lock_file)
+    Clic.(args9 entry_point on_chain_views syntax infer protocol_version display_format warn werror esy_project_path)
     Clic.(prefixes ["info";"measure-contract"] @@ source_file @@ stop)
     f
 
@@ -554,9 +547,9 @@ let pretty_print =
     f
 
 let print_graph =
-  let f (syntax, display_format, esy_installation_json, esy_lock_file) source_file () =
+  let f (syntax, display_format, esy_project_path) source_file () =
     return_result @@
-    Api.Print.dependency_graph source_file syntax display_format esy_installation_json esy_lock_file
+    Api.Print.dependency_graph source_file syntax display_format esy_project_path
   in
   let _cmdname = "print-graph" in
   let _doc = "Subcommand: Print the dependency graph.\nWarning: Intended for development of LIGO and can break at any time." in
@@ -566,7 +559,7 @@ let print_graph =
   Clic.command
     ~group:print_group
     ~desc
-    Clic.(args4 syntax display_format esy_installation_json esy_lock_file)
+    Clic.(args3 syntax display_format esy_project_path)
     Clic.(prefixes ["print";"dependency-graph"] @@ source_file @@ stop)
     f
 
@@ -620,9 +613,9 @@ let print_ast_sugar =
     f
 
 let print_ast_core =
-  let f (syntax, infer, protocol_version, display_format, esy_installation_json, esy_lock_file) source_file () =
+  let f (syntax, infer, protocol_version, display_format, esy_project_path) source_file () =
     return_result @@
-    Api.Print.ast_core source_file syntax infer protocol_version display_format esy_installation_json esy_lock_file
+    Api.Print.ast_core source_file syntax infer protocol_version display_format esy_project_path
   in
   let _doc = "Subcommand: Print the AST.\n Warning: Intended for development of LIGO and can break at any time." in
   let desc =      "This sub-command prints the source file in the AST \
@@ -630,14 +623,14 @@ let print_ast_core =
   Clic.command
     ~group:print_group
     ~desc
-    Clic.(args6 syntax infer protocol_version display_format esy_installation_json esy_lock_file)
+    Clic.(args5 syntax infer protocol_version display_format esy_project_path)
     Clic.(prefixes ["print";"ast-core"] @@ source_file @@ stop)
     f
 
 let print_ast_typed =
-  let f (syntax, infer, protocol_version, display_format, esy_installation_json, esy_lock_file) source_file () =
+  let f (syntax, infer, protocol_version, display_format, esy_project_path) source_file () =
     return_result @@
-    Api.Print.ast_typed source_file syntax infer protocol_version display_format esy_installation_json esy_lock_file
+    Api.Print.ast_typed source_file syntax infer protocol_version display_format esy_project_path
   in
   let _doc = "Subcommand: Print the typed AST.\n Warning: Intended for development of LIGO and can break at any time." in
   let desc =    "This sub-command prints the source file in the AST \
@@ -647,14 +640,14 @@ let print_ast_typed =
   Clic.command
     ~group:print_group
     ~desc
-    Clic.(args6 syntax infer protocol_version display_format esy_installation_json esy_lock_file)
+    Clic.(args5 syntax infer protocol_version display_format esy_project_path)
     Clic.(prefixes ["print";"ast-typed"] @@ source_file @@ stop)
     f
 
 let print_ast_combined =
-  let f (syntax, infer, protocol_version, display_format, esy_installation_json, esy_lock_file) source_file () =
+  let f (syntax, infer, protocol_version, display_format, esy_project_path) source_file () =
     return_result @@
-    Api.Print.ast_combined source_file syntax infer protocol_version display_format esy_installation_json esy_lock_file
+    Api.Print.ast_combined source_file syntax infer protocol_version display_format esy_project_path
   in
   let _cmdname = "print ast-combined" in
   let _doc = "Subcommand: Print the contract after combination with the build system.\n Warning: Intended for development of LIGO and can break at any time." in
@@ -665,14 +658,14 @@ let print_ast_combined =
   Clic.command
     ~group:print_group
     ~desc
-    Clic.(args6 syntax infer protocol_version display_format esy_installation_json esy_lock_file)
+    Clic.(args5 syntax infer protocol_version display_format esy_project_path)
     Clic.(prefixes ["print";"ast-combined"] @@ source_file @@ stop)
     f
 
 let print_mini_c =
-  let f (syntax, infer, protocol_version, display_format, optimize, esy_installation_json, esy_lock_file) source_file () =
+  let f (syntax, infer, protocol_version, display_format, optimize, esy_project_path) source_file () =
     return_result @@
-    Api.Print.mini_c source_file syntax infer protocol_version display_format optimize esy_installation_json esy_lock_file
+    Api.Print.mini_c source_file syntax infer protocol_version display_format optimize esy_project_path
   in
   let _cmdname = "print-mini-c" in
   let _doc = "Subcommand: Print Mini-C. Warning: Intended for development of LIGO and can break at any time." in
@@ -683,7 +676,7 @@ let print_mini_c =
   Clic.command
     ~group:print_group
     ~desc
-    Clic.(args7 syntax infer protocol_version display_format optimize esy_installation_json esy_lock_file)
+    Clic.(args6 syntax infer protocol_version display_format optimize esy_project_path)
     Clic.(prefixes ["print";"mini-c"] @@ source_file @@ stop)
     f
 
@@ -700,7 +693,7 @@ let dump_changelog =
     f
 
 let repl =
-  let f (protocol_version, infer, amount, balance, sender, source, now, display_format, init_file, esy_installation_json, esy_lock_file) syntax_name () =
+  let f (protocol_version, infer, amount, balance, sender, source, now, display_format, init_file, esy_project_path) syntax_name () =
     return_result @@
     (let protocol = Environment.Protocols.protocols_to_variant protocol_version in
     let syntax = Ligo_compile.Helpers.syntax_to_variant (Syntax_name syntax_name) None in
@@ -710,11 +703,11 @@ let repl =
     | None, _, _ -> Error ("", "Please check protocol name.")
     | _, _, None -> Error ("", "Please check run options.")
     | Some protocol, Some syntax, Some dry_run_opts ->
-       (Repl.main syntax display_format protocol infer dry_run_opts init_file esy_installation_json esy_lock_file); Ok("","")) in
+       (Repl.main syntax display_format protocol infer dry_run_opts init_file esy_project_path); Ok("","")) in
   let _doc = "Subcommand: REPL" in
   let desc = "" in
   Clic.command ~desc
-    Clic.(args11 protocol_version infer amount balance sender source now display_format init_file esy_installation_json esy_lock_file)
+    Clic.(args10 protocol_version infer amount balance sender source now display_format init_file esy_project_path)
     Clic.(prefix "repl" @@ req_syntax @@ stop)
     f
 

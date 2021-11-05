@@ -9,12 +9,12 @@ let pretty_print ?werror source_file syntax display_format =
     let meta = Compile.Of_source.extract_meta ~raise syntax source_file in
     Compile.Utils.pretty_print ~raise ~options ~meta source_file
 
-let dependency_graph source_file syntax display_format =
+let dependency_graph source_file syntax display_format esy_project_path =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (BuildSystem.Formatter.graph_format) get_warnings @@
       fun ~raise ->
       let options = Compiler_options.make () in
-      let module_resolutions = Build.ModuleResolutions.make ~installation:esy_installation_json ~lock:esy_lock_file in
+      let module_resolutions = Build.ModuleResolutions.make esy_project_path in
       let g,_ = Build.dependency_graph ~raise ~module_resolutions ~options syntax Env source_file in
       (g,source_file)
 
@@ -51,7 +51,7 @@ let ast_sugar source_file syntax display_format =
       let c_unit,_ = Compile.Utils.to_c_unit ~raise ~options ~meta source_file in
       Compile.Utils.to_sugar ~raise ~add_warning ~options ~meta c_unit source_file
 
-let ast_core source_file syntax infer protocol_version display_format esy_installation_json esy_lock_file =
+let ast_core source_file syntax infer protocol_version display_format esy_project_path =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (Ast_core.Formatter.module_format) get_warnings @@
     fun ~raise ->
@@ -62,7 +62,7 @@ let ast_core source_file syntax infer protocol_version display_format esy_instal
           let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
           Compiler_options.make ~infer ~protocol_version ()
         in
-        let module_resolutions = Build.ModuleResolutions.make ~installation:esy_installation_json ~lock:esy_lock_file in
+        let module_resolutions = Build.ModuleResolutions.make esy_project_path in
         let _,inferred_core,_,_ = Build.infer_contract ~raise ~add_warning ~module_resolutions ~options syntax Env source_file in
         inferred_core
     else
@@ -72,7 +72,7 @@ let ast_core source_file syntax infer protocol_version display_format esy_instal
         let c_unit,_ = Compile.Utils.to_c_unit ~raise ~options ~meta source_file in
         Compile.Utils.to_core ~raise ~add_warning ~options ~meta c_unit source_file
 
-let ast_typed source_file syntax infer protocol_version display_format esy_installation_json esy_lock_file =
+let ast_typed source_file syntax infer protocol_version display_format esy_project_path =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (Ast_typed.Formatter.module_format_fully_typed) get_warnings @@
     fun ~raise ->
@@ -80,12 +80,12 @@ let ast_typed source_file syntax infer protocol_version display_format esy_insta
         let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
         Compiler_options.make ~infer ~protocol_version ()
       in
-      let module_resolutions = Build.ModuleResolutions.make ~installation:esy_installation_json ~lock:esy_lock_file in
+      let module_resolutions = Build.ModuleResolutions.make esy_project_path in
       let typed,_ = Build.type_contract ~raise ~add_warning ~module_resolutions ~options syntax Env source_file in
       let typed = Self_ast_typed.monomorphise_module typed in
       typed
 
-let ast_combined  source_file syntax infer protocol_version display_format esy_installation_json esy_lock_file =
+let ast_combined  source_file syntax infer protocol_version display_format esy_project_path =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (Ast_typed.Formatter.module_format_fully_typed) get_warnings @@
     fun ~raise ->
@@ -93,11 +93,11 @@ let ast_combined  source_file syntax infer protocol_version display_format esy_i
         let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
         Compiler_options.make ~infer ~protocol_version ()
       in
-      let module_resolutions = Build.ModuleResolutions.make ~installation:esy_installation_json ~lock:esy_lock_file in
+      let module_resolutions = Build.ModuleResolutions.make esy_project_path in
       let typed,_ = Build.combined_contract ~raise ~add_warning ~module_resolutions ~options syntax Env source_file in
       typed
 
-let mini_c source_file syntax infer protocol_version display_format optimize esy_installation_json esy_lock_file =
+let mini_c source_file syntax infer protocol_version display_format optimize esy_project_path =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (Mini_c.Formatter.program_format) get_warnings @@
     fun ~raise ->
@@ -105,7 +105,7 @@ let mini_c source_file syntax infer protocol_version display_format optimize esy
         let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
         Compiler_options.make ~infer ~protocol_version ()
       in
-      let module_resolutions = Build.ModuleResolutions.make ~installation:esy_installation_json ~lock:esy_lock_file in
+      let module_resolutions = Build.ModuleResolutions.make esy_project_path in
       let mini_c,_ = Build.build_mini_c ~raise ~add_warning ~module_resolutions ~options syntax Env source_file in
       match optimize with
         | None -> Mini_c.Formatter.Raw mini_c

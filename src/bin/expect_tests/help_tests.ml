@@ -38,8 +38,7 @@ let%expect_test _ =
         [--warn <BOOL>]
         [--werror <BOOL>]
         [--michelson-comments <MICHELSON_COMMENTS>]
-        [--esy-installation-json <ESY_INSTALLATION_JSON>]
-        [--esy-lock-file <ESY_LOCK_FILE>]
+        [--esy-project-path <ESY_PROJECT_PATH>]
 
     Usage
     ligo [global options] command [command options]
@@ -67,8 +66,7 @@ let%expect_test _ =
     [--warn <BOOL>]
     [--werror <BOOL>]
     [--michelson-comments <MICHELSON_COMMENTS>]
-    [--esy-installation-json <ESY_INSTALLATION_JSON>]
-    [--esy-lock-file <ESY_LOCK_FILE>]
+    [--esy-project-path <ESY_PROJECT_PATH>]
     This sub-command compiles a contract to Michelson code. It expects a source file and an entrypoint function that has the type of a contract: "parameter * storage -> operations list * storage".
     SOURCE_FILE: SOURCE_FILE is the path to the smart contract file.
     -e --entry-point <ENTRY_POINT>: the entry-point that will be compiled.
@@ -93,8 +91,7 @@ let%expect_test _ =
       Defaults to `false`.
     --michelson-comments <MICHELSON_COMMENTS>: Selects kinds of comments to be added to the Michelson output. Currently only 'location' is supported, which propagates original source locations (line/col).
       Defaults to ``.
-    --esy-installation-json <ESY_INSTALLATION_JSON>: The path to installation.json of esy project.
-    --esy-lock-file <ESY_LOCK_FILE>: The path to lock file of esy project. |} ] ;
+    --esy-project-path <ESY_PROJECT_PATH>: The path to esy project. |} ] ;
 
   run_ligo_good [ "compile" ; "parameter" ; "--help" ] ;
   [%expect {|
@@ -114,6 +111,7 @@ let%expect_test _ =
         [-o --output-file <OUTPUT_FILE>]
         [--warn <BOOL>]
         [--werror <BOOL>]
+        [--esy-project-path <ESY_PROJECT_PATH>]
 
     Usage
     ligo [global options] command [command options]
@@ -143,6 +141,7 @@ let%expect_test _ =
     [-o --output-file <OUTPUT_FILE>]
     [--warn <BOOL>]
     [--werror <BOOL>]
+    [--esy-project-path <ESY_PROJECT_PATH>]
     This sub-command compiles a parameter for a given contract to a Michelson expression. The resulting Michelson expression can be passed as an argument in a transaction which calls a contract.
     SOURCE_FILE: SOURCE_FILE is the path to the smart contract file.
     PARAMETER_EXPRESSION: the expression that will be compiled.
@@ -169,7 +168,8 @@ let%expect_test _ =
     --warn <BOOL>: Indicates whether warning messages should be printed in stderr or not
       Defaults to `true`.
     --werror <BOOL>: Indicates whether warning messages should be treated as errors or not
-      Defaults to `false`. |} ] ;
+      Defaults to `false`.
+    --esy-project-path <ESY_PROJECT_PATH>: The path to esy project. |} ] ;
 
   run_ligo_good [ "compile"; "storage" ; "--help" ] ;
   [%expect {|
@@ -189,6 +189,7 @@ let%expect_test _ =
         [-o --output-file <OUTPUT_FILE>]
         [--warn <BOOL>]
         [--werror <BOOL>]
+        [--esy-project-path <ESY_PROJECT_PATH>]
 
     Usage
     ligo [global options] command [command options]
@@ -218,6 +219,7 @@ let%expect_test _ =
     [-o --output-file <OUTPUT_FILE>]
     [--warn <BOOL>]
     [--werror <BOOL>]
+    [--esy-project-path <ESY_PROJECT_PATH>]
     This sub-command compiles an initial storage for a given contract to a Michelson expression. The resulting Michelson expression can be passed as an argument in a transaction which originates a contract.
     SOURCE_FILE: SOURCE_FILE is the path to the smart contract file.
     STORAGE_EXPRESSION: the expression that will be compiled.
@@ -244,7 +246,8 @@ let%expect_test _ =
     --warn <BOOL>: Indicates whether warning messages should be printed in stderr or not
       Defaults to `true`.
     --werror <BOOL>: Indicates whether warning messages should be treated as errors or not
-      Defaults to `false`. |} ] ;
+      Defaults to `false`.
+    --esy-project-path <ESY_PROJECT_PATH>: The path to esy project. |} ] ;
 
   run_ligo_good [ "run" ; "dry-run" ; "--help" ] ;
   [%expect {|
@@ -262,6 +265,7 @@ let%expect_test _ =
         [--format <DISPLAY-FORMAT>]
         [--warn <BOOL>]
         [--werror <BOOL>]
+        [--esy-project-path <ESY_PROJECT_PATH>]
 
     Usage
     ligo [global options] command [command options]
@@ -289,6 +293,7 @@ let%expect_test _ =
     [--format <DISPLAY-FORMAT>]
     [--warn <BOOL>]
     [--werror <BOOL>]
+    [--esy-project-path <ESY_PROJECT_PATH>]
     This sub-command runs a LIGO contract on a given storage and parameter. The context is initialized from a source file where the contract is implemented. The interpretation is done using Michelson's interpreter.
     SOURCE_FILE: SOURCE_FILE is the path to the smart contract file.
     PARAMETER_EXPRESSION: the expression that will be compiled.
@@ -313,7 +318,8 @@ let%expect_test _ =
     --warn <BOOL>: Indicates whether warning messages should be printed in stderr or not
       Defaults to `true`.
     --werror <BOOL>: Indicates whether warning messages should be treated as errors or not
-      Defaults to `false`. |} ] ;
+      Defaults to `false`.
+    --esy-project-path <ESY_PROJECT_PATH>: The path to esy project. |} ] ;
 
   run_ligo_good [ "run" ; "evaluate-call" ; "--help" ] ;
   [%expect {|
@@ -331,6 +337,7 @@ let%expect_test _ =
         [--format <DISPLAY-FORMAT>]
         [--warn <BOOL>]
         [--werror <BOOL>]
+        [--esy-project-path <ESY_PROJECT_PATH>]
 
     Usage
     ligo [global options] command [command options]
@@ -343,7 +350,7 @@ let%expect_test _ =
     ligo [global options] man -v 3 (for the full manual)
 
     Global options (must come before the command)
-    
+
 
     Commands for executing Ligo code
     run evaluate-call SOURCE_FILE PARAMETER_EXPRESSION [-e --entry-point <ENTRY_POINT>]
@@ -358,6 +365,7 @@ let%expect_test _ =
     [--format <DISPLAY-FORMAT>]
     [--warn <BOOL>]
     [--werror <BOOL>]
+    [--esy-project-path <ESY_PROJECT_PATH>]
     This sub-command runs a LIGO function on a given argument. The context is initialized from a source file where the function is implemented. The interpretation is done using Michelson's interpreter.
     SOURCE_FILE: SOURCE_FILE is the path to the smart contract file.
     PARAMETER_EXPRESSION: the expression that will be compiled.
@@ -381,7 +389,8 @@ let%expect_test _ =
     --warn <BOOL>: Indicates whether warning messages should be printed in stderr or not
       Defaults to `true`.
     --werror <BOOL>: Indicates whether warning messages should be treated as errors or not
-      Defaults to `false`. |} ] ;
+      Defaults to `false`.
+    --esy-project-path <ESY_PROJECT_PATH>: The path to esy project. |} ] ;
 
   run_ligo_good [ "run" ; "evaluate-expr" ; "--help" ] ;
   [%expect {|
@@ -399,6 +408,7 @@ let%expect_test _ =
         [--format <DISPLAY-FORMAT>]
         [--warn <BOOL>]
         [--werror <BOOL>]
+        [--esy-project-path <ESY_PROJECT_PATH>]
 
     Usage
     ligo [global options] command [command options]
@@ -426,6 +436,7 @@ let%expect_test _ =
     [--format <DISPLAY-FORMAT>]
     [--warn <BOOL>]
     [--werror <BOOL>]
+    [--esy-project-path <ESY_PROJECT_PATH>]
     This sub-command evaluates a LIGO definition. The context is initialized from a source file where the definition is written. The interpretation is done using a Michelson interpreter.
     SOURCE_FILE: SOURCE_FILE is the path to the smart contract file.
     -e --entry-point <ENTRY_POINT>: the entry-point that will be compiled.
@@ -448,7 +459,8 @@ let%expect_test _ =
     --warn <BOOL>: Indicates whether warning messages should be printed in stderr or not
       Defaults to `true`.
     --werror <BOOL>: Indicates whether warning messages should be treated as errors or not
-      Defaults to `false`. |} ] ;
+      Defaults to `false`.
+    --esy-project-path <ESY_PROJECT_PATH>: The path to esy project. |} ] ;
 
   run_ligo_good [ "compile" ; "expression" ; "--help" ] ;
   [%expect {|
@@ -462,6 +474,7 @@ let%expect_test _ =
         [--michelson-format <MICHELSON_FORMAT>]
         [--warn <BOOL>]
         [--werror <BOOL>]
+        [--esy-project-path <ESY_PROJECT_PATH>]
 
     Usage
     ligo [global options] command [command options]
@@ -485,6 +498,7 @@ let%expect_test _ =
     [--michelson-format <MICHELSON_FORMAT>]
     [--warn <BOOL>]
     [--werror <BOOL>]
+    [--esy-project-path <ESY_PROJECT_PATH>]
     This sub-command compiles a LIGO expression to a Michelson value. It works by compiling the LIGO expression to a Michelson expression and then interpreting it using Michelson's interpreter.
     SYNTAX: the syntax that will be used. Currently supported syntaxes are "pascaligo", "cameligo" and "reasonligo". By default, the syntax is guessed from the extension (.ligo, .mligo, .religo, .jsligo respectively).
     _EXPRESSION: the expression that will be compiled.
@@ -501,4 +515,5 @@ let%expect_test _ =
     --warn <BOOL>: Indicates whether warning messages should be printed in stderr or not
       Defaults to `true`.
     --werror <BOOL>: Indicates whether warning messages should be treated as errors or not
-      Defaults to `false`. |} ] ;
+      Defaults to `false`.
+    --esy-project-path <ESY_PROJECT_PATH>: The path to esy project. |} ] ;

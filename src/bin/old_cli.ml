@@ -246,29 +246,21 @@ let generator =
     info ~docv ~doc ["generator" ; "g"] in
   value @@ opt string "random" info
 
-let esy_installation_json = 
+let esy_project_path = 
   let open Arg in
   let info =
-    let docv = "ESY_INSTALLATION_JSON" in
-    let doc = "$(docv) is path to installation.json of esy project." in
-    info ~docv ~doc ["esy-installation-json"] in
-  value @@ opt (some string) None info
-  
-let esy_lock_file = 
-  let open Arg in
-  let info =
-    let docv = "ESY_LOCK_FILE" in
-    let doc = "$(docv) is path to lock file of esy project." in
-    info ~docv ~doc ["esy-lock-file"] in
+    let docv = "ESY_PROJECT_PATH" in
+    let doc = "$(docv) is path to esy project." in
+    info ~docv ~doc ["esy-project-path"] in
   value @@ opt (some string) None info
   
 
 module Api = Ligo_api
 let compile_file =
-  let f source_file entry_point oc_views syntax infer protocol_version display_format disable_typecheck michelson_format output_file warn werror esy_installation_json esy_lock_file =
+  let f source_file entry_point oc_views syntax infer protocol_version display_format disable_typecheck michelson_format output_file warn werror esy_project_path =
     return_result ~warn ?output_file @@
-    Api.Compile.contract ~werror source_file entry_point oc_views syntax infer protocol_version display_format disable_typecheck michelson_format [] esy_installation_json esy_lock_file in
-  let term = Term.(const f $ source_file 0 $ entry_point 1 $ on_chain_views $ syntax $ infer $ protocol_version $ display_format $ disable_michelson_typechecking $ michelson_code_format $ output_file $ warn $ werror $ esy_installation_json $ esy_lock_file) in
+    Api.Compile.contract ~werror source_file entry_point oc_views syntax infer protocol_version display_format disable_typecheck michelson_format [] esy_project_path in
+  let term = Term.(const f $ source_file 0 $ entry_point 1 $ on_chain_views $ syntax $ infer $ protocol_version $ display_format $ disable_michelson_typechecking $ michelson_code_format $ output_file $ warn $ werror $ esy_project_path) in
   let cmdname = "compile-contract" in
   let doc = "Subcommand: Compile a contract." in
   let man = [`S Manpage.s_description;
@@ -310,11 +302,11 @@ let pretty_print =
   in (Term.ret term, Term.info ~man ~doc cmdname)
 
 let print_graph =
-  let f source_file syntax display_format esy_installation_json esy_lock_file =
+  let f source_file syntax display_format esy_project_path =
     return_result @@
-    Api.Print.dependency_graph source_file syntax display_format esy_installation_json esy_lock_file
+    Api.Print.dependency_graph source_file syntax display_format esy_project_path
   in
-  let term = Term.(const f $ source_file 0  $ syntax $ display_format $ esy_installation_json $ esy_lock_file) in
+  let term = Term.(const f $ source_file 0  $ syntax $ display_format $ esy_project_path) in
   let cmdname = "print-graph" in
   let doc = "Subcommand: Print the dependency graph.\nWarning: Intended for development of LIGO and can break at any time." in
   let man = [`S Manpage.s_description;
@@ -364,11 +356,11 @@ let print_ast_sugar =
   in (Term.ret term, Term.info ~man ~doc cmdname)
 
 let print_ast_core =
-  let f source_file syntax infer protocol_version display_format esy_installation_json esy_lock_file =
+  let f source_file syntax infer protocol_version display_format esy_project_path =
     return_result @@
-    Api.Print.ast_core source_file syntax infer protocol_version display_format esy_installation_json esy_lock_file
+    Api.Print.ast_core source_file syntax infer protocol_version display_format esy_project_path
   in
-  let term = Term.(const f $ source_file 0  $ syntax $ infer $ protocol_version $ display_format $ esy_installation_json $ esy_lock_file) in
+  let term = Term.(const f $ source_file 0  $ syntax $ infer $ protocol_version $ display_format $ esy_project_path) in
   let cmdname = "print-ast-core" in
   let doc = "Subcommand: Print the AST.\n Warning: Intended for development of LIGO and can break at any time." in
   let man = [`S Manpage.s_description;
@@ -377,11 +369,11 @@ let print_ast_core =
   in (Term.ret term, Term.info ~man ~doc cmdname)
 
 let print_ast_typed =
-  let f source_file syntax infer protocol_version display_format esy_installation_json esy_lock_file =
+  let f source_file syntax infer protocol_version display_format esy_project_path =
     return_result @@
-    Api.Print.ast_typed source_file syntax infer protocol_version display_format esy_installation_json esy_lock_file
+    Api.Print.ast_typed source_file syntax infer protocol_version display_format esy_project_path
   in
-  let term = Term.(const f $ source_file 0  $ syntax $ infer $ protocol_version $ display_format $ esy_installation_json $ esy_lock_file) in
+  let term = Term.(const f $ source_file 0  $ syntax $ infer $ protocol_version $ display_format $ esy_project_path) in
   let cmdname = "print-ast-typed" in
   let doc = "Subcommand: Print the typed AST.\n Warning: Intended for development of LIGO and can break at any time." in
   let man = [`S Manpage.s_description;
@@ -392,11 +384,11 @@ let print_ast_typed =
   in (Term.ret term, Term.info ~man ~doc cmdname)
 
 let print_ast_combined =
-  let f source_file syntax infer protocol_version display_format esy_installation_json esy_lock_file =
+  let f source_file syntax infer protocol_version display_format esy_project_path =
     return_result @@
-    Api.Print.ast_combined source_file syntax infer protocol_version display_format esy_installation_json esy_lock_file
+    Api.Print.ast_combined source_file syntax infer protocol_version display_format esy_project_path
   in
-  let term = Term.(const f $ source_file 0  $ syntax $ infer $ protocol_version $ display_format $ esy_installation_json $ esy_lock_file) in
+  let term = Term.(const f $ source_file 0  $ syntax $ infer $ protocol_version $ display_format $ esy_project_path) in
   let cmdname = "print-ast-combined" in
   let doc = "Subcommand: Print the contract after combination with the build system.\n Warning: Intended for development of LIGO and can break at any time." in
   let man = [`S Manpage.s_description;
@@ -407,11 +399,11 @@ let print_ast_combined =
   in (Term.ret term, Term.info ~man ~doc cmdname)
 
 let print_mini_c =
-  let f source_file syntax infer protocol_version display_format optimize esy_installation_json esy_lock_file =
+  let f source_file syntax infer protocol_version display_format optimize esy_project_path =
     return_result @@
-    Api.Print.mini_c source_file syntax infer protocol_version display_format optimize esy_installation_json esy_lock_file
+    Api.Print.mini_c source_file syntax infer protocol_version display_format optimize esy_project_path
   in
-  let term = Term.(const f $ source_file 0 $ syntax $ infer $ protocol_version $ display_format $ optimize $ esy_installation_json $ esy_lock_file) in
+  let term = Term.(const f $ source_file 0 $ syntax $ infer $ protocol_version $ display_format $ optimize $ esy_project_path) in
   let cmdname = "print-mini-c" in
   let doc = "Subcommand: Print Mini-C. Warning: Intended for development of LIGO and can break at any time." in
   let man = [`S Manpage.s_description;
@@ -422,12 +414,12 @@ let print_mini_c =
   in (Term.ret term, Term.info ~man ~doc cmdname)
 
 let measure_contract =
-  let f source_file entry_point oc_views syntax infer protocol_version display_format warn werror esy_installation_json esy_lock_file =
+  let f source_file entry_point oc_views syntax infer protocol_version display_format warn werror esy_project_path =
     return_result ~warn @@
-    Api.Info.measure_contract source_file entry_point oc_views syntax infer protocol_version display_format werror esy_installation_json esy_lock_file
+    Api.Info.measure_contract source_file entry_point oc_views syntax infer protocol_version display_format werror esy_project_path
   in
   let term =
-    Term.(const f $ source_file 0 $ entry_point 1 $ on_chain_views $ syntax $ infer $ protocol_version $ display_format $ warn $ werror $ esy_installation_json $ esy_lock_file) in
+    Term.(const f $ source_file 0 $ entry_point 1 $ on_chain_views $ syntax $ infer $ protocol_version $ display_format $ warn $ werror $ esy_project_path) in
   let cmdname = "measure-contract" in
   let doc = "Subcommand: Measure a contract's compiled size in bytes." in
   let man = [`S Manpage.s_description;
@@ -436,12 +428,12 @@ let measure_contract =
   in (Term.ret term , Term.info ~man ~doc cmdname)
 
 let compile_parameter =
-  let f source_file entry_point expression syntax infer protocol_version amount balance sender source now display_format michelson_format output_file warn werror esy_installation_json esy_lock_file =
+  let f source_file entry_point expression syntax infer protocol_version amount balance sender source now display_format michelson_format output_file warn werror esy_project_path =
     return_result ~warn ?output_file @@
-    Api.Compile.parameter source_file entry_point expression syntax infer protocol_version amount balance sender source now display_format michelson_format werror esy_installation_json esy_lock_file
+    Api.Compile.parameter source_file entry_point expression syntax infer protocol_version amount balance sender source now display_format michelson_format werror esy_project_path
     in
   let term =
-    Term.(const f $ source_file 0 $ entry_point 1 $ expression "PARAMETER" 2  $ syntax $ infer $ protocol_version $ amount $ balance $ sender $ source $ now $ display_format $ michelson_code_format $ output_file $ warn $ werror $ esy_installation_json $ esy_lock_file) in
+    Term.(const f $ source_file 0 $ entry_point 1 $ expression "PARAMETER" 2  $ syntax $ infer $ protocol_version $ amount $ balance $ sender $ source $ now $ display_format $ michelson_code_format $ output_file $ warn $ werror $ esy_project_path) in
   let cmdname = "compile-parameter" in
   let doc = "Subcommand: Compile parameters to a Michelson expression." in
   let man = [`S Manpage.s_description;
@@ -452,12 +444,12 @@ let compile_parameter =
   in (Term.ret term , Term.info ~man ~doc cmdname)
 
 let interpret =
-  let f expression init_file syntax infer protocol_version amount balance sender source now display_format esy_installation_json esy_lock_file =
+  let f expression init_file syntax infer protocol_version amount balance sender source now display_format esy_project_path =
     return_result @@
-    Api.Run.interpret expression init_file syntax infer protocol_version amount balance sender source now display_format esy_installation_json esy_lock_file
+    Api.Run.interpret expression init_file syntax infer protocol_version amount balance sender source now display_format esy_project_path
   in
   let term =
-    Term.(const f $ expression "EXPRESSION" 0 $ init_file $ syntax $ infer $ protocol_version $ amount $ balance $ sender $ source $ now $ display_format $ esy_installation_json $ esy_lock_file) in
+    Term.(const f $ expression "EXPRESSION" 0 $ init_file $ syntax $ infer $ protocol_version $ amount $ balance $ sender $ source $ now $ display_format $ esy_project_path) in
   let cmdname = "interpret" in
   let doc = "Subcommand: Interpret the expression in the context initialized by the provided source file." in
   let man = [`S Manpage.s_description;
@@ -468,12 +460,12 @@ let interpret =
   in (Term.ret term , Term.info ~man ~doc cmdname)
 
 let compile_storage =
-  let f source_file entry_point expression syntax infer protocol_version amount balance sender source now display_format michelson_format output_file warn werror esy_installation_json esy_lock_file =
+  let f source_file entry_point expression syntax infer protocol_version amount balance sender source now display_format michelson_format output_file warn werror esy_project_path =
     return_result ~warn ?output_file @@
-    Api.Compile.storage source_file entry_point expression syntax infer protocol_version amount balance sender source now display_format michelson_format werror esy_installation_json esy_lock_file
+    Api.Compile.storage source_file entry_point expression syntax infer protocol_version amount balance sender source now display_format michelson_format werror esy_project_path
   in
   let term =
-    Term.(const f $ source_file 0 $ entry_point 1 $ expression "STORAGE" 2  $ syntax $ infer $ protocol_version $ amount $ balance $ sender $ source $ now $ display_format $ michelson_code_format $ output_file $ warn $ werror $ esy_installation_json $ esy_lock_file) in
+    Term.(const f $ source_file 0 $ entry_point 1 $ expression "STORAGE" 2  $ syntax $ infer $ protocol_version $ amount $ balance $ sender $ source $ now $ display_format $ michelson_code_format $ output_file $ warn $ werror $ esy_project_path) in
   let cmdname = "compile-storage" in
   let doc = "Subcommand: Compile an initial storage in LIGO syntax to \
              a Michelson expression." in
@@ -485,12 +477,12 @@ let compile_storage =
   in (Term.ret term , Term.info ~man ~doc cmdname)
 
 let dry_run =
-  let f source_file entry_point input storage amount balance sender source now syntax infer protocol_version display_format warn werror esy_installation_json esy_lock_file =
+  let f source_file entry_point input storage amount balance sender source now syntax infer protocol_version display_format warn werror esy_project_path =
     return_result ~warn @@
-    Api.Run.dry_run source_file entry_point input storage amount balance sender source now syntax infer protocol_version display_format werror esy_installation_json esy_lock_file
+    Api.Run.dry_run source_file entry_point input storage amount balance sender source now syntax infer protocol_version display_format werror esy_project_path
     in
   let term =
-    Term.(const f $ source_file 0 $ entry_point 1 $ expression "PARAMETER" 2 $ expression "STORAGE" 3 $ amount $ balance $ sender $ source $ now  $ syntax $ infer $ protocol_version $ display_format $ warn $ werror $ esy_installation_json $ esy_lock_file) in
+    Term.(const f $ source_file 0 $ entry_point 1 $ expression "PARAMETER" 2 $ expression "STORAGE" 3 $ amount $ balance $ sender $ source $ now  $ syntax $ infer $ protocol_version $ display_format $ warn $ werror $ esy_project_path) in
   let cmdname = "dry-run" in
   let doc = "Subcommand: Run a smart-contract with the given storage and input." in
   let man = [`S Manpage.s_description;
@@ -502,12 +494,12 @@ let dry_run =
   in (Term.ret term , Term.info ~man ~doc cmdname)
 
 let evaluate_call ~cmdname_deprecation =
-  let f source_file entry_point parameter amount balance sender source now syntax infer protocol_version display_format warn werror esy_installation_json esy_lock_file =
+  let f source_file entry_point parameter amount balance sender source now syntax infer protocol_version display_format warn werror esy_project_path =
     return_result ~warn @@
-    Api.Run.evaluate_call source_file entry_point parameter amount balance sender source now syntax infer protocol_version display_format werror esy_installation_json esy_lock_file
+    Api.Run.evaluate_call source_file entry_point parameter amount balance sender source now syntax infer protocol_version display_format werror esy_project_path
     in
   let term =
-    Term.(const f $ source_file 0 $ entry_point 1 $ expression "PARAMETER" 2 $ amount $ balance $ sender $ source $ now  $ syntax $ infer $ protocol_version $ display_format $ warn $ werror $ esy_installation_json $ esy_lock_file) in
+    Term.(const f $ source_file 0 $ entry_point 1 $ expression "PARAMETER" 2 $ amount $ balance $ sender $ source $ now  $ syntax $ infer $ protocol_version $ display_format $ warn $ werror $ esy_project_path) in
   (* "run-function" was renamed to "evaluate-call", keeping both for a few versions for backward-compatibility. *)
   let cmdname = match cmdname_deprecation with
   | `deprecated_run_function -> "run-function"
@@ -525,12 +517,12 @@ let evaluate_call ~cmdname_deprecation =
   in (Term.ret term , Term.info ~man ~doc cmdname)
 
 let evaluate_expr ~cmdname_deprecation =
-  let f source_file entry_point amount balance sender source now syntax infer protocol_version display_format warn werror esy_installation_json esy_lock_file =
+  let f source_file entry_point amount balance sender source now syntax infer protocol_version display_format warn werror esy_project_path =
     return_result ~warn @@
-    Api.Run.evaluate_expr source_file entry_point amount balance sender source now syntax infer protocol_version display_format werror esy_installation_json esy_lock_file
+    Api.Run.evaluate_expr source_file entry_point amount balance sender source now syntax infer protocol_version display_format werror esy_project_path
     in
   let term =
-    Term.(const f $ source_file 0 $ entry_point 1 $ amount $ balance $ sender $ source $ now  $ syntax $ infer $ protocol_version $ display_format $ warn $ werror $ esy_installation_json $ esy_lock_file) in
+    Term.(const f $ source_file 0 $ entry_point 1 $ amount $ balance $ sender $ source $ now  $ syntax $ infer $ protocol_version $ display_format $ warn $ werror $ esy_project_path) in
   (* "run-function" was renamed to "evaluate-call", keeping both for a few versions for backward-compatibility. *)
   let cmdname = match cmdname_deprecation with
   | `deprecated_evaluate_value -> "evaluate-value"
@@ -548,12 +540,12 @@ let evaluate_expr ~cmdname_deprecation =
   in (Term.ret term , Term.info ~man ~doc cmdname)
 
 let compile_expression =
-  let f expression syntax infer protocol_version init_file display_format without_run michelson_format warn werror esy_installation_json esy_lock_file =
+  let f expression syntax infer protocol_version init_file display_format without_run michelson_format warn werror esy_project_path =
     return_result ~warn @@
-    Api.Compile.expression expression syntax infer protocol_version init_file display_format without_run michelson_format werror esy_installation_json esy_lock_file
+    Api.Compile.expression expression syntax infer protocol_version init_file display_format without_run michelson_format werror esy_project_path
     in
   let term =
-    Term.(const f $ expression "" 1 $ req_syntax 0 $ infer $ protocol_version $ init_file $ display_format $ without_run $ michelson_code_format $ warn $ werror $ esy_installation_json $ esy_lock_file) in
+    Term.(const f $ expression "" 1 $ req_syntax 0 $ infer $ protocol_version $ init_file $ display_format $ without_run $ michelson_code_format $ warn $ werror $ esy_project_path) in
   let cmdname = "compile-expression" in
   let doc = "Subcommand: Compile to a Michelson value." in
   let man = [`S Manpage.s_description;
@@ -635,12 +627,12 @@ let get_scope =
   in (Term.ret term , Term.info ~man ~doc cmdname)
 
 let test =
-  let f source_file syntax steps infer protocol_version display_format esy_installation_json esy_lock_file =
+  let f source_file syntax steps infer protocol_version display_format esy_project_path =
     return_result @@
-    Api.Run.test source_file syntax steps infer protocol_version display_format esy_installation_json esy_lock_file
+    Api.Run.test source_file syntax steps infer protocol_version display_format esy_project_path
   in
   let term =
-    Term.(const f $ source_file 0 $ syntax $ steps $ infer $ protocol_version $ display_format $ esy_installation_json $ esy_lock_file) in
+    Term.(const f $ source_file 0 $ syntax $ steps $ infer $ protocol_version $ display_format $ esy_project_path) in
   let cmdname = "test" in
   let doc = "Subcommand: Test a contract with the LIGO test framework (BETA)." in
   let man = [`S Manpage.s_description;
@@ -654,7 +646,7 @@ let test =
 
 let repl =
   let f syntax_name protocol_version infer
-    amount balance sender source now display_format init_file esy_installation_json esy_lock_file : unit Term.ret =
+    amount balance sender source now display_format init_file esy_project_path : unit Term.ret =
     (let protocol = Environment.Protocols.protocols_to_variant protocol_version in
     let syntax = Ligo_compile.Helpers.syntax_to_variant (Syntax_name syntax_name) None in
     let dry_run_opts = Ligo_run.Of_michelson.make_dry_run_options {now ; amount ; balance ; sender ; source ; parameter_ty = None } in
@@ -663,9 +655,9 @@ let repl =
     | None, _, _ -> `Error (false, "Please check protocol name.")
     | _, _, None -> `Error (false, "Please check run options.")
     | Some protocol, Some syntax, Some dry_run_opts ->
-       `Ok (Repl.main syntax display_format protocol infer dry_run_opts init_file esy_installation_json esy_lock_file)) in
+       `Ok (Repl.main syntax display_format protocol infer dry_run_opts init_file esy_project_path)) in
   let term =
-    Term.(const f $ req_syntax 0 $ protocol_version $ infer $ amount $ balance $ sender $ source $ now $ display_format $ init_file $ esy_installation_json $ esy_lock_file) in
+    Term.(const f $ req_syntax 0 $ protocol_version $ infer $ amount $ balance $ sender $ source $ now $ display_format $ init_file $ esy_project_path) in
   let cmdname = "repl" in
   let doc = "Subcommand: REPL" in
   (Term.ret term , Term.info ~doc cmdname)

@@ -188,7 +188,7 @@ let eval display_format state c =
        | Json -> Yojson.Safe.pretty_to_string @@ convert ~display_format:t disp in
      (0, state, out)
 
-let parse_and_eval ~module_resolutions display_format state s =
+let parse_and_eval ?module_resolutions display_format state s =
   let c = match parse s with
     | Use s -> use_file ~module_resolutions state s
     | Import (fn, mn) -> import_file ~module_resolutions state fn mn
@@ -221,20 +221,20 @@ let rec read_input prompt delim =
                  some @@ s ^ "\n" ^ i
               | hd :: _ -> some @@ hd
 
-let rec loop ~module_resolutions syntax display_format state n =
+let rec loop ?module_resolutions syntax display_format state n =
   let prompt = Format.sprintf "In  [%d]: " n in
   let s = read_input prompt ";;" in
   match s with
   | Some s ->
-     let k, state, out = parse_and_eval ~module_resolutions display_format state s in
+     let k, state, out = parse_and_eval ?module_resolutions display_format state s in
      let out = Format.sprintf "Out [%d]: %s" n out in
      print_endline out;
-     loop ~module_resolutions syntax display_format state (n + k)
+     loop ?module_resolutions syntax display_format state (n + k)
   | None -> ()
 
-let main syntax display_format protocol typer_switch dry_run_opts init_file esy_installation_json esy_lock_file =
+let main syntax display_format protocol typer_switch dry_run_opts init_file esy_project_path =
   print_endline welcome_msg;
-  let module_resolutions = Build.ModuleResolutions.make ~installation:esy_installation_json ~lock:esy_lock_file in
+  let module_resolutions = Build.ModuleResolutions.make esy_project_path in
   let state = make_initial_state syntax protocol typer_switch dry_run_opts in
   let state = match init_file with
     | None -> state
@@ -242,4 +242,4 @@ let main syntax display_format protocol typer_switch dry_run_opts init_file esy_
                         let _, state, _ = eval (Ex_display_format Dev) state c in
                         state in
   LNoise.set_multiline true;
-  loop ~module_resolutions syntax display_format state 1
+  loop ?module_resolutions syntax display_format state 1

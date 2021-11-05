@@ -5,7 +5,7 @@ module Compile = Ligo_compile
 module Helpers   = Ligo_compile.Helpers
 module Run = Ligo_run.Of_michelson
 
-let test source_file syntax steps infer protocol_version display_format esy_installation_json esy_lock_file =
+let test source_file syntax steps infer protocol_version display_format esy_project_path =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (Ligo_interpreter.Formatter.tests_format) get_warnings @@
       fun ~raise ->
@@ -17,7 +17,7 @@ let test source_file syntax steps infer protocol_version display_format esy_inst
       let steps = int_of_string steps in
       Interpreter.eval_test ~raise ~steps ~module_resolutions ~protocol_version typed
 
-let dry_run source_file entry_point input storage amount balance sender source now syntax infer protocol_version display_format werror esy_installation_json esy_lock_file =
+let dry_run source_file entry_point input storage amount balance sender source now syntax infer protocol_version display_format werror esy_project_path =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~werror ~display_format (Decompile.Formatter.expression_format) get_warnings @@
       fun ~raise ->
@@ -38,7 +38,7 @@ let dry_run source_file entry_point input storage amount balance sender source n
       let runres  = Run.run_contract ~raise ~options michelson_prg.expr michelson_prg.expr_ty args_michelson in
       Decompile.Of_michelson.decompile_typed_program_entry_function_result ~raise typed_prg entry_point runres
 
-let interpret expression init_file syntax infer protocol_version amount balance sender source now display_format esy_installation_json esy_lock_file =
+let interpret expression init_file syntax infer protocol_version amount balance sender source now display_format esy_project_path =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (Decompile.Formatter.expression_format) get_warnings @@
       fun ~raise ->
@@ -76,7 +76,7 @@ let evaluate_call source_file entry_point parameter amount balance sender source
       let runres           = Run.run_expression ~raise ~options michelson.expr michelson.expr_ty in
       Decompile.Of_michelson.decompile_typed_program_entry_function_result ~raise typed_prg entry_point runres
 
-let evaluate_expr source_file entry_point amount balance sender source now syntax infer protocol_version display_format werror esy_installation_json esy_lock_file =
+let evaluate_expr source_file entry_point amount balance sender source now syntax infer protocol_version display_format werror esy_project_path =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~werror ~display_format Decompile.Formatter.expression_format get_warnings @@
       fun ~raise ->
