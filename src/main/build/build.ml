@@ -17,10 +17,11 @@ module M (Params : Params) =
     type module_name = string
     type compilation_unit = Buffer.t
     type meta_data = Ligo_compile.Helpers.meta
-    let preprocess : file_name -> compilation_unit * meta_data * (file_name * module_name) list =
-      fun file_name ->
+    let esy_project_path = Params.options.esy_project_path
+    let preprocess : file_name -> file_name list -> compilation_unit * meta_data * (file_name * module_name) list =
+      fun file_name includes ->
       let meta = Ligo_compile.Of_source.extract_meta ~raise "auto" file_name in
-      let c_unit, deps = Ligo_compile.Helpers.preprocess_file ~raise ~meta ~options file_name in
+      let c_unit, deps = Ligo_compile.Helpers.preprocess_file ~raise ~meta ~options ~includes file_name in
       c_unit,meta,deps
     module AST = struct
       type declaration = Ast_typed.declaration_loc
