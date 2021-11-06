@@ -225,9 +225,13 @@ module Mutator = struct
       let+ a, b, mutation = combine lamb (self lamb) args (self args) in
       return @@ E_application {lamb=a;args=b}, mutation
     )
-    | E_let_in { let_binder ; rhs ; let_result; inline } -> (
-      let+ rhs, let_result, mutation = combine rhs (self rhs) let_result (self let_result) in
-      return @@ E_let_in { let_binder ; rhs ; let_result; inline }, mutation
+    | E_let_in { let_binder ; rhs ; let_result; attr } -> (
+      if attr.no_mutation then
+        let+ let_result, mutation = self let_result in
+        return @@ E_let_in { let_binder ; rhs ; let_result; attr }, mutation
+      else
+        let+ rhs, let_result, mutation = combine rhs (self rhs) let_result (self let_result) in
+        return @@ E_let_in { let_binder ; rhs ; let_result; attr }, mutation
     )
     | E_type_in {type_binder; rhs; let_result} -> (
       let+ let_result, mutation = self let_result in
@@ -266,6 +270,7 @@ module Mutator = struct
       e, Option.some_if (b && not (Location.is_dummy_or_generated e.location)) (e.location, e)
     )
     | E_variable _ | E_raw_code _ as e' -> [ (return e'), None ]
+    | E_type_inst _ as e' -> [ (return e'), None ]
 
   and mutate_cases : matching_expr -> (matching_expr * mutation option) list = fun m ->
     match m with
@@ -285,14 +290,17 @@ module Mutator = struct
   and mutate_module : module_fully_typed -> (module_fully_typed * mutation option) list = fun (Module_Fully_Typed p) ->
     let aux = fun ({location; wrap_content = x} : declaration location_wrap) ->
       match x with
-      | Declaration_constant {name; binder; expr ; inline} -> (
-        let+ expr, mutation = mutate_expression expr in
-        ({location; wrap_content = Declaration_constant {name; binder; expr ; inline}} : declaration location_wrap), mutation
+      | Declaration_constant {name; binder; expr ; attr} -> (
+        if attr.no_mutation then
+          [(({location; wrap_content = Declaration_constant {name; binder; expr ; attr}} : declaration location_wrap), None)]
+        else
+          let+ expr, mutation = mutate_expression expr in
+          ({location; wrap_content = Declaration_constant {name; binder; expr ; attr}} : declaration location_wrap), mutation
       )
       | Declaration_type t -> [ ({location; wrap_content = Declaration_type t} : declaration location_wrap), None ]
-      | Declaration_module {module_binder;module_} ->
+      | Declaration_module {module_binder;module_; module_attr} ->
          let+ module_, mutation = mutate_module module_ in
-         ({location; wrap_content = Declaration_module {module_binder; module_}} : declaration location_wrap), mutation
+         ({location; wrap_content = Declaration_module {module_binder; module_; module_attr}} : declaration location_wrap), mutation
       | Module_alias _ -> [ ({location; wrap_content = x} : declaration location_wrap), None ]
     in
     let* p, mutation = combine_list p (List.map ~f:aux p) in

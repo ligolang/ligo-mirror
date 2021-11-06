@@ -51,6 +51,9 @@ let rec decompile_type_expression : O.type_expression -> I.type_expression =
       | O.T_abstraction x ->
         let type_ = self x.type_ in
         return @@ I.T_abstraction { x with type_ }
+      | O.T_for_all x ->
+        let type_ = self x.type_ in
+        return @@ I.T_for_all { x with type_ }
 
 let rec decompile_expression : O.expression -> I.expression =
   fun e ->
@@ -75,21 +78,22 @@ let rec decompile_expression : O.expression -> I.expression =
     | O.E_recursive recs ->
       let recs = recursive self self_type recs in
       return @@ I.E_recursive recs
-    | O.E_let_in {let_binder = {var; ascr};inline=false;rhs=expr1;let_result=expr2}
+    | O.E_let_in {let_binder = {var; ascr};attr={inline=false};rhs=expr1;let_result=expr2}
       when Var.equal var.wrap_content (Var.of_name "_")
            && Stdlib.(=) ascr (Some (O.t_unit ())) ->
       let expr1 = self expr1 in
       let expr2 = self expr2 in
       return @@ I.E_sequence {expr1;expr2}
-    | O.E_let_in {let_binder;inline;rhs;let_result} ->
+    | O.E_let_in {let_binder;attr;rhs;let_result} ->
       let let_binder = binder self_type let_binder in
       let rhs = self rhs in
       let let_result = self let_result in
-      let attributes = if inline then ["inline"] else [] in
+      let attributes = if attr.inline then ["inline"] else [] in
       return @@ I.E_let_in {let_binder;mut=false;attributes;rhs;let_result}
-    | O.E_type_in ti ->
-      let ti = type_in self self_type ti in
-      return @@ I.E_type_in ti
+    | O.E_type_in {type_binder; rhs; let_result} ->
+      let rhs = self_type rhs in
+      let let_result = self let_result in
+      return @@ I.E_type_in {type_binder; rhs; let_result}
     | O.E_mod_in {module_binder;rhs;let_result} ->
       let rhs = decompile_module rhs in
       let let_result = self let_result in
@@ -151,17 +155,17 @@ and decompile_declaration : O.declaration -> I.declaration =
   fun declaration ->
   let return (decl: I.declaration) = decl in
   match declaration with
-  | O.Declaration_type dt ->
-    let dt = declaration_type decompile_type_expression dt in
-    return @@ I.Declaration_type dt
+  | O.Declaration_type {type_binder; type_expr; type_attr=_} ->
+    let type_expr = decompile_type_expression type_expr in
+    return @@ I.Declaration_type {type_binder; type_expr; type_attr=[]}
   | O.Declaration_constant {name; binder=b; attr={inline}; expr} ->
     let binder = binder decompile_type_expression b in
     let expr = decompile_expression expr in
     let attr = if inline then ["inline"] else [] in
     return @@ I.Declaration_constant {name; binder; attr; expr}
-  | O.Declaration_module {module_binder;module_} ->
+  | O.Declaration_module {module_binder;module_;module_attr=_} ->
     let module_ = decompile_module module_ in
-    return @@ I.Declaration_module {module_binder;module_}
+    return @@ I.Declaration_module {module_binder;module_;module_attr=[]}
   | O.Module_alias ma ->
     let ma = module_alias ma in
     return @@ Module_alias ma

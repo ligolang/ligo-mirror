@@ -42,7 +42,7 @@ end = struct
     | O.E_application     { lamb; args } -> let () = expression lamb in expression args
     | O.E_lambda          { binder=_; result } -> expression result
     | O.E_recursive       { fun_name=_; fun_type; lambda={ binder=_; result } } -> let () = expression result in te where fun_type
-    | O.E_let_in          { let_binder=_; rhs; let_result; inline=_ } -> let () = expression rhs in expression let_result
+    | O.E_let_in          { let_binder=_; rhs; let_result; attr=_ } -> let () = expression rhs in expression let_result
     | O.E_type_in         { type_binder=_; rhs=_; let_result} -> expression let_result
     | O.E_mod_in          { module_binder=_; rhs=_; let_result} -> expression let_result
     | O.E_mod_alias       { alias=_; binders=_; result} -> expression result
@@ -72,6 +72,7 @@ end = struct
     | O.T_module_accessor {module_name=_; element} -> te where element
     | O.T_singleton _ -> failwith "TODO: singleton?"
     | O.T_abstraction x -> te where x.type_
+    | O.T_for_all x -> te where x.type_
   and te where : O.type_expression -> _ = function { type_content; sugar=_; location=_ } -> tc where type_content
 
   let check_expression_has_no_unification_vars (expr : O.expression) =
@@ -83,7 +84,7 @@ end = struct
 
   let check_has_no_unification_vars ((O.Module_With_Unification_Vars p) as pp) =
     let print_checked p =
-      Format.eprintf "{ \"CHECKING\": %s\n},\n"
+      if Ast_core.Debug.debug_new_typer then Format.eprintf "{ \"CHECKING\": %s\n},\n"
         (Yojson.Safe.to_string (O.Yojson.module_with_unification_vars p)) in
     let () = (if Ast_core.Debug.debug_new_typer || Ast_core.Debug.json_new_typer then print_checked pp) in
     let decl : O.declaration -> _ = fun d -> match d with
@@ -108,36 +109,36 @@ let rec type_declaration ~raise env state : I.declaration Location.wrap -> envir
   let return : O.declaration -> _ -> _ -> _ O'.typer_state -> _ (* return of type_expression *) = fun expr ty e state constraints ->
     (* Format.eprintf "Solving expression : %a\n%!" O.PP_annotated.declaration expr ; *)
     let state = Solver.main ~raise state constraints in
-    Format.eprintf "Leaving type declaration\n\n%!";
+    if Ast_core.Debug.debug_new_typer then Format.eprintf "Leaving type declaration\n\n%!";
     let () = Pretty_print_variables.flush_pending_print state in
     (e,state, Location.wrap ~loc:d.location expr, ty ) in
-  Format.eprintf "Type_declaration : %a\n%!" I.PP.declaration (Location.unwrap d);
-  Format.eprintf "env : %a\n" O.PP.environment env ;
+  if Ast_core.Debug.debug_new_typer then Format.eprintf "Type_declaration : %a\n%!" I.PP.declaration (Location.unwrap d);
+  if Ast_core.Debug.debug_new_typer then Format.eprintf "env : %a\n" O.PP.environment env ;
   match Location.unwrap d with
-  | Declaration_type {type_binder; type_expr} ->
+  | Declaration_type {type_binder; type_expr; type_attr} ->
     let type_binder = Var.todo_cast type_binder in
     let type_expr = evaluate_type ~raise env type_expr in
     let env' = Environment.add_type (type_binder) type_expr env in
     let c = Wrap.type_decl () in
-    return (O.Declaration_type {type_binder; type_expr}) type_expr env' state c
-  | Declaration_constant {name; binder; attr={inline}; expr} -> (
+    return (O.Declaration_type {type_binder; type_expr; type_attr}) type_expr env' state c
+  | Declaration_constant {name; binder; attr; expr} -> (
     (*
       Determine the type of the expression and add it to the environment
     *)
     let tv_opt = Option.map ~f:(evaluate_type ~raise env) binder.ascr in
-    Format.eprintf "const_decl: tv_opt : %a\n%!" (PP_helpers.option O.PP.type_expression) tv_opt ;
+    if Ast_core.Debug.debug_new_typer then Format.eprintf "const_decl: tv_opt : %a\n%!" (PP_helpers.option O.PP.type_expression) tv_opt ;
     let (e, state', expr, t),constraints =
       trace ~raise (constant_declaration_tracer binder.var expr tv_opt) @@
       type_expression' env state expr in
     let binder = Stage_common.Maps.binder (evaluate_type ~raise env)  binder in
     let post_env = Environment.add_ez_declaration binder.var expr t e in
     let c = Wrap.const_decl t tv_opt in
-    return (Declaration_constant { name; binder ; expr ; attr={inline}}) t post_env state' (constraints@c)
+    return (Declaration_constant { name; binder ; expr ; attr}) t post_env state' (constraints@c)
     )
-  | Declaration_module {module_binder;module_} -> (
+  | Declaration_module {module_binder;module_;module_attr} -> (
     let (e,module_,t,state) = type_module ~raise ~init_env:env module_ in
     let post_env = Environment.add_module module_binder e env in
-    return (Declaration_module { module_binder; module_}) t post_env state @@ Wrap.mod_decl ()
+    return (Declaration_module { module_binder; module_; module_attr}) t post_env state @@ Wrap.mod_decl ()
   )
   | Module_alias {alias;binders} -> (
     let aux env binder =
@@ -197,6 +198,9 @@ and evaluate_type ~raise : environment -> I.type_expression -> O.type_expression
   | T_abstraction x ->
     let type_ = evaluate_type ~raise e x.type_ in
     return (T_abstraction {x with type_})
+  | T_for_all x ->
+    let type_ = evaluate_type ~raise e x.type_ in
+    return (T_for_all {x with type_})
 
 
 and type_expression ~raise : ?tv_opt:O.type_expression -> environment -> _ O'.typer_state -> I.expression -> environment * _ O'.typer_state * O.expression * O.type_expression = fun ?tv_opt e state ae ->
@@ -215,13 +219,13 @@ and type_expression' ~raise : ?tv_opt:O.type_expression -> environment -> _ O'.t
     let tv = t_variable type_name in
     let loc = ae.location in
     let expr' = e_ascription ~loc expr tv in
-    Format.eprintf "Returning expr : %a \nwith new_constraints: %a\n"
+    if Ast_core.Debug.debug_new_typer then Format.eprintf "Returning expr : %a \nwith new_constraints: %a\n"
       Ast_core.PP.expression expr'
       Ast_core.PP.(list_sep_d type_constraint_short) new_constraints;
     ((e,state, expr',tv),new_constraints@constraints) in
   let return_wrapped expr e state constraints (c , expr_type) = return expr e state c constraints expr_type in
-  Format.eprintf "Type_expression : %a\n%!" Ast_core.PP.expression ae ;
-  Format.eprintf "Env : %a\n%!" Ast_core.PP.environment e;
+  if Ast_core.Debug.debug_new_typer then Format.eprintf "Type_expression : %a\n%!" Ast_core.PP.expression ae ;
+  if Ast_core.Debug.debug_new_typer then Format.eprintf "Env : %a\n%!" Ast_core.PP.environment e;
   trace ~raise (expression_tracer ae) @@
   fun ~raise:_ -> match ae.expression_content with
 
@@ -237,7 +241,7 @@ and type_expression' ~raise : ?tv_opt:O.type_expression -> environment -> _ O'.t
     let (tv' : Environment.element) =
       trace_option ~raise (unbound_variable e name ae.location)
       @@ Environment.get_opt name e in
-    Format.eprintf "wrap variable : %a, %a\n%!"
+    if Ast_core.Debug.debug_new_typer then Format.eprintf "wrap variable : %a, %a\n%!"
       O.PP.expression_variable name
       O.PP.environment_element tv'
       ;
@@ -466,7 +470,7 @@ and type_expression' ~raise : ?tv_opt:O.type_expression -> environment -> _ O'.t
     return_wrapped (e_record_update record path update) e state (c1@c2) wrapped
 
   (* Advanced *)
-  | E_let_in {let_binder ; rhs ; let_result; inline} ->
+  | E_let_in {let_binder ; rhs ; let_result; attr} ->
     let rhs_tv_opt = Option.map ~f:(evaluate_type ~raise e) (let_binder.ascr) in
     let (e,state,rhs,t_r),c1 = self e state rhs in
     let let_binder = Stage_common.Maps.binder (evaluate_type ~raise e) let_binder in
@@ -474,7 +478,7 @@ and type_expression' ~raise : ?tv_opt:O.type_expression -> environment -> _ O'.t
     let e = Environment.add_ez_binder (let_binder.var) (t_variable fresh) e in
     let (_,state,let_result,l_let),c2 = self e state let_result in
     let wrapped = Wrap.let_in fresh t_r rhs_tv_opt l_let in
-    return_wrapped (e_let_in let_binder rhs let_result inline) e state (c1@c2) wrapped
+    return_wrapped (e_let_in let_binder rhs let_result attr) e state (c1@c2) wrapped
 
   | E_type_in {type_binder; rhs ; let_result} ->
     let rhs = evaluate_type ~raise e rhs in
@@ -602,7 +606,7 @@ and type_and_subst : type a b.
   let () = (if Ast_core.Debug.debug_new_typer && Ast_core.Debug.json_new_typer then print_env_state_node in_printer env_state_node) in
   let (env, state, node, ty) = types_and_returns_env env_state_node in
   let node,ty,env =
-    Format.eprintf "Substitutions ongoing\n%!";
+    if Ast_core.Debug.debug_new_typer then Format.eprintf "Substitutions ongoing\n%!";
     let aliases = state.aliases in
     let assignments = state.plugin_states#assignments in
     let substs : variable: O.type_variable -> O.type_content option = fun ~variable ->
@@ -631,16 +635,16 @@ and type_and_subst : type a b.
         let () = (if Ast_core.Debug.debug_new_typer then Printf.fprintf stderr "%s%!" @@ Format.asprintf "Substituing var %a (%a is %a)\n%!" Var.pp variable Var.pp root Ast_core.PP.type_content expr) in
         expr
     in
-    Format.eprintf "substituting node\n%!";
+    if Ast_core.Debug.debug_new_typer then Format.eprintf "substituting node\n%!";
     let node = apply_substs ~substs node in
-    Format.eprintf "substituting env %a\n%!" Ast_core.PP.environment env;
+    if Ast_core.Debug.debug_new_typer then Format.eprintf "substituting env %a\n%!" Ast_core.PP.environment env;
     let ty = Typesystem.Misc.Substitution.Pattern.s_type_expression ~substs ty in
-    Format.eprintf "substituting ty %a\n%!" Ast_core.PP.type_expression ty;
+    if Ast_core.Debug.debug_new_typer then Format.eprintf "substituting ty %a\n%!" Ast_core.PP.type_expression ty;
     let env  = Typesystem.Misc.Substitution.Pattern.s_environment ~substs env in
-    Format.eprintf "New env %a\n%!" O.PP.environment env;
+    if Ast_core.Debug.debug_new_typer then Format.eprintf "New env %a\n%!" O.PP.environment env;
     (node,ty,env)
   in
-  Format.eprintf "Substritutions done\n%!";
+  if Ast_core.Debug.debug_new_typer then Format.eprintf "Substritutions done\n%!";
   let () = (if Ast_core.Debug.debug_new_typer then Printf.fprintf stderr "\nTODO AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA Print env,state,node here again.\n\n") in
   let () = (if Ast_core.Debug.debug_new_typer && Ast_core.Debug.json_new_typer then print_env_state_node out_printer (env, state, node)) in
   (node, ty, state, env)

@@ -61,6 +61,7 @@ type typer_error = [
   | `Typer_expected_unit of Location.t * Ast_typed.type_expression
   | `Typer_not_matching of Location.t * Ast_typed.type_expression * Ast_typed.type_expression
   | `Typer_not_annotated of Location.t
+  | `Typer_contract_not_annotated of Location.t
   | `Typer_bad_substraction of Location.t
   | `Typer_wrong_size of Location.t * Ast_typed.type_expression
   | `Typer_wrong_neg of Location.t * Ast_typed.type_expression
@@ -83,6 +84,8 @@ type typer_error = [
   | `Typer_pattern_do_not_conform_type of Ast_core.type_expression Ast_core.pattern * Ast_typed.type_expression
   | `Typer_redundant_pattern of Location.t
   | `Typer_wrong_type_for_unit_pattern of Location.t * Ast_typed.type_expression
+  | `Typer_poly_not_applied of Location.t
+  | `Typer_wrong_generalizable of Location.t * Ast_core.type_variable
 ]
 
 let wrong_type_for_unit_pattern l t = `Typer_wrong_type_for_unit_pattern (l,t)
@@ -157,6 +160,7 @@ let expected_unit (loc:Location.t) (t:Ast_typed.type_expression) = `Typer_expect
 let expected_ascription (t:Ast_core.expression) = `Typer_expected_ascription t
 let not_matching (loc:Location.t) (t1:Ast_typed.type_expression) (t2:Ast_typed.type_expression) = `Typer_not_matching (loc,t1,t2)
 let not_annotated (loc: Location.t) = `Typer_not_annotated loc
+let contract_not_annotated (loc: Location.t) = `Typer_contract_not_annotated loc
 let bad_subtraction (loc:Location.t) = `Typer_bad_substraction loc
 let wrong_size (loc:Location.t) (t:Ast_typed.type_expression) = `Typer_wrong_size (loc,t)
 let wrong_neg (loc:Location.t) (t:Ast_typed.type_expression) = `Typer_wrong_neg (loc,t)
@@ -168,6 +172,8 @@ let uncomparable_types (loc:Location.t) (a:Ast_typed.type_expression) (b:Ast_typ
   `Typer_uncomparable_types (loc,a,b)
 let comparator_composed (loc:Location.t) (a:Ast_typed.type_expression) = `Typer_comparator_composed (loc,a)
 let unrecognized_type_constant (e:Ast_core.type_expression) = `Typer_unrecognized_type_constant e
+let poly_not_applied (loc:Location.t) = `Typer_poly_not_applied loc
+let wrong_generalizable (loc:Location.t) (t:Ast_core.type_variable) = `Typer_wrong_generalizable (loc, t)
 
 (* new typer errors *)
 let constant_declaration_tracer (name: Ast_core.expression_variable) (ae:Ast_core.expression) (expected: Ast_typed.type_expression option) (err:typer_error) =
@@ -352,6 +358,10 @@ let rec error_ppformat : display_format:string display_format ->
     | `Typer_record_access_tracer (_,err) -> error_ppformat ~display_format f err
     | `Typer_not_annotated l ->
       Format.fprintf f "@[<hv>%a@.Can't infer the type of this value, please add a type annotation.@]"
+        Snippet.pp l
+    | `Typer_contract_not_annotated l ->
+      Format.fprintf f "@[<hv>%a@.Can't infer the complete type of this value, please add a type annotation.\
+        @.The value has type 'a contract option, here 'a can't be inferred@]"
         Snippet.pp l
     | `Typer_bad_substraction loc ->
       Format.fprintf f "@[<hv>%a@.Invalid subtraction.\
@@ -557,7 +567,7 @@ let rec error_ppformat : display_format:string display_format ->
         Ast_typed.PP.type_expression t
     | `Typer_not_matching (loc,t1,t2) ->
       Format.fprintf f
-        "@[<hv>%a@.These types are not matching:@ - %a@ - %a@]"
+        "@[<hv>%a@.These types are not matching:@. - %a@. - %a@]"
         Snippet.pp loc
         Ast_typed.PP.type_expression t1
         Ast_typed.PP.type_expression t2
@@ -611,8 +621,15 @@ let rec error_ppformat : display_format:string display_format ->
       Format.fprintf f
         "@[<hv>%a@.Redundant pattern matching@]"
         Snippet.pp loc
+    | `Typer_poly_not_applied loc ->
+      Format.fprintf f
+        "@[<hv>%a@.Polymorphic value is not applied enough@]"
+        Snippet.pp loc
+    | `Typer_wrong_generalizable (loc, t) ->
+      Format.fprintf f
+        "@[<hv>%a@.Invalid type name: %a is a generalizable variable@]"
+        Snippet.pp loc Ast_core.PP.type_variable t
   )
-
 let rec error_jsonformat : typer_error -> Yojson.Safe.t = fun a ->
   let json_error ~stage ~content =
     `Assoc [
@@ -1228,6 +1245,12 @@ let rec error_jsonformat : typer_error -> Yojson.Safe.t = fun a ->
       ("message", message);
     ] in
     json_error ~stage ~content
+  | `Typer_contract_not_annotated _ ->
+    let message = `String "not annotated contract" in
+    let content = `Assoc [
+      ("message", message);
+    ] in
+    json_error ~stage ~content
   | `Typer_bad_substraction loc ->
     let message = `String "bad substraction, bad parameters" in
     let content = `Assoc [
@@ -1398,5 +1421,19 @@ let rec error_jsonformat : typer_error -> Yojson.Safe.t = fun a ->
       ("type", t);
       ("pattern", pattern);
       ("location", Location.to_yojson p.location);
+    ] in
+    json_error ~stage ~content
+  | `Typer_poly_not_applied (loc) ->
+    let message = `String "polymorphic value is not applied enough" in
+    let content = `Assoc [
+      ("message", message);
+      ("location", Location.to_yojson loc);
+    ] in
+    json_error ~stage ~content
+  | `Typer_wrong_generalizable (loc, t) ->
+    let message = `String (Format.asprintf "invalid type name: generalizable variable %a" Ast_core.PP.type_variable t) in
+    let content = `Assoc [
+      ("message", message);
+      ("location", Location.to_yojson loc);
     ] in
     json_error ~stage ~content

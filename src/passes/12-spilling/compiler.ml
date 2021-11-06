@@ -25,8 +25,12 @@ let compile_constant' : AST.constant' -> constant' = function
   | C_IS_NAT -> C_IS_NAT
   | C_SOME -> C_SOME
   | C_NONE -> C_NONE
+  | C_UNOPT -> C_UNOPT
+  | C_UNOPT_WITH_ERROR -> C_UNOPT_WITH_ERROR
   | C_ASSERTION -> C_ASSERTION
+  | C_ASSERTION_WITH_ERROR -> C_ASSERTION_WITH_ERROR
   | C_ASSERT_SOME -> C_ASSERT_SOME
+  | C_ASSERT_SOME_WITH_ERROR -> C_ASSERT_SOME_WITH_ERROR
   | C_ASSERT_INFERRED -> C_ASSERT_INFERRED
   | C_FAILWITH -> C_FAILWITH
   | C_UPDATE -> C_UPDATE
@@ -129,6 +133,7 @@ let compile_constant' : AST.constant' -> constant' = function
   (* Blockchain *)
   | C_CALL -> C_CALL
   | C_CONTRACT -> C_CONTRACT
+  | C_CONTRACT_WITH_ERROR -> C_CONTRACT_WITH_ERROR
   | C_CONTRACT_OPT -> C_CONTRACT_OPT
   | C_CONTRACT_ENTRYPOINT -> C_CONTRACT_ENTRYPOINT
   | C_CONTRACT_ENTRYPOINT_OPT -> C_CONTRACT_ENTRYPOINT_OPT
@@ -157,6 +162,8 @@ let compile_constant' : AST.constant' -> constant' = function
   | C_SAPLING_EMPTY_STATE -> C_SAPLING_EMPTY_STATE
   | C_SAPLING_VERIFY_UPDATE -> C_SAPLING_VERIFY_UPDATE
   | C_POLYMORPHIC_ADD -> C_POLYMORPHIC_ADD
+  | C_OPEN_CHEST -> C_OPEN_CHEST
+  | C_VIEW -> C_VIEW
   | (   C_TEST_ORIGINATE
       | C_TEST_SET_NOW
       | C_TEST_SET_SOURCE
@@ -181,14 +188,17 @@ let compile_constant' : AST.constant' -> constant' = function
       | C_TEST_TO_CONTRACT
       | C_TEST_TO_ENTRYPOINT
       | C_TEST_TO_TYPED_ADDRESS
+      | C_TEST_SET_BIG_MAP
       | C_TEST_NTH_BOOTSTRAP_TYPED_ADDRESS
       | C_TEST_ORIGINATE_FROM_FILE
-      | C_BIG_MAP_IDENTIFIER
       | C_TEST_COMPILE_META_VALUE
       | C_TEST_MUTATE_COUNT
       | C_TEST_MUTATE_VALUE
       | C_TEST_MUTATION_TEST
       | C_TEST_MUTATION_TEST_ALL
+      | C_TEST_CAST_ADDRESS
+      | C_TEST_CREATE_CHEST
+      | C_TEST_CREATE_CHEST_KEY
       | C_TEST_SAVE_MUTATION) as c ->
     failwith (Format.asprintf "%a is only available for LIGO interpreter" PP.constant c)
 
@@ -218,7 +228,8 @@ let rec compile_type ~raise (t:AST.type_expression) : type_expression =
     | (i, []) when String.equal i signature_name -> return (T_base TB_signature)
     | (i, []) when String.equal i baker_hash_name -> return (T_base TB_baker_hash)
     | (i, []) when String.equal i pvss_key_name -> return (T_base TB_pvss_key)
-
+    | (i, []) when String.equal i chest_name -> return (T_base TB_chest)
+    | (i, []) when String.equal i chest_key_name -> return (T_base TB_chest_key)
     | (i, []) when String.equal i baker_operation_name -> return (T_base TB_baker_operation)
     | (i, []) when String.equal i bls12_381_g1_name -> return (T_base TB_bls12_381_g1)
     | (i, []) when String.equal i bls12_381_g2_name -> return (T_base TB_bls12_381_g2)
@@ -300,6 +311,8 @@ let rec compile_type ~raise (t:AST.type_expression) : type_expression =
   | T_singleton _ ->
     raise.raise @@ corner_case ~loc:__LOC__ "Singleton uncaught"
   | T_abstraction _ ->
+    raise.raise @@ corner_case ~loc:__LOC__ "Abstraction type uncaught"
+  | T_for_all _ ->
     raise.raise @@ corner_case ~loc:__LOC__ "For all type uncaught"
 
 (* probably should use result monad for conformity? but these errors
@@ -335,9 +348,15 @@ let compile_record_matching ~raise expr' return k ({ fields; body; tv } : Ast_ty
     let fields =
       List.map
         ~f:(fun (l, (row_element : _ row_element_mini_c)) ->
-           let t = compile_type ~raise row_element.associated_type in
-           (fst (LMap.find l fields), t))
-        record_fields in
+          let t = compile_type ~raise row_element.associated_type in
+          let x = trace_option ~raise
+            (corner_case ~loc:__LOC__ ("missing label in record"))
+            (LMap.find_opt l fields)
+          in
+          (fst x, t)
+        )
+        record_fields
+    in
     let body = k body in
     return (E_let_tuple (expr', (fields, body)))
   | _ ->
@@ -346,7 +365,11 @@ let compile_record_matching ~raise expr' return k ({ fields; body; tv } : Ast_ty
     let rec aux expr (tree : Layout.record_tree) body =
       match tree.content with
       | Field l ->
-        let var = fst (LMap.find l fields) in
+        let x = trace_option ~raise
+          (corner_case ~loc:__LOC__ ("missing label in record"))
+          (LMap.find_opt l fields)
+        in
+        let var = fst x in
         return @@ E_let_in (expr, false, ((var, tree.type_), body))
       | Pair (x, y) ->
         let x_var = Location.wrap (Var.fresh ()) in
@@ -382,7 +405,9 @@ and compile_expression ~raise ?(module_env = SMap.empty) (ae:AST.expression) : e
   let return ?(tv = tv) expr =
     Combinators.Expression.make_tpl ~loc:ae.location (expr, tv) in
   match ae.expression_content with
-  | E_let_in {let_binder; rhs; let_result; inline} ->
+  | E_type_inst _ ->
+    raise.raise @@ corner_case ~loc:__LOC__ (Format.asprintf "Type instance: This program should be monomorphised")
+  | E_let_in {let_binder; rhs; let_result; attr = { inline } } ->
     let rhs' = self rhs in
     let result' = self let_result in
     return (E_let_in (rhs', inline, ((Location.map Var.todo_cast let_binder, rhs'.type_expression), result')))
@@ -724,7 +749,7 @@ and compile_expression ~raise ?(module_env = SMap.empty) (ae:AST.expression) : e
         let module_names = aux element in
         (module_var :: module_names)
       | E_variable var ->
-        [Var.to_name @@ Location.unwrap @@ var]
+        [Format.asprintf "%a" Var.pp @@ Location.unwrap var]
       | E_record_accessor {record; path} ->
         let module_names = aux record in
         let Label module_var = path in
@@ -766,7 +791,7 @@ and compile_recursive ~raise module_env {fun_name; fun_type; lambda} =
         let let_result = replace_callback ~raise fun_name loop_type shadowed li.let_result in
         let rhs = compile_expression ~raise ~module_env li.rhs in
         let ty  = compile_type ~raise li.rhs.type_expression in
-        e_let_in (Location.map Var.todo_cast li.let_binder) ty li.inline rhs let_result
+        e_let_in (Location.map Var.todo_cast li.let_binder) ty li.attr.inline rhs let_result
       | E_matching m ->
         let ty = compile_type ~raise e.type_expression in
         matching ~raise fun_name loop_type shadowed m ty
@@ -888,7 +913,7 @@ and compile_recursive ~raise module_env {fun_name; fun_type; lambda} =
 and compile_declaration ~raise module_env env (d:AST.declaration) : (toplevel_statement * _ SMap.t) option =
   match d with
   | Declaration_type _ -> None
-  | Declaration_constant { binder ; expr ; inline } ->
+  | Declaration_constant { binder ; expr ; attr = { inline } } ->
     let expression = compile_expression ~raise ~module_env expr in
     let binder = Location.map Var.todo_cast binder in
     let tv = Combinators.Expression.get_type expression in
@@ -931,15 +956,17 @@ and compile_module_as_record ~raise module_name (module_env : _ SMap.t) (lst : A
   let rec module_as_record ~raise module_env (AST.Module_Fully_Typed lst) : (AST.expression * _) =
     let aux (r,env) (cur : AST.declaration ) =
       match cur with
-      | Declaration_constant { binder ; expr; inline=_ } ->
-        let l = Var.to_name @@ Location.unwrap binder in
-        ((Label l,(expr,false))::r,env)
+      | Declaration_constant { binder ; expr; attr=_ } ->
+        let l = Format.asprintf "%a" Var.pp @@ Location.unwrap binder in
+        let attr : AST.known_attributes = { inline = false ; no_mutation = false; public = true; view = false } in
+        ((Label l,(expr,attr))::r,env)
       | Declaration_type _ty -> (r,env)
       | Declaration_module {module_binder; module_} ->
         let l = module_binder in
         let r',_ = module_as_record env ~raise module_ in
         let env = SMap.add l (get_type_expression r') env in
-        ((Label l,(r',false))::r,env)
+        let attr : AST.known_attributes = { inline = false ; no_mutation = false; public = true ; view = false } in
+        ((Label l,(r',attr))::r,env)
       | Module_alias {alias; binders} ->
         let l = alias in
         let module_var, access = binders in
@@ -951,7 +978,8 @@ and compile_module_as_record ~raise module_name (module_env : _ SMap.t) (lst : A
         let module_type = get_type_expression module_expr in
         let env = SMap.add l module_type env in
         let r' = module_expr in
-        ((Label l,(r',true))::r,env)
+        let attr : AST.known_attributes = { inline = true ; no_mutation = false ; public = true ; view = false } in
+        ((Label l,(r',attr))::r,env)
 
     in
     let r,env = List.fold ~f:aux ~init:([],module_env) (temp_unwrap_loc_list lst) in

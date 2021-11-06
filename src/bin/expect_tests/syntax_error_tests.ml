@@ -4,7 +4,7 @@ open Cli_expect
 let () = Unix.putenv "TERM" "dumb"
 
 let%expect_test _ =
-  run_ligo_bad [ "compile-contract" ; "../../test/contracts/negative/error_syntax.ligo" ; "main" ] ;
+  run_ligo_bad [ "compile" ; "contract" ; "../../test/contracts/negative/error_syntax.ligo" ] ;
   [%expect {|
     File "../../test/contracts/negative/error_syntax.ligo", line 1, characters 16-17:
       1 | type foo is bar - 42
@@ -14,6 +14,9 @@ let%expect_test _ =
       * the end of the file. |} ]
 
 let%expect_test _ =
-  run_ligo_bad [ "compile-expression" ; "jsligo" ; "Bytes.X()" ] ;
-  [%expect {| Unknown constructor in module: Bytes |} ]
+  run_ligo_bad [ "compile"; "expression" ; "jsligo" ; "Bytes.X()" ] ;
+  [%expect {|
+    Ill-formed selection of a value in a module.
+    At this point, the selection symbol '.' is expected, followed by the
+    qualified name of a value. |} ]
 

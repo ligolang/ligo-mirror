@@ -6,19 +6,27 @@ let () = Unix.putenv "LIGO_FORCE_NEW_TYPER" "false"
 type syntax = string
 type group_name = string
 type lang = Meta | Object (* Object = normal LIGO code ; Meta = ligo test framework code *)
-module SnippetsGroup = Map.Make(struct type t = (syntax * group_name) let compare a b = compare a b end)
+module SnippetsGroup = Map.Make(struct type t = (syntax * group_name * Environment.Protocols.t) let compare a b = compare a b end)
 
 
 type snippetsmap = (lang * string) SnippetsGroup.t
 
-(**
+let get_proto p =
+  let opt = try Environment.Protocols.protocols_to_variant p with
+    _ -> None
+  in
+  match opt with
+  | Some x -> x
+  | None -> failwith "unknown protocol"
+let current_proto = get_proto "current"
+(*
   Binds the snippets by (syntax, group_name).
   Syntax and group_name being retrieved from the .md file header & arguments
   e.g. in the .md file:
     ```syntax group=group_name
       <some code>
     ```
-**)
+*)
 let get_groups md_file : snippetsmap =
   let channel = open_in md_file in
   let lexbuf = Lexing.from_channel channel in
@@ -31,14 +39,14 @@ let get_groups md_file : snippetsmap =
           List.iter ~f:
             (fun arg ->
               match arg with
-              | Md.Field "" | Md.Field "skip" | Md.NameValue ("group",_) | Md.Field "test-ligo" -> ()
+              | Md.Field "" | Md.Field "skip" | Md.NameValue ("group",_) | Md.Field "test-ligo" | Md.NameValue ("protocol",_) -> ()
               | Md.Field _ | Md.NameValue _ -> failwith "unknown argument"
             )
             el.arguments
         in
         match el.arguments with
         | [Md.Field ""] -> (
-          SnippetsGroup.update (s,"ungrouped")
+          SnippetsGroup.update (s,"ungrouped",current_proto)
             (fun arg_content ->
               match arg_content with
               | Some (lang,ct) -> Some (lang, String.concat "\n" (ct::el.contents))
@@ -47,9 +55,29 @@ let get_groups md_file : snippetsmap =
             grp_map
         )
         | [Md.Field "skip"] -> grp_map
+        | [Md.Field "test-ligo" ; Md.NameValue ("group", name) ; Md.NameValue ("protocol",x)] -> (
+          let lang = Meta in
+          SnippetsGroup.update (s,name,get_proto x)
+            (fun arg_content ->
+              match arg_content with
+              | Some (lang',ct) when lang = lang' -> Some (lang, String.concat "\n" (ct::el.contents))
+              | _ -> Some (lang, String.concat "\n" el.contents)
+            )
+            grp_map
+        )
         | [Md.Field "test-ligo" ; Md.NameValue ("group", name)] -> (
           let lang = Meta in
-          SnippetsGroup.update (s,name)
+          SnippetsGroup.update (s,name,current_proto)
+            (fun arg_content ->
+              match arg_content with
+              | Some (lang',ct) when lang = lang' -> Some (lang, String.concat "\n" (ct::el.contents))
+              | _ -> Some (lang, String.concat "\n" el.contents)
+            )
+            grp_map
+        )
+        | [Md.NameValue ("group", name); Md.NameValue ("protocol",x)] -> (
+          let lang = Object in
+          SnippetsGroup.update (s,name,get_proto x)
             (fun arg_content ->
               match arg_content with
               | Some (lang',ct) when lang = lang' -> Some (lang, String.concat "\n" (ct::el.contents))
@@ -59,7 +87,7 @@ let get_groups md_file : snippetsmap =
         )
         | [Md.NameValue ("group", name)] -> (
           let lang = Object in
-          SnippetsGroup.update (s,name)
+          SnippetsGroup.update (s,name,current_proto)
             (fun arg_content ->
               match arg_content with
               | Some (lang',ct) when lang = lang' -> Some (lang, String.concat "\n" (ct::el.contents))
@@ -79,12 +107,13 @@ let get_groups md_file : snippetsmap =
   if Meta : evaluate each expression in each programs from the snippets group map
   if Object : run the ligo test framework
 **)
-let compile_groups ~raise ~add_warning filename grp_list =
-  let aux : (syntax * group_name) * (lang * string) -> unit =
-    fun ((syntax , grp) , (lang , contents)) ->
+let compile_groups ~raise filename grp_list =
+  let add_warning _ = () in
+  let aux : (syntax * group_name * Environment.Protocols.t) * (lang * string) -> unit =
+    fun ((syntax , grp, protocol_version) , (lang , contents)) ->
       trace ~raise (test_md_file filename syntax grp contents) @@
       fun ~raise -> 
-      let options         = Compiler_options.make () in
+      let options    = Compiler_options.make ~protocol_version () in
       let meta       = Ligo_compile.Of_source.make_meta ~raise syntax None in
       let c_unit,_   = Ligo_compile.Of_source.compile_string ~raise ~options ~meta contents in
       let imperative = Ligo_compile.Of_c_unit.compile ~raise ~add_warning ~meta c_unit filename in
@@ -96,7 +125,7 @@ let compile_groups ~raise ~add_warning filename grp_list =
         let init_env = Environment.default_with_test options.protocol_version in
         let options = { options with init_env ; test = true } in
         let typed,_    = Ligo_compile.Of_core.typecheck ~raise ~add_warning ~options Env inferred in
-        let _ = Interpreter.eval_test ~raise typed in
+        let _ = Interpreter.eval_test ~protocol_version:options.protocol_version ~raise ~steps:5000 typed in
         ()
       | Object ->
         let typed,_    = Ligo_compile.Of_core.typecheck ~raise ~add_warning ~options Env inferred in
@@ -111,10 +140,10 @@ let compile_groups ~raise ~add_warning filename grp_list =
   let () = List.iter ~f:aux grp_list in
   ()
 
-let compile ~raise ~add_warning filename () =
+let compile ~raise filename () =
   let groups = get_groups filename in
   let groups_map = SnippetsGroup.bindings groups in
-  let () = compile_groups ~raise ~add_warning filename groups_map in
+  let () = compile_groups ~raise filename groups_map in
   ()
 
 let get_all_md_files () =
@@ -144,6 +173,6 @@ let main =
     List.map
       ~f:(fun md_file ->
         let test_name = "File : "^md_file^"\"" in
-        test_w test_name (compile md_file)
+        test test_name (compile md_file)
       )
       (get_all_md_files ())

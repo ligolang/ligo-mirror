@@ -4,15 +4,12 @@ A lexer is a tool that reads a text file expected to be made of
 _lexemes_, and returns abstract versions of them, called _tokens_, for
 a parser to consume.
 
-The current lexer library supports the making of UT8-aware lexers for
+The current lexer library supports the making of UTF8-aware lexers for
 programming languages, like LIGO, by having the library's client
 provide a lexer for the tokens as a callback: the library takes care
 of the markup (strings and comments), and calls back the client's
-lexer for the tokens. In the case of LIGO, this enables to share the
+lexer for the tokens. In the case of LIGO, this enables sharing of the
 boilerplate between the different concrete syntaxes.
-
-This lexer library also offer a one or two-token window for the parser
-in case of a parse error, so better error messages can be printed.
 
 This lexer library can also be used to support tools other than
 parsers, like pretty-printers and style checkers, as done in the LIGO
@@ -68,7 +65,7 @@ Here is a short description of some of those files and OCaml modules:
     `Core`, with some specific uses in mind. This is a public module.
 
   * The module `CLI` deals with command-line options for building a
-    standalone lexer, and also export data structures about the
+    standalone lexer, and also exports data structures about the
     configuration meant for the library client, for example, the LIGO
     compiler. This is a public module.
 
@@ -507,7 +504,7 @@ Let go through all the fields:
     choosing `` `Point`` versus `` `Byte`` has an impact only on
     errors happening after a UTF-8 comment.
 
-  * The field `command` register an optional action to undertake while
+  * The field `command` registers an optional action to undertake while
     the lexer is running: ``Some `Copy`` will reproduce the input to
     the output from the lexical units, ``Some `Units`` will print out
     the lexical units, and ``Some `Tokens`` will print out only the
@@ -528,7 +525,7 @@ type 'token window = <
 >
 ```
 
-A object of this type is used in case of parse error. When a parser
+An object of this type is used in case of parse error. When a parser
 consumes the tokens produced by the client of this library, it is fed
 a window of the last or two last tokens, so the error message is more
 precise.
@@ -568,7 +565,7 @@ and 'token sync = {
 The fields and methods are as follows.
 
   * The field `config` is explained by the section on
-    [the type config](#type-config)
+    [the type config](#type-config).
 
   * The field `window` is explained above in this section.
 

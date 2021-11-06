@@ -55,11 +55,14 @@ module Tree_abstraction = struct
     | "Tezos.create_contract"    -> some_const C_CREATE_CONTRACT
     | "Tezos.transaction"        -> some_const C_CALL
     | "Tezos.set_delegate"       -> some_const C_SET_DELEGATE
+    | "Tezos.get_contract_with_error" -> some_const C_CONTRACT_WITH_ERROR
     | "Tezos.get_contract_opt"   -> some_const C_CONTRACT_OPT
     | "Tezos.get_entrypoint_opt" -> some_const C_CONTRACT_ENTRYPOINT_OPT
     | "Tezos.level"              -> some_const C_LEVEL
     | "Tezos.pairing_check"      -> some_const C_PAIRING_CHECK
     | "Tezos.never"              -> some_const C_NEVER
+    | "Tezos.open_chest"         -> some_const C_OPEN_CHEST
+    | "Tezos.call_view"          -> some_const C_VIEW
 
     (* Sapling *)
     | "Tezos.sapling_empty_state" -> some_const C_SAPLING_EMPTY_STATE
@@ -88,6 +91,11 @@ module Tree_abstraction = struct
     | "Bytes.length" -> some_const C_SIZE
     | "Bytes.concat" -> some_const C_CONCAT
     | "Bytes.sub"    -> some_const C_SLICE
+
+    (* Options module *)
+
+    | "Option.unopt"            -> some_const C_UNOPT
+    | "Option.unopt_with_error" -> some_const C_UNOPT_WITH_ERROR
 
     (* List module *)
 
@@ -143,7 +151,6 @@ module Tree_abstraction = struct
     | "Big_map.add"      -> some_const C_MAP_ADD
     (* Edo linear operator *)
     | "Big_map.get_and_update" -> some_const C_BIG_MAP_GET_AND_UPDATE
-    | "Big_map.identifier" -> some_const C_BIG_MAP_IDENTIFIER
 
     (* Bitwise module *)
 
@@ -194,6 +201,10 @@ module Tree_abstraction = struct
     | "Test.nth_bootstrap_typed_address" -> some_const C_TEST_NTH_BOOTSTRAP_TYPED_ADDRESS
     | "Test.to_entrypoint" -> some_const C_TEST_TO_ENTRYPOINT
     | "Test.to_typed_address" -> some_const C_TEST_TO_TYPED_ADDRESS
+    | "Test.set_big_map" -> some_const C_TEST_SET_BIG_MAP
+    | "Test.cast_address" -> some_const C_TEST_CAST_ADDRESS
+    | "Test.create_chest" -> some_const C_TEST_CREATE_CHEST
+    | "Test.create_chest_key" -> some_const C_TEST_CREATE_CHEST_KEY
 
     (* Operator module *)
 
@@ -232,11 +243,14 @@ module Tree_abstraction = struct
     | C_CREATE_CONTRACT         -> "Tezos.create_contract"
     | C_CALL                    -> "Tezos.transaction"
     | C_SET_DELEGATE            -> "Tezos.set_delegate"
+    | C_CONTRACT_WITH_ERROR     -> "Tezos.get_contract_with_error"
     | C_CONTRACT_OPT            -> "Tezos.get_contract_opt"
     | C_CONTRACT_ENTRYPOINT_OPT -> "Tezos.get_entrypoint_opt"
     | C_CONTRACT                -> "Tezos.get_contract"
     | C_CONTRACT_ENTRYPOINT     -> "Tezos.get_entrypoint"
     | C_NEVER                   -> "Tezos.never"
+    | C_OPEN_CHEST              -> "Tezos.open_chest" 
+    | C_VIEW                    -> "Tezos.call_view" 
 
     (* Operator module *)
 
@@ -318,7 +332,6 @@ module Tree_abstraction = struct
         | C_MAP_UPDATE      -> "Big_map.update" *)
     | C_BIG_MAP_LITERAL -> "Big_map.literal"
     | C_BIG_MAP_EMPTY   -> "Big_map.empty"
-    | C_BIG_MAP_IDENTIFIER -> "Big_map.identifier"
     (*  | C_MAP_MEM         -> "Big_map.mem"
         | C_MAP_REMOVE      -> "Big_map.remove"
         | C_MAP_ADD         -> "Big_map.add" *)
@@ -375,6 +388,10 @@ module Tree_abstraction = struct
     | C_TEST_NTH_BOOTSTRAP_TYPED_ADDRESS -> "Test.nth_bootstrap_typed_address"
     | C_TEST_TO_ENTRYPOINT -> "Test.to_entrypoint"
     | C_TEST_TO_TYPED_ADDRESS -> "Test.to_typed_address"
+    | C_TEST_SET_BIG_MAP -> "Test.set_big_map"
+    | C_TEST_CAST_ADDRESS -> "Test.cast_address"
+    | C_TEST_CREATE_CHEST -> "Test.create_chest"
+
 
     | _ as c -> failwith @@ Format.asprintf "Constant not handled : %a" Stage_common.PP.constant' c
 
@@ -475,11 +492,13 @@ module Tree_abstraction = struct
 
       (* Others *)
 
-      | "assert"          -> some_const C_ASSERTION
-      | "assert_some"     -> some_const C_ASSERT_SOME
-      | "size"            -> some_deprecated C_SIZE (* Deprecated *)
+      | "assert"                 -> some_const C_ASSERTION
+      | "assert_with_error"      -> some_const C_ASSERTION_WITH_ERROR
+      | "assert_some"            -> some_const C_ASSERT_SOME
+      | "assert_some_with_error" -> some_const C_ASSERT_SOME_WITH_ERROR
+      | "size"                   -> some_deprecated C_SIZE (* Deprecated *)
 
-      | _ as c            -> pseudo_modules c
+      | _ as c                   -> pseudo_modules c
 
     let constant'_to_string = function
       (* Tezos module (ex-Michelson) *)
@@ -569,8 +588,10 @@ module Tree_abstraction = struct
 
       (* Others *)
 
-      | "assert"       -> some_const C_ASSERTION
-      | "assert_some"  -> some_const C_ASSERT_SOME
+      | "assert"                 -> some_const C_ASSERTION
+      | "assert_with_error"      -> some_const C_ASSERTION_WITH_ERROR
+      | "assert_some"            -> some_const C_ASSERT_SOME
+      | "assert_some_with_error" -> some_const C_ASSERT_SOME_WITH_ERROR
       | "true"         -> some_const C_TRUE
       | "false"        -> some_const C_FALSE
 
@@ -666,8 +687,10 @@ module Tree_abstraction = struct
 
       (* Others *)
 
-      | "assert"      -> some_const C_ASSERTION
-      | "assert_some" -> some_const C_ASSERT_SOME
+      | "assert"                 -> some_const C_ASSERTION
+      | "assert_with_error"      -> some_const C_ASSERTION_WITH_ERROR
+      | "assert_some"            -> some_const C_ASSERT_SOME
+      | "assert_some_with_error" -> some_const C_ASSERT_SOME_WITH_ERROR
       | "true"         -> some_const C_TRUE
       | "false"        -> some_const C_FALSE
 
@@ -754,18 +777,22 @@ module Stacking = struct
     | C_MAP_FIND_OPT       , _   -> Some ( simple_binary @@ prim "GET")
     | C_MAP_ADD            , _   -> Some ( simple_ternary @@ seq [dip (i_some) ; prim "UPDATE"])
     | C_MAP_UPDATE         , _   -> Some ( simple_ternary @@ prim "UPDATE")
-    | (C_MAP_GET_AND_UPDATE|C_BIG_MAP_GET_AND_UPDATE) , Edo ->
+    | (C_MAP_GET_AND_UPDATE|C_BIG_MAP_GET_AND_UPDATE) , _ ->
       Some (simple_ternary @@ seq [prim "GET_AND_UPDATE"; prim "PAIR"])
     | C_FOLD_WHILE         , _   ->
       Some ( simple_binary @@ seq [i_swap ; (i_push (prim "bool") (prim "True"));prim ~children:[seq [dip i_dup; i_exec; i_unpair]] "LOOP" ;i_swap ; i_drop])
-    | C_FOLD_CONTINUE      , _   -> Some ( simple_unary @@ seq [(i_push (prim "bool") (prim "True")); i_pair])
-    | C_FOLD_STOP          , _   -> Some ( simple_unary @@ seq [(i_push (prim "bool") (prim "False")); i_pair])
-    | C_SIZE               , _   -> Some ( simple_unary @@ prim "SIZE")
-    | C_FAILWITH           , _   -> Some ( simple_unary @@ prim "FAILWITH")
-    | C_NEVER              , _   -> Some ( simple_unary @@ prim "NEVER")
-    | C_ASSERT_SOME        , _   -> Some ( simple_unary @@ i_assert_some)
+    | C_FOLD_CONTINUE         , _   -> Some ( simple_unary @@ seq [(i_push (prim "bool") (prim "True")); i_pair])
+    | C_FOLD_STOP             , _   -> Some ( simple_unary @@ seq [(i_push (prim "bool") (prim "False")); i_pair])
+    | C_SIZE                  , _   -> Some ( simple_unary @@ prim "SIZE")
+    | C_FAILWITH              , _   -> Some ( simple_unary @@ prim "FAILWITH")
+    | C_NEVER                 , _   -> Some ( simple_unary @@ prim "NEVER")
+    | C_UNOPT                 , _   -> Some ( simple_binary @@ i_if_none (seq [i_push_string "option is None"; i_failwith]) (seq []))
+    | C_UNOPT_WITH_ERROR      , _   -> Some ( simple_binary @@ i_if_none (i_failwith) (seq [ i_swap; i_drop]))
+    | C_ASSERT_SOME           , _   -> Some ( simple_unary @@ i_if_none (seq [i_push_string "failed assert some" ; i_failwith]) (seq [i_drop; i_push_unit]))
+    | C_ASSERT_SOME_WITH_ERROR, _   -> Some ( simple_binary @@ i_if_none (i_failwith) (seq [i_dropn 2; i_push_unit]))
     | C_ASSERT_INFERRED    , _   -> Some ( simple_binary @@ i_if (seq [i_failwith]) (seq [i_drop ; i_push_unit]))
     | C_ASSERTION          , _   -> Some ( simple_unary @@ i_if (seq [i_push_unit]) (seq [i_push_string "failed assertion" ; i_failwith]))
+    | C_ASSERTION_WITH_ERROR, _  -> Some ( simple_binary @@ i_if (seq [i_drop; i_push_unit]) (i_failwith))
     | C_INT                , _   -> Some ( simple_unary @@ prim "INT")
     | C_ABS                , _   -> Some ( simple_unary @@ prim "ABS")
     | C_IS_NAT             , _   -> Some ( simple_unary @@ prim "ISNAT")
@@ -815,18 +842,23 @@ module Stacking = struct
     | C_MAP_REMOVE         , _   -> Some (special (fun with_args -> seq [dip (with_args "NONE"); prim "UPDATE"]))
     | C_LEFT               , _   -> Some (trivial_special "LEFT")
     | C_RIGHT              , _   -> Some (trivial_special "RIGHT")
-    | C_TICKET             , Edo -> Some ( simple_binary @@ prim "TICKET" )
-    | C_READ_TICKET        , Edo -> Some ( simple_unary @@ seq [ prim "READ_TICKET" ; prim "PAIR" ] )
-    | C_SPLIT_TICKET       , Edo -> Some ( simple_binary @@ prim "SPLIT_TICKET" )
-    | C_JOIN_TICKET        , Edo -> Some ( simple_unary @@ prim "JOIN_TICKETS" )
-    | C_SAPLING_EMPTY_STATE, Edo -> Some (trivial_special "SAPLING_EMPTY_STATE")
-    | C_SAPLING_VERIFY_UPDATE , Edo -> Some (simple_binary @@ prim "SAPLING_VERIFY_UPDATE")
+    | C_TICKET             , _ -> Some ( simple_binary @@ prim "TICKET" )
+    | C_READ_TICKET        , _ -> Some ( simple_unary @@ seq [ prim "READ_TICKET" ; prim "PAIR" ] )
+    | C_SPLIT_TICKET       , _ -> Some ( simple_binary @@ prim "SPLIT_TICKET" )
+    | C_JOIN_TICKET        , _ -> Some ( simple_unary @@ prim "JOIN_TICKETS" )
+    | C_SAPLING_EMPTY_STATE, _ -> Some (trivial_special "SAPLING_EMPTY_STATE")
+    | C_SAPLING_VERIFY_UPDATE , _ -> Some (simple_binary @@ prim "SAPLING_VERIFY_UPDATE")
     | C_PAIRING_CHECK , _ -> Some (simple_binary @@ prim "PAIRING_CHECK")
     | C_CONTRACT           , _   ->
       Some (special
               (fun with_args ->
                  seq [with_args "CONTRACT";
                       i_assert_some_msg (i_push_string "bad address for get_contract")]))
+    | C_CONTRACT_WITH_ERROR, _   ->
+      Some (special
+              (fun with_args ->
+                 seq [with_args "CONTRACT";
+                      i_if_none (i_failwith) (seq [i_swap; i_drop])]))
     | C_CONTRACT_OPT         , _   -> Some (trivial_special "CONTRACT")
     | C_CONTRACT_ENTRYPOINT , _  ->
       Some (special
@@ -839,7 +871,18 @@ module Stacking = struct
               (fun with_args ->
                  seq [with_args "CREATE_CONTRACT";
                       i_pair]))
-
+    | C_OPEN_CHEST , Hangzhou -> (
+      Some (simple_ternary @@ seq [
+        prim "OPEN_CHEST" ;
+        i_if_left
+          ( prim "RIGHT" ~children:[t_or t_unit t_unit])
+          ( i_if
+            (seq [ i_push_unit ; prim "LEFT" ~children:[t_unit] ; prim "LEFT" ~children:[t_bytes] ])
+            (seq [ i_push_unit ; prim "RIGHT" ~children:[t_unit] ; prim "LEFT" ~children:[t_bytes] ])
+          ) 
+      ])
+    )
+    | C_VIEW , Hangzhou -> Some (trivial_special "VIEW")
     | _ -> None
 
 end

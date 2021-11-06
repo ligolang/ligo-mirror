@@ -2,12 +2,12 @@ open Trace
 
 (* Helpers *)
 
-let variant_to_syntax v =
+let variant_to_syntax (v: Ligo_compile.Helpers.v_syntax) =
   match v with
-  | Ligo_compile.Helpers.PascaLIGO -> "pascaligo"
-  | Ligo_compile.Helpers.CameLIGO -> "cameligo"
-  | Ligo_compile.Helpers.ReasonLIGO -> "reasonligo"
-  | Ligo_compile.Helpers.JsLIGO -> "jsligo"
+  | PascaLIGO -> "pascaligo"
+  | CameLIGO -> "cameligo"
+  | ReasonLIGO -> "reasonligo"
+  | JsLIGO -> "jsligo"
 
 let get_declarations_core core_prg =
      let func_declarations  = Ligo_compile.Of_core.list_declarations core_prg in
@@ -85,8 +85,8 @@ type state = { env : Ast_typed.environment;
                mod_types : Ast_typed.type_expression Stage_common.Ast_common.SMap.t}
 
 let try_eval ~raise state s =
-  let options = Compiler_options.make ~init_env:state.env ~infer:state.infer ~protocol_version:state.protocol () in
-
+  let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol () in
+  let options = {options with init_env = state.env } in
   let typed_exp,env = Ligo_compile.Utils.type_expression_string ~raise ~options:options state.syntax s state.env in
   let mini_c_exp = Ligo_compile.Of_typed.compile_expression ~raise ~module_env:state.mod_types typed_exp in
   let compiled_exp = Ligo_compile.Of_mini_c.aggregate_and_compile_expression ~raise ~options:options state.decl_list mini_c_exp in
@@ -101,7 +101,8 @@ let try_eval ~raise state s =
     raise.raise `Repl_unexpected
 
 let try_contract ~raise state s =
-  let options = Compiler_options.make ~init_env:state.env ~infer:state.infer ~protocol_version:state.protocol () in
+  let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol () in
+  let options = {options with init_env = state.env } in
   try
     try_with (fun ~raise ->
       let typed_prg,core_prg,env =
@@ -126,16 +127,18 @@ let try_contract ~raise state s =
      raise.raise `Repl_unexpected
 
 let import_file ~raise state file_name module_name =
-  let options = Compiler_options.make ~init_env:state.env ~infer:state.infer ~protocol_version:state.protocol () in
+  let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol () in
+  let options = {options with init_env = state.env } in
   let mini_c,mod_types,_,env = Build.build_contract_module ~raise ~add_warning ~options (variant_to_syntax state.syntax) Ligo_compile.Of_core.Env file_name module_name in
-  let env = Ast_typed.Environment.add_module module_name env state.env in
+  let env = Ast_typed.Environment.add_module ~public:true module_name env state.env in
   let mod_env = Ast_core.SMap.find module_name mod_types in
   let mod_types = Ast_core.SMap.add module_name mod_env state.mod_types in
   let state = { state with env = env; decl_list = state.decl_list @ mini_c; mod_types = mod_types } in
   (state, Just_ok)
 
 let use_file ~raise state s =
-  let options = Compiler_options.make ~init_env:state.env ~infer:state.infer ~protocol_version:state.protocol () in
+  let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol () in
+  let options = {options with init_env = state.env } in
   (* Missing typer environment? *)
   let mini_c,mod_types,(Ast_typed.Module_Fully_Typed module'),env = Build.build_contract_use ~raise ~add_warning ~options (variant_to_syntax state.syntax) s in
   let mod_types = Ast_core.SMap.union (fun _ _ a -> Some a) state.mod_types mod_types in

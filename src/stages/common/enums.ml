@@ -41,8 +41,12 @@ type constant' =
   | C_IS_NAT
   | C_SOME
   | C_NONE
+  | C_UNOPT
+  | C_UNOPT_WITH_ERROR
   | C_ASSERTION
+  | C_ASSERTION_WITH_ERROR
   | C_ASSERT_SOME
+  | C_ASSERT_SOME_WITH_ERROR
   | C_ASSERT_INFERRED
   | C_FAILWITH
   | C_UPDATE
@@ -136,7 +140,6 @@ type constant' =
   | C_BIG_MAP_EMPTY
   | C_BIG_MAP_LITERAL
   | C_BIG_MAP_GET_AND_UPDATE
-  | C_BIG_MAP_IDENTIFIER [@only_interpreter]
   (* Crypto *)
   | C_SHA256
   | C_SHA512
@@ -149,6 +152,7 @@ type constant' =
   | C_CALL
   | C_CONTRACT
   | C_CONTRACT_OPT
+  | C_CONTRACT_WITH_ERROR
   | C_CONTRACT_ENTRYPOINT
   | C_CONTRACT_ENTRYPOINT_OPT
   | C_AMOUNT
@@ -161,6 +165,8 @@ type constant' =
   | C_IMPLICIT_ACCOUNT
   | C_SET_DELEGATE
   | C_CREATE_CONTRACT
+  | C_OPEN_CHEST
+  | C_VIEW
   (* Tests - ligo interpreter only *)
   | C_TEST_ORIGINATE [@only_interpreter]
   | C_TEST_GET_STORAGE [@only_interpreter]
@@ -194,6 +200,10 @@ type constant' =
   | C_TEST_ORIGINATE_FROM_FILE [@only_interpreter]
   | C_TEST_TO_TYPED_ADDRESS [@only_interpreter]
   | C_TEST_NTH_BOOTSTRAP_TYPED_ADDRESS [@only_interpreter]
+  | C_TEST_SET_BIG_MAP [@only_interpreter]
+  | C_TEST_CAST_ADDRESS [@only_interpreter]
+  | C_TEST_CREATE_CHEST [@only_interpreter]
+  | C_TEST_CREATE_CHEST_KEY [@only_interpreter]
   (* New with EDO*)
   | C_SHA3
   | C_KECCAK

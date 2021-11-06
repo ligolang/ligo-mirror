@@ -14,7 +14,9 @@ let t_constant ?loc ?sugar type_operator arguments : type_expression =
   make_t ?loc ?sugar (T_app {type_operator=Var.of_name type_operator;arguments})
 let t_abstraction ?loc ?sugar ty_binder kind type_ =
   make_t ?loc ?sugar (T_abstraction {ty_binder ; kind ; type_})
-  
+let t_for_all ?loc ?sugar ty_binder kind type_ =
+  make_t ?loc ?sugar (T_for_all {ty_binder ; kind ; type_})
+
   (*X_name here should be replaced by X_injection*)
 let t_signature  ?loc ?sugar () : type_expression = t_constant ?loc ?sugar signature_name []
 let t_chain_id   ?loc ?sugar () : type_expression = t_constant ?loc ?sugar chain_id_name []
@@ -178,7 +180,7 @@ let e_application lamb args : expression = make_e @@ E_application {lamb;args}
 let e_lambda      ?loc ?sugar binder output_type result            = make_e ?loc ?sugar @@ E_lambda {binder; output_type; result ;  }
 let e_lambda_ez   ?loc ?sugar var ?ascr ?const_or_var output_type result         = e_lambda ?loc ?sugar {var;ascr;attributes={const_or_var}} output_type result
 let e_recursive   ?loc ?sugar fun_name fun_type lambda             = make_e ?loc ?sugar @@ E_recursive {fun_name; fun_type; lambda}
-let e_let_in      ?loc ?sugar let_binder rhs let_result inline = make_e ?loc ?sugar @@ E_let_in { let_binder ; rhs ; let_result; inline }
+let e_let_in      ?loc ?sugar let_binder rhs let_result attr = make_e ?loc ?sugar @@ E_let_in { let_binder ; rhs ; let_result; attr }
 let e_let_in_ez   ?loc ?sugar var ?ascr ?const_or_var inline rhs let_result = e_let_in ?loc ?sugar {var;ascr;attributes={const_or_var}} rhs let_result inline
 let e_type_in type_binder rhs let_result = make_e @@ E_type_in { type_binder ; rhs ; let_result }
 let e_mod_in      ?loc ?sugar module_binder rhs let_result         = make_e ?loc ?sugar @@ E_mod_in { module_binder ; rhs ; let_result }

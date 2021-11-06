@@ -52,14 +52,19 @@ let is_pure_constant : constant' -> bool =
   | C_PAIRING_CHECK
   | C_SAPLING_EMPTY_STATE
   | C_SAPLING_VERIFY_UPDATE
+  | C_OPEN_CHEST
     -> true
   (* unfortunately impure: *)
   | C_BALANCE | C_AMOUNT | C_NOW | C_SOURCE | C_SENDER | C_CHAIN_ID
   | C_ADD | C_SUB |C_MUL|C_DIV|C_MOD | C_LSL | C_LSR
   | C_LEVEL | C_VOTING_POWER | C_TOTAL_VOTING_POWER | C_POLYMORPHIC_ADD
   (* impure: *)
+  | C_UNOPT
+  | C_UNOPT_WITH_ERROR
   | C_ASSERTION
+  | C_ASSERTION_WITH_ERROR
   | C_ASSERT_SOME
+  | C_ASSERT_SOME_WITH_ERROR
   | C_ASSERT_INFERRED
   | C_MAP_FIND
   | C_FOLD_WHILE
@@ -91,12 +96,14 @@ let is_pure_constant : constant' -> bool =
   | C_BIG_MAP_LITERAL
   | C_HASH
   | C_CONTRACT
+  | C_CONTRACT_WITH_ERROR
   | C_CONTRACT_OPT
   | C_CONTRACT_ENTRYPOINT
   | C_CONTRACT_ENTRYPOINT_OPT
   | C_SELF
   | C_SELF_ADDRESS
   | C_IMPLICIT_ACCOUNT
+  | C_VIEW
   (* Test - ligo interpreter, should never end up here *)
   | C_TEST_ORIGINATE
   | C_TEST_GET_STORAGE
@@ -130,7 +137,10 @@ let is_pure_constant : constant' -> bool =
   | C_TEST_TO_TYPED_ADDRESS
   | C_TEST_NTH_BOOTSTRAP_TYPED_ADDRESS
   | C_TEST_ORIGINATE_FROM_FILE
-  | C_BIG_MAP_IDENTIFIER
+  | C_TEST_SET_BIG_MAP
+  | C_TEST_CAST_ADDRESS
+  | C_TEST_CREATE_CHEST
+  | C_TEST_CREATE_CHEST_KEY
     -> false
 
 let rec is_pure : expression -> bool = fun e ->

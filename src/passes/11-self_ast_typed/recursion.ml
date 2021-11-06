@@ -46,6 +46,8 @@ let rec check_recursive_call ~raise : expression_variable -> bool -> expression 
     check_recursive_call ~raise n false update
   | E_module_accessor _ ->
     ()
+  | E_type_inst _ ->
+    ()
 
 and check_recursive_call_in_matching ~raise = fun n final_path c ->
   match c with
@@ -72,7 +74,8 @@ let remove_rec_expression : expression -> expression = fun e ->
   let return expression_content = { e with expression_content } in
   match e.expression_content with
   | E_recursive {fun_name; lambda} as e-> (
-    if List.mem (FV.expression lambda.result) fun_name ~equal:var_equal then
+    let _, fv = FV.expression lambda.result in
+    if List.mem fv fun_name ~equal:var_equal then
       return e
     else
       return (E_lambda lambda)

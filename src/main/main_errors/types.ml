@@ -2,9 +2,7 @@ type tezos_alpha_error =  [`Tezos_alpha_error of Tezos_error_monad.Error_monad.e
 
 type all =
 [
- | `Build_error_tracer of all
- | `Build_dependency_cycle of string
- | `Build_corner_case of string * string (* TO REMOVE *)
+ | `Build_error_tracer of BuildSystem.Errors.t
 
  | `Main_invalid_generator_name of string
  | `Main_invalid_syntax_name of string
@@ -59,6 +57,7 @@ type all =
  | `Main_interpret_generic of Location.t * string
  | `Main_interpret_literal of Location.t * Ast_typed.literal
  | `Main_interpret_modules_not_supported of Location.t
+ | `Main_interpret_not_enough_initial_accounts of Location.t * Memory_proto_alpha.Protocol.Alpha_context.Tez.tez
 
  | `Main_decompile_michelson of Stacking.Errors.stacking_error
  | `Main_decompile_mini_c of Spilling.Errors.spilling_error

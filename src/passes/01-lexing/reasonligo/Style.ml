@@ -42,11 +42,12 @@ let is_int    = function Token.Int _ -> true | _ -> false
 let is_string = function Token.String _ -> true | _ -> false
 let is_bytes  = function Token.Bytes _ -> true | _ -> false
 
+let hex_digits = ['A'; 'B'; 'C'; 'D'; 'E'; 'F';
+                  'a'; 'b'; 'c'; 'd'; 'e'; 'f']
+
 let is_hexa = function
-  Token.UIdent
-    Region.{value="A"|"a"|"B"|"b"|"C"|"c"
-                 |"D"|"d"|"E"|"e"|"F"|"f"; _} -> true
-  | _ -> false
+  Token.UIdent t | Token.Ident t -> List.mem t#payload hex_digits
+| _ -> false
 
 let is_sym =
   let open Token in

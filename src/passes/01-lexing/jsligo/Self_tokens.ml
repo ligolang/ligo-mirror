@@ -9,6 +9,7 @@ module Region    = Simple_utils.Region
 module Markup    = LexerLib.Markup
 module Directive = LexerLib.Directive
 module Unit      = LexerLib.Unit
+module Wrap      = Lexing_shared.Wrap
 
 (* Signature *)
 
@@ -75,13 +76,18 @@ let automatic_semicolon_insertion tokens =
   | token :: (Let _ as t) :: rest ->
     let (r, _) = Token.proj_token token in
     let (r2, _) = Token.proj_token t in
-    if r#stop#line < r2#start#line  then (
-      inner (t :: SEMI (Region.make ~start:(r#shift_one_uchar (-1))#stop ~stop:r#stop) :: token :: result) rest
-    )
+    if r#stop#line < r2#start#line  then
+      let region =
+        Region.make ~start:(r#shift_one_uchar (-1))#stop ~stop:r#stop in
+      let semi = SEMI (Wrap.wrap ";" region) in
+      inner (t :: semi :: token :: result) rest
     else (
       match token with
         RBRACE _ as t ->
-        inner (t :: SEMI (Region.make ~start:(r#shift_one_uchar (-1))#stop ~stop:r#stop) :: token :: result) rest
+        let region =
+          Region.make ~start:(r#shift_one_uchar (-1))#stop ~stop:r#stop in
+        let semi = SEMI (Wrap.wrap ";" region) in
+        inner (t :: semi :: token :: result) rest
       | _ ->
         inner (t :: token :: result) rest
     )
@@ -139,9 +145,10 @@ let attributes tokens =
   let rec inner result = function
     LineCom c :: tl
   | BlockCom c :: tl ->
-      let attributes = collect_attributes c.Region.value in
+      let attributes = collect_attributes c#payload in
       let attributes = List.map (fun e ->
-        Attr Region.{value = e; region = c.region}) attributes in
+        Attr (Token.wrap e c#region)
+      ) attributes in
       inner (attributes @ result) tl
   | hd :: tl -> inner (hd :: result) tl
   | [] -> List.rev result
@@ -178,14 +185,49 @@ let print_units units = print print_unit units
 
 let print_tokens tokens = print (fun token -> print_unit (`Token token)) tokens
 
+
+(* insert vertical bar for sum type *)
+
+let vertical_bar_insert tokens =
+  let open! Token in
+  let rec aux acc insert_token = function
+    (VBAR _ as hd) :: tl ->
+    aux (hd::acc) false tl
+  | (EQ _ as hd) :: tl ->
+    if insert_token then (
+      List.rev_append (hd :: VBAR (Token.wrap "|" Region.ghost) :: acc) tl
+    )
+    else (
+      List.rev_append (hd :: acc) tl
+    )
+  | (RBRACKET _ as hd) :: tl ->
+    aux (hd::acc) true tl
+  | hd :: tl ->
+    aux (hd::acc) insert_token tl
+  | [] ->
+    List.rev acc
+  in
+  aux [] false tokens
+
+let vertical_bar_insert tokens =
+  let open! Token in
+  let rec aux acc = function
+    (VBAR _ as hd) :: tl ->
+      aux (vertical_bar_insert (hd::acc)) tl
+  | hd :: tl -> aux (hd::acc) tl
+  | [] -> List.rev acc
+  in aux [] tokens
+
+let vertical_bar_insert units = apply vertical_bar_insert units
+
 (* COMPOSING FILTERS (exported) *)
 
-let filter units =
-     attributes
-  @@ automatic_semicolon_insertion
-  (*  @@ print_tokens *)
-  @@ tokens_of
-  (*  @@ print_units *)
-  @@ inject_zwsp
-  @@ Style.check
-     units
+let filter =
+  attributes
+  <@ automatic_semicolon_insertion
+  <@ vertical_bar_insert
+  (*  <@ print_tokens *)
+  <@ tokens_of
+  (*  <@ print_units *)
+  <@ inject_zwsp
+  <@ Style.check
