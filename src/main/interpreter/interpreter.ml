@@ -785,7 +785,7 @@ and eval_ligo ~raise ~steps ~protocol_version ~options : Ast_typed.expression ->
     )
     | E_mod_in {module_binder; rhs; let_result} ->
        let>> state = Get_state () in
-       let (item, state) = eval_module ~raise ~steps ~protocol_version ~options (rhs, state, env) in
+       let (item, state) = eval_module ~raise ~steps ~options (rhs, state, env) in
        let>> () = Put_state state in
        let env = Env.extend_mod env module_binder item in
        eval_ligo (let_result) calltrace env
@@ -956,8 +956,9 @@ and resolve_module_path ~raise ~loc binders env =
     | Some e -> e in
   List.Ne.fold_left aux env binders
 
-and eval_module ~raise ~steps ~protocol_version ~options : Ast_typed.module_fully_typed * Tezos_state.context * env -> env * Tezos_state.context =
+and eval_module ~raise ~steps ~options : Ast_typed.module_fully_typed * Tezos_state.context * env -> env * Tezos_state.context =
   fun (Module_Fully_Typed prg, initial_state, env) ->
+    let protocol_version = options.protocol_version in
     let aux : env * env * Tezos_state.context -> declaration location_wrap -> env * env * Tezos_state.context =
       fun (top_env,curr_env,state) el ->
         match Location.unwrap el with
@@ -969,7 +970,7 @@ and eval_module ~raise ~steps ~protocol_version ~options : Ast_typed.module_full
           let top_env' = Env.extend top_env binder ~no_mutation (expr.type_expression, v) in
           (top_env', curr_env',state)
         | Ast_typed.Declaration_module {module_binder; module_} ->
-          let (inner_curr_env, state) = eval_module ~raise ~steps ~protocol_version ~options (module_, state, top_env) in
+          let (inner_curr_env, state) = eval_module ~raise ~steps ~options (module_, state, top_env) in
           let curr_env' = Env.extend_mod curr_env module_binder inner_curr_env in
           let top_env' = Env.extend_mod top_env module_binder inner_curr_env in
           (top_env', curr_env',state)
@@ -982,10 +983,11 @@ and eval_module ~raise ~steps ~protocol_version ~options : Ast_typed.module_full
     let (_, curr_env, state) = List.fold ~f:aux ~init:(env,[], initial_state) prg in
     (curr_env, state)
 
-let eval_test ~raise ~steps ~protocol_version ~options : Ast_typed.module_fully_typed -> (env * (string * value) list) =
+let eval_test ~raise ~steps ~(options:Compiler_options.t) : Ast_typed.module_fully_typed -> (env * (string * value) list) =
   fun prg ->
+    let protocol_version = options.protocol_version in
     let initial_state = Tezos_state.init_ctxt ~raise protocol_version [] in
-    let (env, _state) = eval_module ~raise ~steps ~protocol_version ~options (prg, initial_state, Env.empty_env) in
+    let (env, _state) = eval_module ~raise ~steps ~options (prg, initial_state, Env.empty_env) in
     let v = Env.to_kv_list_rev (Ligo_interpreter.Environment.expressions env) in
     let aux : expression_variable * (value_expr * bool) -> (string * value) option = fun (ev, (v, _)) ->
       let ev = Location.unwrap ev in
