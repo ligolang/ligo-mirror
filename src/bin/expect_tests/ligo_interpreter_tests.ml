@@ -64,6 +64,14 @@ let%expect_test _ =
     - test_list_fold_left_sum exited with value (). |}]
 
 let%expect_test _ =
+  (* This tests a possible regression on the way modules are evaluated. It is possible that the number of element in the environment explodes. *)
+  run_ligo_good ["run"; "test" ; test "imported_modules/test.mligo" ; "--format" ; "dev" ] ;
+  [%expect {|
+    Everything at the top-level was executed.
+    - test1 exited with value ().
+    Number of elements in environment: 37 |}]
+
+let%expect_test _ =
   run_ligo_good ["run"; "test" ; test "views_test.mligo" ; "--protocol" ; "hangzhou" ] ;
   [%expect {|
     Everything at the top-level was executed.
@@ -163,6 +171,13 @@ let%expect_test _ =
   Everything at the top-level was executed.
   - test exited with value (). |}]
 
+let%expect_test _ =
+  run_ligo_good ["run";"test" ; test "nesting_modules.mligo" ] ;
+  [%expect {|
+  111
+  Everything at the top-level was executed.
+  - test exited with value (). |}]
+
 (* DEPRECATED
 let%expect_test _ =
 run_ligo_good ["run";"test" ; test "bootstrapped_contracts.mligo" ] ;
@@ -217,6 +232,14 @@ let%expect_test _ =
 let%expect_test _ =
   run_ligo_good [ "run" ; "test" ; test "test_bigmap_compare.mligo" ] ;
   [%expect {|
+    Everything at the top-level was executed.
+    - test exited with value (). |}]
+
+let%expect_test _ =
+  run_ligo_good [ "run" ; "test" ; test "test_bigmap_set.mligo" ] ;
+  [%expect {|
+    9n
+    0n
     Everything at the top-level was executed.
     - test exited with value (). |}]
 
@@ -377,6 +400,12 @@ let%expect_test _ =
       - test_switch_if_return exited with value ().
       - test_switch_switch_break exited with value (). |}]
 
+let%expect_test _ =
+  run_ligo_good [ "run" ; "test" ; test "test_negative_big_map_id.mligo" ] ;
+    [%expect{|
+      Everything at the top-level was executed.
+      - test_main exited with value (). |}]
+
 (* do not remove that :) *)
 let () = Sys.chdir pwd
 
@@ -418,8 +447,8 @@ let%expect_test _ =
 
     An uncaught error occured:
     Ill typed contract:
-      1: { parameter unit ; storage unit ; code { DROP ; PUSH unit Unit } }
-    At line 1 characters 39 to 64,
+      1: { parameter unit ; storage unit ; code { DROP ; UNIT } }
+    At line 1 characters 39 to 54,
       wrong stack type at end of body:
       - expected return stack type:
         [ pair (list operation) unit ],
@@ -483,7 +512,7 @@ let%expect_test _ =
      11 |   ()
 
     The source address is not an implicit account
-    KT1DStcZ1kqKBupmwQ23aRXeJ5cEXYbqATEe |}]
+    KT1EaZdMJaW3jgoYLwKJSjuUFA6qoKCPjiie |}]
 
 let%expect_test _ =
   run_ligo_bad [ "run" ; "test" ; bad_test "test_source2.mligo" ] ;
@@ -494,4 +523,4 @@ let%expect_test _ =
      11 |   ()
 
     The source address is not an implicit account
-    KT1DStcZ1kqKBupmwQ23aRXeJ5cEXYbqATEe |}]
+    KT1EaZdMJaW3jgoYLwKJSjuUFA6qoKCPjiie |}]

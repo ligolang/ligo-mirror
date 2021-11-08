@@ -880,7 +880,7 @@ let%expect_test _ =
              PAIR } } } |}]
 
 let%expect_test _ =
-  run_ligo_good [ "compile" ; "contract" ; contract "ticket_wallet.mligo" ; "--protocol"; "edo" ; "--disable-michelson-typechecking" ] ;
+  run_ligo_good [ "compile" ; "contract" ; contract "ticket_wallet.mligo" ] ;
   [%expect {|
 { parameter
     (or (ticket %receive unit)
@@ -969,7 +969,7 @@ let%expect_test _ =
                      PAIR } } } } } |} ]
 
 let%expect_test _ =
-  run_ligo_good [ "compile" ; "contract" ; contract "ticket_builder.mligo" ; "--protocol"; "edo" ] ;
+  run_ligo_good [ "compile" ; "contract" ; contract "ticket_builder.mligo" ] ;
   [%expect {|
 File "../../test/contracts/ticket_builder.mligo", line 29, characters 28-34:
  28 |       begin
@@ -1013,7 +1013,7 @@ Hint: replace it by "_ticket" to prevent this warning.
              PUSH mutez 0 ;
              DIG 2 ;
              CDR ;
-             PUSH unit Unit ;
+             UNIT ;
              TICKET ;
              TRANSFER_TOKENS ;
              SWAP ;
@@ -1721,12 +1721,12 @@ let%expect_test _ =
   [%expect {|
     { parameter unit ;
       storage unit ;
-      code { LAMBDA
-               (pair unit (pair unit (pair unit unit)))
-               unit
-               { UNPAIR 4 ; DROP 4 ; PUSH unit Unit } ;
+      code { LAMBDA (pair unit (pair unit (pair unit unit))) unit { UNPAIR 4 ; DROP 4 ; UNIT } ;
              LAMBDA (pair nat nat) nat { UNPAIR ; MUL } ;
-             DIG 2 ; |}]
+             DIG 2 ;
+             UNPAIR ;
+             PUSH nat 0 ;
+             PUSH nat 0 ; |}]
 
 (* old uncurry bugs: *)
 let%expect_test _ =
@@ -1906,9 +1906,9 @@ let%expect_test _ =
       code { DROP ;
              SELF %foo ;
              PUSH mutez 0 ;
-             PUSH unit Unit ;
+             UNIT ;
              TRANSFER_TOKENS ;
-             PUSH unit Unit ;
+             UNIT ;
              NIL operation ;
              DIG 2 ;
              CONS ;
@@ -1955,7 +1955,7 @@ let%expect_test _ =
   [%expect {|
     { parameter unit ;
       storage unit ;
-      code { DROP ; PUSH unit Unit ; NIL operation ; PAIR } } |}]
+      code { DROP ; UNIT ; NIL operation ; PAIR } } |}]
 
 let%expect_test _ =
   run_ligo_good [ "compile" ; "contract" ; contract "remove_unused_toptup.mligo" ] ;
@@ -1980,14 +1980,14 @@ let%expect_test _ =
   [%expect {|
     { parameter (pair (pair (nat %AAA) (nat %fooB)) (nat %cCC)) ;
       storage unit ;
-      code { DROP ; PUSH unit Unit ; NIL operation ; PAIR } } |}]
+      code { DROP ; UNIT ; NIL operation ; PAIR } } |}]
 
 let%expect_test _ =
   run_ligo_good [ "compile" ; "contract" ; contract "annotation_cases.mligo" ; "-e" ; "main2" ] ;
   [%expect {|
     { parameter (or (or (nat %AAA) (nat %fooB)) (nat %cCC)) ;
       storage unit ;
-      code { DROP ; PUSH unit Unit ; NIL operation ; PAIR } } |}]
+      code { DROP ; UNIT ; NIL operation ; PAIR } } |}]
 
 (* remove recursion *)
 let%expect_test _ =
@@ -2077,3 +2077,93 @@ let%expect_test _ =
         7 | import Foo = Bar.Foo
 
       Module "Foo" not found. |}]
+
+(* Test compile contract with Big_map.get_and_update for Hangzhou *)
+let%expect_test _ =
+  run_ligo_good [ "compile" ; "contract" ; contract "ticket_wallet.mligo" ; "--protocol"; "hangzhou" ] ;
+  [%expect {|
+{ parameter
+    (or (ticket %receive unit)
+        (pair %send
+           (contract %destination (ticket unit))
+           (pair (nat %amount) (address %ticketer)))) ;
+  storage (pair (address %manager) (big_map %tickets address (ticket unit))) ;
+  code { PUSH mutez 0 ;
+         AMOUNT ;
+         COMPARE ;
+         EQ ;
+         IF {} { PUSH string "failed assertion" ; FAILWITH } ;
+         UNPAIR ;
+         SWAP ;
+         UNPAIR ;
+         DIG 2 ;
+         IF_LEFT
+           { READ_TICKET ;
+             CAR ;
+             DIG 3 ;
+             NONE (ticket unit) ;
+             DUP 3 ;
+             GET_AND_UPDATE ;
+             IF_NONE
+               { DIG 2 }
+               { DIG 3 ;
+                 PAIR ;
+                 JOIN_TICKETS ;
+                 IF_NONE { PUSH string "impossible?" ; FAILWITH } {} } ;
+             SOME ;
+             DIG 2 ;
+             GET_AND_UPDATE ;
+             DROP ;
+             SWAP ;
+             PAIR ;
+             NIL operation ;
+             PAIR }
+           { SWAP ;
+             DUP ;
+             DUG 2 ;
+             SENDER ;
+             COMPARE ;
+             EQ ;
+             IF {} { PUSH string "failed assertion" ; FAILWITH } ;
+             DIG 2 ;
+             NONE (ticket unit) ;
+             DUP 3 ;
+             GET 4 ;
+             GET_AND_UPDATE ;
+             IF_NONE
+               { DROP 3 ; PUSH string "no tickets" ; FAILWITH }
+               { READ_TICKET ;
+                 CDR ;
+                 CDR ;
+                 DUP 4 ;
+                 GET 3 ;
+                 DUP ;
+                 DIG 2 ;
+                 SUB ;
+                 ISNAT ;
+                 IF_NONE { PUSH string "not enough tickets" ; FAILWITH } {} ;
+                 SWAP ;
+                 PAIR ;
+                 SWAP ;
+                 SPLIT_TICKET ;
+                 IF_NONE
+                   { DROP 3 ; PUSH string "impossible?" ; FAILWITH }
+                   { UNPAIR ;
+                     DUG 2 ;
+                     SOME ;
+                     DUP 4 ;
+                     GET 4 ;
+                     GET_AND_UPDATE ;
+                     DROP ;
+                     DIG 2 ;
+                     CAR ;
+                     PUSH mutez 0 ;
+                     DIG 3 ;
+                     TRANSFER_TOKENS ;
+                     DUG 2 ;
+                     SWAP ;
+                     PAIR ;
+                     NIL operation ;
+                     DIG 2 ;
+                     CONS ;
+                     PAIR } } } } } |} ]

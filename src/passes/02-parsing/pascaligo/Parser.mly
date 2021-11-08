@@ -101,11 +101,15 @@
 
 [@@@warning "-42"]
 
-(* Dependencies *)
+(* Vendors dependencies *)
 
 open Simple_utils.Region
+
+(* LIGO dependencies *)
+
 module CST = Cst_pascaligo.CST
-open CST
+open! CST
+module Wrap = Lexing_shared.Wrap
 
 (* UTILITIES
 
@@ -115,25 +119,28 @@ open CST
    make it easy in the semantic action to collate the information into
    CST nodes. *)
 
-let mk_wild region = Region.{value="_"; region}
+let mk_wild t = Region.{value="_"; region=t#region}
 let mk_pun attributes pun = Punned {pun; attributes}
+
+let unwrap = Wrap.payload
+let wrap   = Wrap.wrap
 
 let mk_reg   region value = Region.{region; value}
 let mk_E_Var region value = E_Var Region.{region; value}
 
-let mk_wild_attr region =
-  let value = {variable = mk_wild region; attributes=[]}
-  in {region; value}
+let mk_wild_attr t =
+  let value = {variable = mk_wild t; attributes=[]}
+  in {region=t#region; value}
 
 let apply_type_ctor lexeme token args =
-  let total     = cover token args.region in
-  let type_ctor = mk_reg token lexeme in
+  let total     = cover token#region args.region in
+  let type_ctor = mk_reg token#region lexeme in
   let {region; value = {lpar; inside; rpar}} = args in
   let tuple = mk_reg region {lpar; inside=inside,[]; rpar}
   in mk_reg total (type_ctor, tuple)
 
 let apply_map lexeme token args =
-  let region    = cover token args.region in
+  let region    = cover token#region args.region in
   let type_ctor = mk_reg token lexeme
   in mk_reg region (type_ctor, args)
 
@@ -289,13 +296,13 @@ let terminate_decl semi = function
 
 par(X):
   "(" X ")" {
-    let region = cover $1 $3
+    let region = cover $1#region $3#region
     and value  = {lpar=$1; inside=$2; rpar=$3}
     in {region; value} }
 
 brackets(X):
   "[" X "]" {
-    let region = cover $1 $3
+    let region = cover $1#region $3#region
     and value  = {lbracket=$1; inside=$2; rbracket=$3}
     in {region; value} }
 
@@ -413,7 +420,7 @@ declaration:
 type_decl:
   "type" type_name ioption(type_params) "is" type_expr {
     let stop   = type_expr_to_region $5 in
-    let region = cover $1 stop in
+    let region = cover $1#region stop in
     let value  = {kwd_type=$1; name=$2; params=$3; kwd_is=$4;
                   type_expr=$5; terminator=None}
     in {region; value} }
@@ -466,8 +473,8 @@ cartesian_level:
 | core_type { $1 }
 
 core_type:
-  "<string>"     { T_String $1           }
-| "<int>"        { T_Int    $1           }
+  "<string>"     { T_String (unwrap $1)  }
+| "<int>"        { T_Int    (unwrap $1)  }
 | "_"            { T_Var    (mk_wild $1) }
 | type_ctor_app  { T_App    $1           }
 | record_type    { T_Record $1           }
@@ -478,7 +485,7 @@ core_type:
 (* Type constructor applications *)
 
 type_ctor_app:
-  type_ctor type_tuple     { let region = cover $1.region $2.region
+  type_ctor type_tuple     { let region = cover $1#region $2.region
                              in {region; value = $1,$2}             }
 | "map"     type_tuple     { apply_map       "map"     $1 $2        }
 | "big_map" type_tuple     { apply_map       "big_map" $1 $2        }
@@ -513,8 +520,8 @@ type_tuple: par(nsepseq(type_expr,",")) { $1 }
 
 qualified_type:
   type_in_module(type_ctor { T_Var $1 }) type_tuple {
-    let region = cover $1.region $2.region
-    in T_App {region; value=$1}
+    let region = cover (type_expr_to_region $1) $2.region
+    in T_App {region; value=$1,$2}
   }
 | type_in_module(type_name      { T_Var $1 })
 | type_in_module(par(type_expr) { T_Par $1 }) { $1 }
@@ -563,9 +570,9 @@ sum_type:
 variant:
   attributes ctor ioption(of_type_expr) {
     let stop   = match $3 with
-                   None -> $2.region
+                   None -> $2#region
                  | Some (_, t) -> type_expr_to_region t in
-    let region = cover $2.region stop
+    let region = cover $2#region stop
     and value  = {ctor=$2; args=$3; attributes=$1}
     in {region; value} }
 
@@ -582,10 +589,10 @@ record_type:
 field_decl:
   attributes field_name ioption(type_annotation) {
     let stop = match $3 with
-                        None -> $2.region
+                        None -> $2#region
                | Some (_, t) -> type_expr_to_region t in
     let region = match $1 with
-                         [] -> cover $2.region stop
+                         [] -> cover $2#region stop
                  | start::_ -> cover start.region stop
     and value = {attributes=$1; field_name=$2; field_type=$3}
     in {region; value} }
@@ -609,7 +616,7 @@ type_annotation: ":" type_expr { $1,$2 }
 const_decl:
   attributes "const" unqualified_decl("=") {
     let pattern, const_type, equal, init, stop = $3 in
-    let region = cover $2 stop
+    let region = cover $2#region stop
     and value  = {attributes=$1; kwd_const=$2; pattern; const_type;
                   equal; init; terminator=None}
     in {region; value} }
@@ -624,9 +631,14 @@ unqualified_decl(OP):
 fun_decl:
   attributes ioption("recursive") "function" fun_name parameters
   ioption(type_annotation) "is" expr {
-    let start  = match $2 with Some start -> start | None -> $3 in
+    let kwd_recursive = $2 in
+    let kwd_function = $3 in
+    let kwd_is = $7 in
+    let start  = match kwd_recursive with
+                   Some start -> start
+                 | None -> kwd_function in
     let stop   = expr_to_region $8 in
-    let region = cover start stop
+    let region = cover start#region stop
     and value  = {attributes=$1; kwd_recursive=$2; kwd_function=$3;
                   fun_name=$4; param=$5; ret_type=$6; kwd_is=$7;
                   return=$8; terminator=None}
@@ -645,8 +657,8 @@ param_decl:
     in {region; value} }
 
 param_kind:
-  "var"   { $1, `Var   $1 }
-| "const" { $1, `Const $1 }
+  "var"   { $1#region, `Var   $1 }
+| "const" { $1#region, `Const $1 }
 
 var_pattern:
   attributes variable {
@@ -668,7 +680,7 @@ module_decl:
 terse_module_decl:
   "module" module_name "is" "block"? "{" declarations "}" {
     let enclosing = Braces ($4,$5,$7) in
-    let region    = cover $1 $7
+    let region    = cover $1#region $7#region
     and value     = {kwd_module=$1; name=$2; kwd_is=$3; enclosing;
                      declarations=$6; terminator=None}
     in {region; value} }
@@ -676,7 +688,7 @@ terse_module_decl:
 verb_module_decl:
   "module" module_name "is" "begin" declarations "end" {
     let enclosing = BeginEnd ($4,$6) in
-    let region    = cover $1 $6
+    let region    = cover $1#region $6#region
     and value     = {kwd_module=$1; name=$2; kwd_is=$3; enclosing;
                      declarations=$5; terminator=None}
     in {region; value} }
@@ -689,7 +701,7 @@ declarations:
 module_alias:
   "module" module_name "is" nsepseq(module_name,".") {
     let stop   = nsepseq_to_region (fun x -> x.region) $4 in
-    let region = cover $1 stop in
+    let region = cover $1#region stop in
     let value  = {kwd_module=$1; alias=$2; kwd_is=$3;
                   mod_path=$4; terminator=None}
     in {region; value} }
@@ -714,7 +726,7 @@ statement:
 var_decl:
   "var" unqualified_decl(":=") {
     let pattern, var_type, assign, init, stop = $2 in
-    let region = cover $1 stop
+    let region = cover $1#region stop
     and value  = {kwd_var=$1; pattern; var_type;
                   assign; init; terminator=None; attributes=[]}
     in {region; value} }
@@ -762,7 +774,7 @@ base_instr(right_instr,right_expr):
 
 if_then_instr(right_instr):
   "if" expr "then" test_clause(right_instr) {
-     let region = cover $1 (test_clause_to_region $4)
+     let region = cover $1#region (test_clause_to_region $4)
      and value  = {kwd_if=$1; test=$2; kwd_then=$3; if_so=$4;
                    if_not=None}
      in I_Cond {region; value} }
@@ -770,7 +782,7 @@ if_then_instr(right_instr):
 if_then_else_instr(right_instr):
   "if" expr "then" test_clause(closed_instr)
   "else" test_clause(right_instr) {
-     let region = cover $1 (test_clause_to_region $6)
+     let region = cover $1#region (test_clause_to_region $6)
      and value  = {kwd_if=$1; test=$2; kwd_then=$3; if_so=$4;
                    if_not = Some ($5,$6) }
      in {region; value} }
@@ -782,7 +794,7 @@ closed_instr:
 
 remove_instr(right_expr):
   "remove" expr "from" right_expr {
-    let region = cover $1 (expr_to_region $4)
+    let region = cover $1#region (expr_to_region $4)
     and value  = {kwd_remove=$1; item=$2; kwd_from=$3; collection=$4}
     in {region; value} }
 
@@ -790,7 +802,7 @@ remove_instr(right_expr):
 
 patch_instr(right_expr):
   "patch" core_expr "with" right_expr {
-    let region = cover $1 (expr_to_region $4)
+    let region = cover $1#region (expr_to_region $4)
     and value  = {kwd_patch=$1; collection=$2; kwd_with=$3; patch=$4}
     in {region; value} }
 
@@ -815,7 +827,7 @@ terse_case(rhs):
     fun rhs_to_region ->
       let enclosing = Brackets ($4,$7)
       and cases     = $6 rhs_to_region in
-      let region    = cover $1 $7
+      let region    = cover $1#region $7#region
       and value     = {kwd_case=$1; expr=$2; kwd_of=$3;
                        enclosing; lead_vbar=$5; cases}
       in {region; value} }
@@ -825,7 +837,7 @@ verb_case(rhs):
     fun rhs_to_region ->
       let enclosing = End $6
       and cases     = $5 rhs_to_region in
-      let region    = cover $1 $6
+      let region    = cover $1#region $6#region
       and value     = {kwd_case=$1; expr=$2; kwd_of=$3;
                        enclosing; lead_vbar=$4; cases}
       in {region; value} }
@@ -899,13 +911,13 @@ lhs: path_expr | map_lookup { $1 }
 
 while_loop:
   "while" expr block {
-    let region = cover $1 $3.region
+    let region = cover $1#region $3.region
     and value  = {kwd_while=$1; cond=$2; block=$3}
     in {region; value} }
 
 for_int:
   "for" variable ":=" expr "to" expr ioption(step_clause) block {
-    let region = cover $1 $8.region in
+    let region = cover $1#region $8.region in
     let value  = {kwd_for=$1; index=$2; assign=$3; init=$4;
                   kwd_to=$5; bound=$6; step=$7; block=$8}
     in {region; value} }
@@ -915,13 +927,13 @@ step_clause: "step" expr { $1,$2 }
 for_in:
   "for" variable "->" variable "in" ioption("map") expr block {
     let bind_to  = Some ($3,$4) in
-    let region   = cover $1 (expr_to_region $7)
+    let region   = cover $1#region (expr_to_region $7)
     and value    = {kwd_for=$1; var=$2; bind_to; kwd_in=$5;
                     expr=$7; block=$8}
     in {region; value}
   }
 | "for" variable "in" expr block {
-    let region = cover $1 $5.region in
+    let region = cover $1#region $5.region in
     let value  = {kwd_for=$1; var=$2; bind_to=None; kwd_in=$3;
                   expr=$4; block=$5}
     in {region; value} }
@@ -1015,13 +1027,13 @@ base_expr(right_expr):
 
 if_then_expr(right_expr):
   "if" expr "then" right_expr {
-     let region = cover $1 (expr_to_region $4)
+     let region = cover $1#region (expr_to_region $4)
      and value = {kwd_if=$1; test=$2; kwd_then=$3; if_so=$4; if_not=None }
      in E_Cond {region; value} }
 
 if_then_else_expr(right_expr):
   "if" expr "then" closed_expr "else" right_expr {
-     let region = cover $1 (expr_to_region $6)
+     let region = cover $1#region (expr_to_region $6)
      and value = {kwd_if=$1; test=$2; kwd_then=$3; if_so=$4;
                   if_not = Some ($5,$6) }
      in {region; value} }
@@ -1215,7 +1227,7 @@ field_path_assignment:
     in {region; value}
   }
 | attributes field_name {
-    let region = $2.region
+    let region = $2#region
     and value = Punned {pun=(E_Var $2); attributes=$1}
     in {region; value} }
 
@@ -1258,8 +1270,8 @@ ctor_expr: ctor_app(expr) { $1 }
 
 ctor_app(payload):
   ctor par(nsepseq(payload,",")) {
-    mk_reg (cover $1.region $2.region) ($1, Some $2) }
-| ctor { {$1 with value = ($1, None)} }
+    mk_reg (cover $1#region $2.region) ($1, Some $2) }
+| ctor { {region=$1#region; value = ($1, None)} }
 
 (* Tuples of expressions *)
 
@@ -1306,7 +1318,7 @@ qualified_expr:
 field_path:
   record_or_tuple "." nsepseq(selection,".") {
     let stop   = nsepseq_to_region selection_to_region $3 in
-    let region = cover ($1.region) stop
+    let region = cover $1#region stop
     and value  = {record_or_tuple=(E_Var $1); selector=$2; field_path=$3}
     in E_Proj {region; value}
   }
@@ -1364,7 +1376,7 @@ update:
 
 code_inj:
   "[%lang" expr "]" {
-    let region = cover $1.region $3
+    let region = cover $1.region $3#region
     and value  = {language=$1; code=$2; rbracket=$3}
     in {region; value} }
 
@@ -1428,7 +1440,7 @@ ctor_app_pattern: ctor_app(pattern) { $1 }
 (*
 ctor_app_pattern:
   type_ctor tuple_pattern {
-    let region = cover $1.region $2.region
+    let region = cover $1#region $2.region
     and value  = P_Var $1, Some $2
     in P_App {region; value} } *)
 
@@ -1439,15 +1451,14 @@ record_pattern:
 
 field_pattern:
   attributes field_name "=" core_pattern {
-    let region = cover $2.region (pattern_to_region $4)
+    let region = cover $2#region (pattern_to_region $4)
     and value  = Complete {field_lhs=$2; assign=$3;
                            field_rhs=$4; attributes=$1}
     in {region; value}
   }
 | attributes field_name {
-    let region = $2.region
-    and value = Punned {pun=$2; attributes=$1}
-    in {region; value}
+    let value = Punned {pun=$2; attributes=$1}
+    in {region = $2#region; value}
   }
 | "_" {
     let value = Punned {pun=(mk_wild $1); attributes=[]}

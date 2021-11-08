@@ -5,7 +5,7 @@
       "language-basics/types",
       "language-basics/constants-and-variables",
       "language-basics/math-numbers-tez",
-      "language-basics/strings",
+      "language-basics/strings-bytes",
       "language-basics/functions",
       "language-basics/boolean-if-else",
       "language-basics/loops",
@@ -78,7 +78,8 @@
       "reference/set-reference",
       "reference/string-reference",
       "reference/current-reference",
-      "reference/test"
+      "reference/test",
+      "reference/hangzhou"
     ]
   },
   "contributors-docs": {

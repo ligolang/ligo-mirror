@@ -10,7 +10,14 @@ module Directive = LexerLib.Directive
 module Utils     = Simple_utils.Utils
 module Region    = Simple_utils.Region
 
+(* Local dependencies *)
+
+module Token = Lexing_pascaligo.Token
+
+(* Utilities *)
+
 type 'a reg = 'a Region.reg
+type 'payload wrap = 'payload Token.wrap
 
 open Utils
 
@@ -24,80 +31,80 @@ type lexeme = string
    [keyword]. If you add or modify some, please make sure they remain
    in order. *)
 
-type keyword        = Region.t
+type keyword       = lexeme wrap
 
-type kwd_and       = Region.t
-type kwd_begin     = Region.t
-type kwd_big_map   = Region.t
-type kwd_block     = Region.t
-type kwd_case      = Region.t
-type kwd_const     = Region.t
-type kwd_contains  = Region.t
-type kwd_down      = Region.t
-type kwd_else      = Region.t
-type kwd_end       = Region.t
-type kwd_for       = Region.t
-type kwd_from      = Region.t
-type kwd_function  = Region.t
-type kwd_if        = Region.t
-type kwd_in        = Region.t
-type kwd_is        = Region.t
-type kwd_list      = Region.t
-type kwd_map       = Region.t
-type kwd_mod       = Region.t
-type kwd_module    = Region.t
-type kwd_nil       = Region.t
-type kwd_not       = Region.t
-type kwd_of        = Region.t
-type kwd_or        = Region.t
-type kwd_patch     = Region.t
-type kwd_record    = Region.t
-type kwd_recursive = Region.t
-type kwd_remove    = Region.t
-type kwd_set       = Region.t
-type kwd_skip      = Region.t
-type kwd_step      = Region.t
-type kwd_then      = Region.t
-type kwd_to        = Region.t
-type kwd_type      = Region.t
-type kwd_var       = Region.t
-type kwd_while     = Region.t
-type kwd_with      = Region.t
+type kwd_and       = lexeme wrap
+type kwd_begin     = lexeme wrap
+type kwd_big_map   = lexeme wrap
+type kwd_block     = lexeme wrap
+type kwd_case      = lexeme wrap
+type kwd_const     = lexeme wrap
+type kwd_contains  = lexeme wrap
+type kwd_down      = lexeme wrap
+type kwd_else      = lexeme wrap
+type kwd_end       = lexeme wrap
+type kwd_for       = lexeme wrap
+type kwd_from      = lexeme wrap
+type kwd_function  = lexeme wrap
+type kwd_if        = lexeme wrap
+type kwd_in        = lexeme wrap
+type kwd_is        = lexeme wrap
+type kwd_list      = lexeme wrap
+type kwd_map       = lexeme wrap
+type kwd_mod       = lexeme wrap
+type kwd_module    = lexeme wrap
+type kwd_nil       = lexeme wrap
+type kwd_not       = lexeme wrap
+type kwd_of        = lexeme wrap
+type kwd_or        = lexeme wrap
+type kwd_patch     = lexeme wrap
+type kwd_record    = lexeme wrap
+type kwd_recursive = lexeme wrap
+type kwd_remove    = lexeme wrap
+type kwd_set       = lexeme wrap
+type kwd_skip      = lexeme wrap
+type kwd_step      = lexeme wrap
+type kwd_then      = lexeme wrap
+type kwd_to        = lexeme wrap
+type kwd_type      = lexeme wrap
+type kwd_var       = lexeme wrap
+type kwd_while     = lexeme wrap
+type kwd_with      = lexeme wrap
 
 (* Symbols *)
 
 (* IMPORTANT: The types are sorted alphabetically. If you add or
    modify some, please make sure they remain in order. *)
 
-type arrow    = Region.t  (* "->"  *)
-type assign   = Region.t  (* ":="  *)
-type caret    = Region.t  (* "^"   *)
-type colon    = Region.t  (* ":"   *)
-type comma    = Region.t  (* ","   *)
-type sharp    = Region.t  (* "#"   *)
-type dot      = Region.t  (* "."   *)
-type equal    = Region.t  (* "="   *)
-type geq      = Region.t  (* ">="  *)
-type gt       = Region.t  (* ">"   *)
-type lbrace   = Region.t  (* "{"   *)
-type lbracket = Region.t  (* "["   *)
-type leq      = Region.t  (* "<="  *)
-type lpar     = Region.t  (* "("   *)
-type lt       = Region.t  (* "<"   *)
-type minus    = Region.t  (* "-"   *)
-type neq      = Region.t  (* "=/=" *)
-type plus     = Region.t  (* "+"   *)
-type rbrace   = Region.t  (* "}"   *)
-type rbracket = Region.t  (* "]"   *)
-type rpar     = Region.t  (* ")"   *)
-type semi     = Region.t  (* ";"   *)
-type slash    = Region.t  (* "/"   *)
-type times    = Region.t  (* "*"   *)
-type vbar     = Region.t  (* "|"   *)
+type arrow    = lexeme wrap  (* "->"  *)
+type assign   = lexeme wrap  (* ":="  *)
+type caret    = lexeme wrap  (* "^"   *)
+type colon    = lexeme wrap  (* ":"   *)
+type comma    = lexeme wrap  (* ","   *)
+type sharp    = lexeme wrap  (* "#"   *)
+type dot      = lexeme wrap  (* "."   *)
+type equal    = lexeme wrap  (* "="   *)
+type geq      = lexeme wrap  (* ">="  *)
+type gt       = lexeme wrap  (* ">"   *)
+type lbrace   = lexeme wrap  (* "{"   *)
+type lbracket = lexeme wrap  (* "["   *)
+type leq      = lexeme wrap  (* "<="  *)
+type lpar     = lexeme wrap  (* "("   *)
+type lt       = lexeme wrap  (* "<"   *)
+type minus    = lexeme wrap  (* "-"   *)
+type neq      = lexeme wrap  (* "=/=" *)
+type plus     = lexeme wrap  (* "+"   *)
+type rbrace   = lexeme wrap  (* "}"   *)
+type rbracket = lexeme wrap  (* "]"   *)
+type rpar     = lexeme wrap  (* ")"   *)
+type semi     = lexeme wrap  (* ";"   *)
+type slash    = lexeme wrap  (* "/"   *)
+type times    = lexeme wrap  (* "*"   *)
+type vbar     = lexeme wrap  (* "|"   *)
 
 (* End-of-File *)
 
-type eof = Region.t
+type eof = lexeme wrap
 
 (* Literals *)
 
@@ -672,12 +679,12 @@ let sepseq_to_region to_region = function
    please make sure they remain in order. *)
 
 let type_expr_to_region = function
-  T_App    {region; _}
+  T_App     {region; _}
+| T_Cart    {region; _}
 | T_Fun     {region; _}
 | T_Int     {region; _}
 | T_ModPath {region; _}
 | T_Par     {region; _}
-| T_Cart    {region; _}
 | T_Record  {region; _}
 | T_String  {region; _}
 | T_Sum     {region; _}
@@ -691,7 +698,6 @@ let type_expr_to_region = function
 let expr_to_region = function
   E_Add       {region; _}
 | E_And       {region; _}
-| E_Typed     {region; _}
 | E_BigMap    {region; _}
 | E_Block     {region; _}
 | E_Bytes     {region; _}
@@ -702,7 +708,7 @@ let expr_to_region = function
 | E_Equal     {region; _}
 | E_Cond      {region; _}
 | E_Cons      {region; _}
-| E_App      {region; _}
+| E_App       {region; _}
 | E_Div       {region; _}
 | E_Fun       {region; _}
 | E_Geq       {region; _}
@@ -719,8 +725,8 @@ let expr_to_region = function
 | E_Mutez     {region; _}
 | E_Nat       {region; _}
 | E_Neg       {region; _}
-| E_Nil        region
-| E_Neq       {region; _}
+| E_Neq       {region; _} -> region
+| E_Nil       t -> t#region
 | E_Not       {region; _}
 | E_Or        {region; _}
 | E_Par       {region; _}
@@ -731,10 +737,10 @@ let expr_to_region = function
 | E_String    {region; _}
 | E_Sub       {region; _}
 | E_Tuple     {region; _}
+| E_Typed     {region; _}
 | E_Update    {region; _}
 | E_Var       {region; _}
-| E_Verbatim  {region; _}
-  -> region
+| E_Verbatim  {region; _} -> region
 
 and tuple_expr_to_region x = x.Region.region
 
@@ -762,10 +768,9 @@ let instr_to_region = function
 | I_For    {region; _}
 | I_ForIn  {region; _}
 | I_Patch  {region; _}
-| I_Remove {region; _}
-| I_Skip    region
-| I_While  {region; _}
-  -> region
+| I_Remove {region; _} -> region
+| I_Skip    t -> t#region
+| I_While  {region; _} -> region
 
 let test_clause_to_region = function
   ClauseInstr instr -> instr_to_region instr
@@ -776,20 +781,19 @@ let test_clause_to_region = function
    please make sure they remain in order. *)
 
 let pattern_to_region = function
-  P_Bytes   {region; _}
+  P_App    {region; _}
+| P_Bytes   {region; _}
 | P_Cons    {region; _}
-| P_App    {region; _}
 | P_Int     {region; _}
 | P_List    {region; _}
-| P_Nat     {region; _}
-| P_Nil      region
+| P_Nat     {region; _} -> region
+| P_Nil      t -> t#region
 | P_Par     {region; _}
 | P_Record  {region; _}
 | P_String  {region; _}
 | P_Tuple   {region; _}
 | P_Typed   {region; _}
-| P_Var     {region; _}
-  -> region
+| P_Var     {region; _} -> region
 
 let declaration_to_region = function
   D_Const    {region; _}
