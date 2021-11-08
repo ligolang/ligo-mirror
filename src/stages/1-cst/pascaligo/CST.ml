@@ -74,7 +74,7 @@ type assign   = Region.t  (* ":="  *)
 type caret    = Region.t  (* "^"   *)
 type colon    = Region.t  (* ":"   *)
 type comma    = Region.t  (* ","   *)
-type cons     = Region.t  (* "#"   *)
+type sharp    = Region.t  (* "#"   *)
 type dot      = Region.t  (* "."   *)
 type equal    = Region.t  (* "="   *)
 type geq      = Region.t  (* ">="  *)
@@ -127,20 +127,6 @@ type 'a brackets = {
   inside   : 'a;
   rbracket : rbracket
 }
-
-(* Collections *)
-
-type iterable = [
-  `List   of kwd_list
-| `Map    of kwd_map
-| `BigMap of kwd_big_map
-| `Set    of kwd_set
-]
-
-type compound_type = [
-  iterable
-| `Record of kwd_record
-]
 
 (* The Concrete Syntax Tree *)
 
@@ -249,32 +235,28 @@ and type_vars = (type_var, comma) nsepseq par reg
    add or modify some, please make sure they remain in order. *)
 
 and type_expr =
-  T_Cart    of cartesian                             (*    x * y * z                                         *)
-| T_Ctor    of type_ctor_app reg                     (*    A.B.t(x,y,z)                                      *)
-| T_Fun     of (type_expr * arrow * type_expr) reg   (*    x -> y                                            *)
-| T_Int     of (lexeme * Z.t) reg                    (*    42                                                *)
-| T_ModPath of type_expr module_path reg             (*    A.B.(x * y)                                       *)
-| T_Par     of type_expr par reg                     (*    (t)                                               *)
-| T_Record  of field_decl reg compound reg           (*    [@a2] record [ a ; [@a1] b : t ]                  *)
-| T_String  of lexeme reg                            (*    "x"                                               *)
-| T_Sum     of sum_type reg                          (*    [@a2] | [@aa] A | B of t                          *)
-| T_Var     of variable                              (*    x                                                 *)
-
-(* Cartesian products *)
-
-and cartesian = (type_expr, times) nsepseq reg
+  T_App     of (type_expr * type_tuple) reg        (* M.t (x,y,z)     *)
+| T_Cart    of (type_expr * times * type_expr) reg (* x * y           *)
+| T_Fun     of (type_expr * arrow * type_expr) reg (* x -> y          *)
+| T_Int     of (lexeme * Z.t) reg                  (* 42              *)
+| T_ModPath of type_expr module_path reg           (* A.B.(x * y)     *)
+| T_Par     of type_expr par reg                   (* (t)             *)
+| T_Record  of field_decl reg compound reg (* record [a; [@a1] b : t] *)
+| T_String  of lexeme reg                          (*    "x"          *)
+| T_Sum     of sum_type reg               (* [@a2] | [@aa] A | B of t *)
+| T_Var     of variable                            (*  x              *)
 
 (* Application of type constructors *)
 
-and type_ctor_app = type_ctor module_path reg * type_tuple
+and type_tuple = (type_expr, comma) nsepseq par reg
+
+(* Module paths *)
 
 and 'a module_path = {
   module_path : (module_name, dot) nsepseq;
   selector    : dot;
   field       : 'a
 }
-
-and type_tuple = (type_expr, comma) nsepseq par reg
 
 (* Record types *)
 
@@ -287,7 +269,7 @@ and field_decl = {
 (* Compound constructs (lists, sets, records, maps) *)
 
 and 'a compound = {
-  kind       : Region.t ;
+  kind       : Region.t;
   enclosing  : enclosing;
   elements   : ('a, semi) sepseq;
   terminator : semi option;
@@ -471,27 +453,28 @@ and while_loop = {
    add or modify some, please make sure they remain in order. *)
 
 and pattern =
-  P_Bytes  of (lexeme * Hex.t) reg
-| P_Cons   of (pattern, cons) nsepseq reg
-| P_Ctor   of data_ctor_pattern reg
-| P_Int    of (lexeme * Z.t) reg
-| P_List   of pattern compound reg
-| P_Nat    of (lexeme * Z.t) reg
-| P_Nil    of kwd_nil
-| P_Par    of pattern par reg
-| P_Record of record_pattern reg
-| P_String of lexeme reg
-| P_Tuple  of tuple_pattern
-| P_Typed  of typed_pattern reg
-| P_Var    of var_pattern reg
+  P_App     of (pattern * tuple_pattern option) reg
+| P_Bytes   of (lexeme * Hex.t) reg
+| P_Cons    of (pattern * sharp * pattern) reg
+| P_Int     of (lexeme * Z.t) reg
+| P_List    of pattern compound reg
+| P_ModPath of pattern module_path reg
+| P_Nat     of (lexeme * Z.t) reg
+| P_Nil     of kwd_nil
+| P_Par     of pattern par reg
+| P_Record  of record_pattern reg
+| P_String  of lexeme reg
+| P_Tuple   of tuple_pattern
+| P_Typed   of typed_pattern reg
+| P_Var     of var_pattern reg
 
 (* Record pattern *)
 
-and record_pattern = (var_pattern, pattern) field reg compound
+and record_pattern = field_pattern reg compound
 
-(* Pattern for data constructor application *)
+and field_pattern = (field_name, pattern) field
 
-and data_ctor_pattern = ctor module_path reg * tuple_pattern option
+(* *)
 
 and tuple_pattern = (pattern, comma) nsepseq par reg
 
@@ -538,7 +521,7 @@ and expr =
 | E_Equal     of equal bin_op reg              (* "="   *)
 | E_Cond      of (expr, expr) conditional reg
 | E_Cons      of cons bin_op reg
-| E_Ctor      of data_ctor_app reg
+| E_App       of data_ctor_app reg
 | E_Div       of slash bin_op reg              (* "/"   *)
 | E_Fun       of fun_expr reg
 | E_Geq       of geq bin_op reg                (* ">="  *)
@@ -634,9 +617,9 @@ and local_path =
 | InRecord of projection reg
 
 and projection = {
-  record     : expr;
-  selector   : dot;
-  field_path : (selection, dot) nsepseq
+  record_or_tuple : expr;
+  selector        : dot;
+  field_path      : (selection, dot) nsepseq
 }
 
 and selection =
@@ -689,7 +672,7 @@ let sepseq_to_region to_region = function
    please make sure they remain in order. *)
 
 let type_expr_to_region = function
-  T_Ctor    {region; _}
+  T_App    {region; _}
 | T_Fun     {region; _}
 | T_Int     {region; _}
 | T_ModPath {region; _}
@@ -719,7 +702,7 @@ let expr_to_region = function
 | E_Equal     {region; _}
 | E_Cond      {region; _}
 | E_Cons      {region; _}
-| E_Ctor      {region; _}
+| E_App      {region; _}
 | E_Div       {region; _}
 | E_Fun       {region; _}
 | E_Geq       {region; _}
@@ -795,7 +778,7 @@ let test_clause_to_region = function
 let pattern_to_region = function
   P_Bytes   {region; _}
 | P_Cons    {region; _}
-| P_Ctor    {region; _}
+| P_App    {region; _}
 | P_Int     {region; _}
 | P_List    {region; _}
 | P_Nat     {region; _}
