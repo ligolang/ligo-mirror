@@ -13,16 +13,16 @@ module JsonHelpers = struct
   let string_list json = List.map ~f:string (list json)
 end
 
-type t = string * (string * string list) list 
+type t = (string * string list) list 
 
 let resolve_paths installation graph root =
   let resolve p =
     Yojson.Basic.Util.member p installation |> JsonHelpers.string
   in
-  (resolve root, Map.String.fold (fun k v xs ->
+  Map.String.fold (fun k v xs ->
     let paths = List.sort ~compare:String.compare @@ (List.map ~f:resolve v) in 
     ((resolve k), paths) :: xs
-  ) graph [])
+  ) graph []
 
 let find_dependencies lock_file = 
   let open Yojson.Basic.Util in
@@ -49,20 +49,19 @@ let make project_path =
     Some (resolve_paths installation_json dependencies root)
   | None -> None
 
+let get_absolute_path path = 
+  let path' = Fpath.v path in
+  if Fpath.is_abs path' then path
+  else Fpath.v ((Sys.getcwd ()) ^ Fpath.dir_sep ^ path) |> Fpath.normalize |> Fpath.to_string
+
 let get_includes path module_resolutions =
-  let starts_with ~prefix s =
-    let s1 = String.length prefix in
-    let s2 = String.length s in
-    let rec aux i =
-      if i >= s1 || i >= s2 then true
-      else if prefix.[i] = s.[i] then aux (i + 1)
-      else false
-    in
-    s2 >= s1 && aux 0
-  in
+  let path = get_absolute_path path in
   match module_resolutions with
-    Some (_, module_resolutions) ->
-    (match List.find ~f:(fun (mod_path, _) -> starts_with ~prefix:mod_path path) module_resolutions with
+    Some module_resolutions ->
+    (match List.find ~f:(fun (mod_path, _) -> 
+        Fpath.is_prefix (Fpath.v mod_path) (Fpath.v path)
+      ) module_resolutions 
+    with
       Some (_,paths) -> paths
     | None -> []
     )

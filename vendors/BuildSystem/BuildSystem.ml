@@ -68,9 +68,7 @@ module Make (M : M) =
         let dep_g = G.add_edge dep_g acc file_name in
         (dep_g,vertices)
     in
-    let includes = match module_resolutions with
-      Some (root, _) -> Module_resolutions.get_includes root module_resolutions
-    | None -> [] in
+    let includes = Module_resolutions.get_includes file_name module_resolutions in
     dfs file_name (dep_g,vertices) @@ (file_name,file_name,includes)
 
   let solve_graph : graph -> file_name -> ((file_name * vertice) list,error) result =

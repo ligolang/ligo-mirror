@@ -248,7 +248,7 @@ let find_external_file file dirs =
       let basename = (Fpath.basename @@ Fpath.v dir)
         |> String.split_on_char '-' 
         |> String.concat "_" in
-      starts_with ~prefix:pkg_name basename
+      starts_with ~prefix:pkg_name basename (*String.equal here*)
     ) dirs in
     Option.map (fun dir -> 
       let path = dir ^ Filename.dir_sep ^ file_name in
