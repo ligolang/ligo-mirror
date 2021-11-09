@@ -21,7 +21,6 @@ let preprocess source_file syntax display_format =
     format_result ~display_format Parsing.Formatter.ppx_format (fun _ -> []) @@
     fun ~raise ->
     fst @@
-    (* MELWYN TODO: handle module resolutions here *)
     let options   = Compiler_options.make () in
     let meta = Compile.Of_source.extract_meta ~raise syntax source_file in
     Compile.Of_source.compile ~raise ~options ~meta source_file
@@ -29,7 +28,6 @@ let preprocess source_file syntax display_format =
 let cst source_file syntax display_format =
     format_result ~display_format (Parsing.Formatter.ppx_format) (fun _ -> []) @@
       fun ~raise ->
-      (* MELWYN TODO: handle module resolutions here *)
       let options = Compiler_options.make () in
       let meta = Compile.Of_source.extract_meta ~raise syntax source_file in
       Compile.Utils.pretty_print_cst ~raise ~options ~meta source_file
@@ -38,7 +36,6 @@ let ast source_file syntax display_format =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (Ast_imperative.Formatter.module_format) get_warnings @@
       fun ~raise ->
-      (* MELWYN TODO: handle module resolutions here *)
       let options       = Compiler_options.make () in
       let meta     = Compile.Of_source.extract_meta ~raise syntax source_file in
       let c_unit,_ = Compile.Utils.to_c_unit ~raise ~options ~meta source_file in
@@ -48,7 +45,6 @@ let ast_sugar source_file syntax display_format =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (Ast_sugar.Formatter.module_format) get_warnings @@
       fun ~raise ->
-      (* MELWYN TODO: handle module resolutions here *)
       let options = Compiler_options.make () in
       let meta     = Compile.Of_source.extract_meta ~raise syntax source_file in
       let c_unit,_ = Compile.Utils.to_c_unit ~raise ~options ~meta source_file in
@@ -69,7 +65,6 @@ let ast_core source_file syntax infer protocol_version display_format esy_projec
         inferred_core
     else
       (* Print the ast as-is without inferring and typechecking dependencies *)
-      (* MELWYN TODO: handle module resolutions here *)
         let options = Compiler_options.make ~infer () in
         let meta     = Compile.Of_source.extract_meta ~raise syntax source_file in
         let c_unit,_ = Compile.Utils.to_c_unit ~raise ~options ~meta source_file in
