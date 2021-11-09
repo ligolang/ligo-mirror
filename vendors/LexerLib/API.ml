@@ -70,9 +70,18 @@ module Make (Config : Preprocessor.Config.S) (Client : Client.S) =
 
     (* Lexing all lexical units from various sources *)
 
-    let from_lexbuf  ~file  lexbuf = inst_from_lexbuf  ~file  lexbuf |> scan_all_units
-    let from_channel ~file channel = inst_from_channel ~file channel |> scan_all_units
-    let from_string  ~file  string = inst_from_string  ~file  string |> scan_all_units
-    let from_buffer         buffer = inst_from_buffer         buffer |> scan_all_units
-    let from_file              src = inst_from_file              src |> scan_all_units
+    let from_lexbuf ~file lexbuf =
+      inst_from_lexbuf  ~file  lexbuf |> scan_all_units
+
+    let from_channel ~file channel =
+      inst_from_channel ~file channel |> scan_all_units
+
+    let from_string ~file string =
+      inst_from_string ~file string |> scan_all_units
+
+    let from_buffer buffer =
+      inst_from_buffer buffer |> scan_all_units
+
+    let from_file src =
+      inst_from_file src |> scan_all_units
   end

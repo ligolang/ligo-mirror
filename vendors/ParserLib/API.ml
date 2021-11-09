@@ -91,7 +91,7 @@ module Make (Lexer  : LEXER)
             let region  = Token.to_region current_token
             in Region.{region; value=message}
         | [] ->
-            (* This case only happens if and only if there are no
+            (* This case happens if, and only if, there are no
                tokens in the input. *)
             let file = Lexing.(lexbuf.lex_curr_p.pos_fname)
             in if file <> "" then

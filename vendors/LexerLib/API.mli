@@ -20,8 +20,8 @@ module type S =
     type 'src lexer = 'src -> (units, error) result
 
     val from_lexbuf  : file:string -> Lexing.lexbuf lexer
-    val from_channel : file:string -> in_channel lexer
-    val from_string  : file:string -> string lexer
+    val from_channel : file:string ->    in_channel lexer
+    val from_string  : file:string ->        string lexer
     val from_file    : string lexer
     val from_buffer  : Buffer.t lexer
   end
