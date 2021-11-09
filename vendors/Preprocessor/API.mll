@@ -227,6 +227,25 @@ let rec last_mode = function
 
 (* Finding a file to #include *)
 
+(* the function [find_external_file] specifically resolves files
+   for ligo packages downloaded via esy.
+
+   the [dirs] contains a list of paths. 
+   esy package path/dir is of the form {package-name}__{version}__{hash}
+   e.g. /path/to/esy/cache/ligo_list_helpers__1.0.0__bf074147
+
+   a ligo package will be used in #import or #include,
+   e.g. #import "ligo-list-helpers/list.mligo" "ListHelpers"
+
+   To correctly resolve the path for #import or #include we split the 
+   path into 2 parts i.e. the package name & rest of the path
+   e.g. "ligo-list-helpers/list.mligo" - 
+    package name = ligo-list-helpers
+    rest of path = list.mligo
+
+   We find the path with the longest prefix, once the package path is
+   identified, the file path is package path / rest of path
+*)
 let find_external_file file dirs = 
   let starts_with ~prefix s =
     let s1 = String.length prefix in
@@ -245,10 +264,8 @@ let find_external_file file dirs =
       |> String.split_on_char '-' 
       |> String.concat "_" in
     let dir = List.find_opt (fun dir ->
-      let basename = (Fpath.basename @@ Fpath.v dir)
-        |> String.split_on_char '-' 
-        |> String.concat "_" in
-      starts_with ~prefix:pkg_name basename (*String.equal here*)
+      let basename = (Fpath.basename @@ Fpath.v dir) in
+      starts_with ~prefix:pkg_name basename 
     ) dirs in
     Option.map (fun dir -> 
       let path = dir ^ Filename.dir_sep ^ file_name in
