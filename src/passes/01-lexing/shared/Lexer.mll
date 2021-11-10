@@ -28,11 +28,12 @@ module Make (Options : Options.S) (Token : Token.S) =
       Unexpected_character of char
     | Non_canonical_zero
     | Invalid_symbol of string
-    | Unsupported_nat_syntax
-    | Unsupported_mutez_syntax
-    | Unsupported_lang_syntax
-    | Invalid_natural
-    | Unterminated_verbatim
+    | Wrong_nat_syntax of string
+    | Wrong_mutez_syntax of string
+    | Wrong_lang_syntax of string
+    | Unterminated_verbatim of string
+    | Overflow_mutez
+    | Underflow_mutez
 
     let sprintf = Printf.sprintf
 
@@ -45,17 +46,20 @@ module Make (Options : Options.S) (Token : Token.S) =
     | Invalid_symbol s ->
         sprintf "Invalid symbol: %S.\n\
                  Hint: Check the LIGO syntax you use." s
-    | Invalid_natural ->
-        "Invalid natural number."
-    | Unsupported_nat_syntax ->
-        "Unsupported nat syntax. Please use annotations instead."
-    | Unsupported_mutez_syntax ->
-        "Unsupported (mu)tez syntax. Please use annotations instead."
-    | Unsupported_lang_syntax ->
-        "Unsupported code injection syntax."
-    | Unterminated_verbatim ->
-        "Unterminated verbatim.\n\
-         Hint: Close with \"|}\"."
+    | Wrong_nat_syntax hint ->
+        sprintf "Wrong nat syntax.\n%s" hint
+    | Wrong_mutez_syntax hint ->
+        sprintf "Wrong mutez syntax.\n%s" hint
+    | Wrong_lang_syntax hint ->
+        sprintf "Wrong code injection syntax.\n%s" hint
+    | Unterminated_verbatim term ->
+        sprintf "Unterminated verbatim.\n\
+                 Hint: Close with %S." term
+    | Overflow_mutez ->
+        "Mutez amount too large.\n\
+         Note: From 0 to 2^63-1=9_223_372_036_854_775_807."
+    | Underflow_mutez ->
+        "Mutez amount not an integer."
 
     type message = string Region.reg
 
@@ -67,13 +71,15 @@ module Make (Options : Options.S) (Token : Token.S) =
 
     (* TOKENS *)
 
-    (* Making tokens *)
+    (* Strings *)
 
     let mk_string thread =
-      let start    = thread#opening#start in
-      let stop     = thread#closing#stop in
-      let region   = Region.make ~start ~stop in
+      let start  = thread#opening#start in
+      let stop   = thread#closing#stop in
+      let region = Region.make ~start ~stop in
       Token.mk_string (thread#to_string) region
+
+    (* Verbatim strings *)
 
     let mk_verbatim (thread, state) =
       let start  = thread#opening#start in
@@ -83,116 +89,134 @@ module Make (Options : Options.S) (Token : Token.S) =
       let token  = Token.mk_verbatim lexeme region
       in token, state
 
+    (* Bytes *)
+
     let mk_bytes bytes state buffer =
       let State.{region; state; _} = state#sync buffer in
       let token = Token.mk_bytes bytes region
       in token, state
 
+    (* Integers *)
+
     let mk_int state buffer =
       let State.{region; lexeme; state} = state#sync buffer in
-      match Token.mk_int lexeme region with
-        Ok token ->
-          token, state
-      | Error Token.Non_canonical_zero ->
-          fail region Non_canonical_zero
+      let z = Z.of_string lexeme in
+      if   Z.equal z Z.zero && lexeme <> "0"
+      then fail region Non_canonical_zero
+      else let token = Token.mk_int lexeme z region
+           in token, state
 
-    let mk_nat state buffer =
-      let State.{region; lexeme; state} = state#sync buffer in
-      match Token.mk_nat lexeme region with
-        Ok token ->
-          token, state
-      | Error Token.Non_canonical_zero_nat ->
-          fail region Non_canonical_zero
-      | Error Token.Invalid_natural ->
-          fail region Invalid_natural
-      | Error Token.Unsupported_nat_syntax ->
-          fail region Unsupported_nat_syntax
+    (* Natural numbers *)
 
-    let mk_mutez state buffer =
-      let State.{region; lexeme; state} = state#sync buffer in
-      match Token.mk_mutez lexeme region with
-        Ok token ->
-          token, state
-      | Error Token.Non_canonical_zero_tez ->
-          fail region Non_canonical_zero
-      | Error Token.Unsupported_mutez_syntax ->
-          fail region Unsupported_mutez_syntax
+    let mk_nat nat state buffer =
+      let State.{region; state; _} = state#sync buffer in
+      let z = Z.of_string nat in
+      if   Z.equal z Z.zero && nat <> "0"
+      then fail region Non_canonical_zero
+      else match Token.mk_nat nat z region with
+             Ok token -> token, state
+           | Error (Token.Wrong_nat_syntax hint) ->
+               fail region (Wrong_nat_syntax hint)
 
-    let mk_tez state buffer =
-      let State.{region; lexeme; state} = state#sync buffer in
-      let lexeme = Str.string_before lexeme (String.index lexeme 't') in
-      let lexeme = Z.mul (Z.of_int 1_000_000) (Z.of_string lexeme) in
-      match Token.mk_mutez (Z.to_string lexeme ^ "mutez") region with
-        Ok token ->
-          token, state
-      | Error Token.Non_canonical_zero_tez ->
-          fail region Non_canonical_zero
-      | Error Token.Unsupported_mutez_syntax ->
-          fail region Unsupported_mutez_syntax
+    (* Mutez *)
 
-    let format_tez s =
-      match String.index s '.' with
-        index ->
-          let len         = String.length s in
-          let integral    = Str.first_chars s index
-          and fractional  = Str.last_chars s (len-index-1) in
-          let num         = Z.of_string (integral ^ fractional)
-          and den         = Z.of_string ("1" ^ String.make (len-index-1) '0')
-          and million     = Q.of_string "1000000" in
-          let mutez       = Q.make num den |> Q.mul million in
-          let should_be_1 = Q.den mutez in
-          if Z.equal Z.one should_be_1 then Some (Q.num mutez) else None
-      | exception Not_found -> assert false
+    let mk_mutez nat state buffer =
+      let State.{region; state; _} = state#sync buffer in
+      match Int64.of_string_opt nat with
+        None -> fail region Overflow_mutez
+      | Some mutez_64 ->
+          if   Int64.equal mutez_64 Int64.zero && nat <> "0"
+          then fail region Non_canonical_zero
+          else let suffix = "mutez" in
+               match Token.mk_mutez nat ~suffix mutez_64 region with
+                 Ok token -> token, state
+               | Error (Token.Wrong_mutez_syntax hint) ->
+                   fail region (Wrong_mutez_syntax hint)
 
-    let mk_tez_dec state buffer =
-      let State.{region; lexeme; state} = state#sync buffer in
-      let lexeme = Str.(global_replace (regexp "_") "" lexeme) in
-      let lexeme = Str.string_before lexeme (String.index lexeme 't') in
-      match format_tez lexeme with
-        None -> assert false
-      | Some tz ->
-          match Token.mk_mutez (Z.to_string tz ^ "mutez") region with
-            Ok token ->
-              token, state
-          | Error Token.Non_canonical_zero_tez ->
-              fail region Non_canonical_zero
-          | Error Token.Unsupported_mutez_syntax ->
-              fail region Unsupported_mutez_syntax
+    (* Integral Tez (internally converted to mutez) *)
+
+    let mk_tez nat suffix state buffer =
+      let State.{region; state; _} = state#sync buffer
+      and mutez = Z.mul (Z.of_int 1_000_000) (Z.of_string nat) in
+      try
+        let mutez_64 = Z.to_int64 mutez in
+        if   Int64.equal mutez_64 Int64.zero && nat <> "0"
+        then fail region Non_canonical_zero
+        else match Token.mk_mutez nat ~suffix mutez_64 region with
+               Ok token -> token, state
+             | Error (Token.Wrong_mutez_syntax hint) ->
+                 fail region (Wrong_mutez_syntax hint)
+      with Z.Overflow -> fail region Overflow_mutez
+
+    (* Tez as a decimal number (internally converted to mutez) *)
+
+    let mk_tez_dec integral fractional suffix state buffer =
+      let State.{region; state; _} = state#sync buffer in
+      let integral'   = Z.of_string integral   |> Z.to_string
+      and fractional' = Z.of_string fractional |> Z.to_string in
+      let numerator   = Z.of_string (integral' ^ fractional')
+      and frac_length = String.length fractional' in
+      let denominator = Z.of_string ("1" ^ String.make frac_length '0')
+      and million     = Q.of_string "1_000_000" in
+      let q_mutez     = Q.make numerator denominator |> Q.mul million in
+      if Z.equal (Q.den q_mutez) Z.one then
+        try
+          let mutez_64 = Z.to_int64 (Q.num q_mutez) in
+          if   Int64.equal mutez_64 Int64.zero
+               && (integral <> "0" || fractional <> "0")
+          then fail region Non_canonical_zero
+          else let lexeme = integral ^ "." ^ fractional in
+               match Token.mk_mutez lexeme ~suffix mutez_64 region with
+                 Ok token -> token, state
+               | Error (Token.Wrong_mutez_syntax hint) ->
+                   fail region (Wrong_mutez_syntax hint)
+        with Z.Overflow -> fail region Overflow_mutez
+      else fail region Underflow_mutez
+
+    (* Identifiers *)
 
     let mk_ident state buffer =
       let State.{region; lexeme; state} = state#sync buffer in
       let token = Token.mk_ident lexeme region
       in token, state
 
+    (* Attributes *)
+
     let mk_attr attr state buffer =
       let State.{region; state; _} = state#sync buffer in
       let token = Token.mk_attr attr region
       in token, state
+
+    (* Data constructors and module names *)
 
     let mk_uident state buffer =
       let State.{region; lexeme; state} = state#sync buffer in
       let token = Token.mk_uident lexeme region
       in token, state
 
-    let mk_lang lang state buffer =
+    (* Code injection *)
+
+     let mk_lang lang state buffer =
       let State.{region; state; _} = state#sync buffer in
-      let start              = region#start#shift_bytes 1 in
-      let stop               = region#stop in
-      let lang_reg           = Region.make ~start ~stop in
-      let lang               = Region.{value=lang; region=lang_reg} in
+      let start    = region#start#shift_bytes 1 in
+      let stop     = region#stop in
+      let lang_reg = Region.make ~start ~stop in
+      let lang     = Region.{value=lang; region=lang_reg} in
       match Token.mk_lang lang region with
-        Ok token ->
-          token, state
-      | Error Token.Unsupported_lang_syntax ->
-          fail region Unsupported_lang_syntax
+        Ok token -> token, state
+      | Error Token.Wrong_lang_syntax hint ->
+          fail region (Wrong_lang_syntax hint)
+
+    (* Symbols *)
 
     let mk_sym state buffer =
       let State.{region; lexeme; state} = state#sync buffer in
       match Token.mk_sym lexeme region with
-        Ok token ->
-          token, state
-      | Error Token.Invalid_symbol s ->
-          fail region (Invalid_symbol  s)
+        Ok token -> token, state
+      | Error Token.Invalid_symbol string ->
+          fail region (Invalid_symbol string)
+
+    (* End-of-File *)
 
     let mk_eof state buffer =
       let State.{region; state; _} = state#sync buffer in
@@ -210,18 +234,21 @@ let nl         = ['\n' '\r'] | "\r\n"
 let blank      = ' ' | '\t'
 let digit      = ['0'-'9']
 let natural    = digit | digit (digit | '_')* digit
-let decimal    = natural '.' natural
+let nat        = natural as nat
+let tz_or_tez  = "tz" | "tez" as tez
+let decimal    = (natural as integral) '.' (natural as fractional)
 let small      = ['a'-'z']
 let capital    = ['A'-'Z']
 let letter     = small | capital
-let ident      = small (letter | '_' | digit)* |
-                 '_' (letter | '_' (letter | digit) | digit)+
+let ident      = small (letter | '_' | digit)*
+               | '_' (letter | '_' (letter | digit) | digit)+
+let ext_ident  = (letter | digit | '_' | ':')+
 let uident     = capital (letter | '_' | digit)*
 let attr       = letter (letter | '_' | ':' | digit)*
 let hexa_digit = digit | ['A'-'F' 'a'-'f']
 let byte       = hexa_digit hexa_digit
 let byte_seq   = byte | byte (byte | '_')* byte
-let bytes      = "0x" (byte_seq? as b)
+let bytes      = "0x" (byte_seq? as bytes)
 let string     = [^'"' '\\' '\n']*  (* For strings of #include *)
 let directive  = '#' (blank* as space) (small+ as id) (* For #include *)
 
@@ -251,18 +278,20 @@ let symbol =
    through recursive calls. *)
 
 rule scan state = parse
-  ident                  { mk_ident   state lexbuf }
-| uident                 { mk_uident  state lexbuf }
-| bytes                  { mk_bytes b state lexbuf }
-| natural "n"            { mk_nat     state lexbuf }
-| natural "mutez"        { mk_mutez   state lexbuf }
-| natural ("tz" | "tez") { mk_tez     state lexbuf }
-| decimal ("tz" | "tez") { mk_tez_dec state lexbuf }
-| natural                { mk_int     state lexbuf }
-| symbol                 { mk_sym     state lexbuf }
-| eof                    { mk_eof     state lexbuf }
-| "[@" (attr as a) "]"   { mk_attr  a state lexbuf }
-| "[%" (attr as l)       { mk_lang  l state lexbuf }
+  ident | '@' ext_ident   { mk_ident         state lexbuf }
+| uident                  { mk_uident        state lexbuf }
+| bytes                   { mk_bytes bytes   state lexbuf }
+| nat "n"                 { mk_nat   nat     state lexbuf }
+| nat "mutez"             { mk_mutez nat     state lexbuf }
+| nat tz_or_tez           { mk_tez   nat tez state lexbuf }
+| natural                 { mk_int           state lexbuf }
+| symbol                  { mk_sym           state lexbuf }
+| eof                     { mk_eof           state lexbuf }
+| "[@" (attr as attr) "]" { mk_attr  attr    state lexbuf }
+| "[%" (attr as lang)     { mk_lang  lang    state lexbuf }
+
+| decimal tz_or_tez {
+    mk_tez_dec integral fractional tez state lexbuf }
 
 | "`" | "{|" as lexeme {
     let verb_open, verb_close = Token.verbatim_delimiters in
@@ -309,7 +338,7 @@ and scan_verbatim verb_close thread state = parse
         and thread = thread#push_string nl in
         scan_verbatim verb_close thread state lexbuf }
 
-| eof { fail thread#opening Unterminated_verbatim }
+| eof { fail thread#opening (Unterminated_verbatim verb_close) }
 
 | _   { let lexeme = Lexing.lexeme lexbuf in
         let State.{state; _} = state#sync lexbuf
