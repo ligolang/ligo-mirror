@@ -4,6 +4,10 @@ module Trace  = Simple_utils.Trace
 module Config = Preprocessor.Config
 module Unit   = LexerLib.Unit
 
+(* Common type definition *)
+
+type lexeme = string
+
 (* Making lexers *)
 
 module type S =

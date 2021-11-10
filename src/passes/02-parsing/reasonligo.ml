@@ -21,6 +21,8 @@ module ReasonligoParser =
   struct
     module CST = CST
     include Parser
+
+    module Recovery = Parsing_reasonligo.RecoverParser
   end
 
 include Parsing_shared.Common.MakeTwoParsers

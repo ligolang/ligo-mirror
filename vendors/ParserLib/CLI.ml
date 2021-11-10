@@ -29,7 +29,12 @@ module Make (LexerParams: LexerLib.CLI.PARAMETERS) : PARAMETERS =
         "      --mono       Use Menhir monolithic API";
         "      --cst        Print the CST";
         "      --cst-tokens Print tokens from the CST";
-        "      --pretty     Pretty-print the input"
+        "      --pretty     Pretty-print the input";
+        "      --recovery   Enable error recovery";
+        "Debug options:";
+        "      --trace-recovery [<output_file>]";
+        "                   Print steps of error recovery to";
+        "                   <output_file>, else to stdout"
       ] in
       begin
         Buffer.add_string buffer (String.concat "\n" options);
@@ -43,10 +48,18 @@ module Make (LexerParams: LexerLib.CLI.PARAMETERS) : PARAMETERS =
     and pretty     = ref false
     and cst        = ref false
     and cst_tokens = ref false
+    and recovery   = ref false
+    and trace_recovery        = ref false
+    and trace_recovery_output = ref None
 
     and help       = ref false
     and version    = ref false
     and cli        = ref false
+
+    (* Setting both [trace_recovery] and [trace_recovery_output] *)
+
+    let set_recovery_output path =
+      (trace_recovery := true; trace_recovery_output := Some path)
 
     (* The following has been copied and pasted from the
        implementation of the module [Getopt], under the original
@@ -117,14 +130,17 @@ module Make (LexerParams: LexerLib.CLI.PARAMETERS) : PARAMETERS =
 
     let specs =
       Getopt.[
-        noshort, "mono",       set mono true, None;
-        noshort, "pretty",     set pretty true, None;
-        noshort, "cst",        set cst true, None;
-        noshort, "cst-tokens", set cst_tokens true, None;
+        noshort, "mono",           set mono true, None;
+        noshort, "pretty",         set pretty true, None;
+        noshort, "cst",            set cst true, None;
+        noshort, "cst-tokens",     set cst_tokens true, None;
+        noshort, "recovery",       set recovery true, None;
+        noshort, "trace-recovery", set trace_recovery true,
+                                   Some set_recovery_output;
 
-        noshort, "cli",        set cli true, None;
-        'h',     "help",       set help true, None;
-        'v',     "version",    set version true, None
+        noshort, "cli",            set cli true, None;
+        'h',     "help",           set help true, None;
+        'v',     "version",        set version true, None
       ]
 
      (* Handler of anonymous arguments: those have been handled by a
@@ -159,21 +175,29 @@ module Make (LexerParams: LexerLib.CLI.PARAMETERS) : PARAMETERS =
       |> add "--pretty"
       |> add "--cst"
       |> add "--cst-tokens"
+      |> add "--recovery"
+      |> add "--trace-recovery"
 
       (* The following options are present in all CLI *)
+
       |> add "--cli"
       |> add "--help" |> add "-h"
       |> add "--version" |> add "-v"
 
-    let opt_with_arg = SSet.empty
+    let opt_with_arg =
+      SSet.empty
+      |> SSet.add "--trace-recovery"
 
     let argv_copy = Array.copy Sys.argv
 
     let () = Argv.filter ~opt_wo_arg ~opt_with_arg
 
-    type status = LexerParams.Status.t
+    type status = [
+      LexerParams.Status.t
+    | `DependsOn of string * string
+    ]
 
-    let status = LexerParams.Status.status
+    let status = (LexerParams.status :> status)
 
     let status =
       try
@@ -191,6 +215,12 @@ module Make (LexerParams: LexerLib.CLI.PARAMETERS) : PARAMETERS =
     and pretty     = !pretty
     and cst        = !cst
     and cst_tokens = !cst_tokens
+    and recovery   = !recovery
+
+    (* Debug options *)
+
+    and trace_recovery        = !trace_recovery
+    and trace_recovery_output = !trace_recovery_output
 
     (* Re-exporting and printing on stdout the CLI options *)
 
@@ -200,7 +230,11 @@ module Make (LexerParams: LexerLib.CLI.PARAMETERS) : PARAMETERS =
         sprintf "mono       = %b" mono;
         sprintf "pretty     = %b" pretty;
         sprintf "cst        = %b" cst;
-        sprintf "cst_tokens = %b" cst_tokens] in
+        sprintf "cst_tokens = %b" cst_tokens;
+        sprintf "recovery   = %b" recovery;
+        sprintf "trace_recovery = %b" trace_recovery;
+        sprintf "trace_recovery_output = %s" @@
+            Option.value trace_recovery_output ~default:"None"] in
     begin
       Buffer.add_string buffer (String.concat "\n" options);
       Buffer.add_char   buffer '\n';
@@ -212,18 +246,14 @@ module Make (LexerParams: LexerLib.CLI.PARAMETERS) : PARAMETERS =
     (* Checking combinations of options *)
 
     let status =
-      match mono, pretty, cst, cst_tokens with
-        false, false, false, false
-      |  true, false, false, false
-      | false, true,  false, false
-      | false, false, true,  false
-      | false, false, false,  true
-      |  true,  true,     _,     _
-      |  true,     _,  true,     _
-      |  true,     _,     _,  true -> status
-      |     _,  true,  true,     _ -> `Conflict ("--pretty", "--cst")
-      |     _,  true,     _,  true -> `Conflict ("--pretty", "--cst-tokens")
-      |     _,     _,  true,  true -> `Conflict ("--cst", "--cst-tokens")
+      match mono, pretty, cst, cst_tokens, recovery, trace_recovery with
+      |    _,  true,  true,     _,     _,     _ -> `Conflict ("--pretty", "--cst")
+      |    _,  true,     _,  true,     _,     _ -> `Conflict ("--pretty", "--cst-tokens")
+      |    _,     _,  true,  true,     _,     _ -> `Conflict ("--cst", "--cst-tokens")
+      | true,     _,     _,     _,  true,     _ -> `Conflict ("--mono", "--recovery")
+      |    _,     _,     _,     _, false,  true -> `DependsOn ("--trace-recovery", "--recovery")
+      |    _,     _,     _,     _,     _,     _ -> status
+
 
     let status =
       match status with

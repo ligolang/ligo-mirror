@@ -5,6 +5,10 @@ module Config  = Preprocessor.Config
 module Options = LexerLib.Options
 module Unit    = LexerLib.Unit
 
+(* Common type definition *)
+
+type lexeme = string
+
 (* Making lexers *)
 
 module type S =

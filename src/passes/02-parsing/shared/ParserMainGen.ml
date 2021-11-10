@@ -37,11 +37,6 @@ module type PRETTY =
     val print : tree -> PPrint.document
   end
 
-type 'token window = <
-  last_token    : 'token option;
-  current_token : 'token           (* Including EOF *)
->
-
 module Make
          (Config      : CONFIG)
          (Options     : OPTIONS)
@@ -52,8 +47,7 @@ module Make
          (Parser      : PARSER with type token = Token.t
                                 and type tree = CST.t)
          (Printer     : PRINTER with type tree = CST.t)
-         (Pretty      : PRETTY with type tree = CST.t)
- =
+         (Pretty      : PRETTY with type tree = CST.t) =
   struct
     (* Reading the preprocessor CLI *)
 
@@ -96,54 +90,80 @@ module Make
       | `Version      ver -> print_and_quit (ver ^ "\n")
       | `Conflict (o1,o2) ->
            cli_error (Printf.sprintf "Choose either %s or %s." o1 o2)
+      | `DependsOn (o1, o2) ->
+           cli_error (Printf.sprintf "Option %s requires option %s" o1 o2)
       | `Done -> ()
 
-    (* Main *)
+    (* Instantiating the main parser *)
 
-    module MainParser = ParserLib.API.Make (MainLexer) (Parser)
+    module Debug =
+      struct
+        let error_recovery_tracing = CLI.trace_recovery
+        let tracing_output         = CLI.trace_recovery_output
+      end
 
-    let wrap : (Parser.tree, MainParser.message) result -> unit =
-      function
-        Stdlib.Ok tree ->
-          if Options.pretty then
-            let doc = Pretty.print tree in
-            let width =
-              match Terminal_size.get_columns () with
-                None -> 60
-              | Some c -> c in
+    module MainParser = ParserLib.API.Make (MainLexer) (Parser) (Debug)
+
+    (* Printing the results of parsing *)
+
+    let show_msg : MainParser.message -> unit =
+      fun {value; region} ->
+        let reg = region#to_string ~file:true ~offsets:true `Point in
+        let msg = Printf.sprintf "Parse error %s:\n%s" reg value
+        in (flush_all (); print_in_red msg)
+
+    let show_tree (tree : Parser.tree) : unit =
+      if CLI.pretty then
+        let doc = Pretty.print tree in
+        let width =
+          match Terminal_size.get_columns () with
+            None -> 60
+          | Some c -> c in
+        begin
+          PPrint.ToChannel.pretty 1.0 width stdout doc;
+          print_newline ()
+        end
+      else
+        let buffer = Buffer.create 231 in
+        let state  = Printer.mk_state
+                       ~offsets:Preprocessor_CLI.offsets
+                       ~mode:Lexer_CLI.mode
+                       ~buffer in
+        if CLI.cst then
+          begin
+            Printer.pp_cst state tree;
+            Printf.printf "%s%!" (Buffer.contents buffer)
+          end
+        else
+          if CLI.cst_tokens then
             begin
-              PPrint.ToChannel.pretty 1.0 width stdout doc;
-              print_newline ()
+              Printer.print_tokens state tree;
+              Printf.printf "%s%!" (Buffer.contents buffer);
             end
-          else
-            let buffer = Buffer.create 231 in
-            let state  = Printer.mk_state
-                           ~offsets:Options.offsets
-                           ~mode:Options.mode
-                           ~buffer in
-            if Options.cst then
-              begin
-                Printer.pp_cst state tree;
-                Printf.printf "%s%!" (Buffer.contents buffer)
-              end
-            else
-              if Options.cst_tokens then
-                begin
-                  Printer.print_tokens state tree;
-                  Printf.printf "%s%!" (Buffer.contents buffer);
-                end
-              else ();
-            flush_all ()
-      | Error Region.{value; region} ->
-         let reg = region#to_string ~file:true ~offsets:true `Point in
-         let msg = Printf.sprintf "Parse error %s:\n%s" reg value
-         in (flush_all (); print_in_red msg)
+          else ();
+        flush_all ()
+
+    let wrap = function
+      Stdlib.Ok tree   -> show_tree tree
+    | Stdlib.Error msg -> show_msg msg
+
+    let wrap_recovery result =
+      let tree, messages =
+        MainParser.extract_recovery_results (result) in
+      let print msg = show_msg msg; Printf.eprintf "\n"
+      in begin
+           List.iter print (List.rev messages);
+           Option.iter show_tree tree
+         end
 
     (* Instantiating the preprocessor *)
 
     module Preproc = Preprocessor.PreprocMainGen.Make (PreprocParams)
 
+    (* Putting preprocessor, lexer and parser together *)
+
     let parse () =
+      let open MainParser in
       if Options.preprocess then
         match Preproc.preprocess () with
           Stdlib.Error _ -> ()
@@ -153,22 +173,30 @@ module Make
             else ();
             let string = Buffer.contents buffer in
             let lexbuf = Lexing.from_string string in
-            let open MainParser in
             if Options.mono then
               mono_from_lexbuf lexbuf |> wrap
             else
               incr_from_lexbuf (module ParErr) lexbuf |> wrap
       else
-        let open MainParser in
-        match Options.input with
-          None ->
-            if Options.mono then
-              mono_from_channel stdin |> wrap
+        let from_stdin () =
+          if CLI.mono then
+            mono_from_channel stdin |> wrap
+          else
+            if CLI.recovery then
+              recov_from_channel (module ParErr) stdin |> wrap_recovery
             else
-              incr_from_channel (module ParErr) stdin |> wrap
-        | Some file_path ->
-            if Options.mono then
-              mono_from_file file_path |> wrap
+              incr_from_channel (module ParErr) stdin |> wrap in
+
+        let from_file file_path =
+          if CLI.mono then
+            mono_from_file file_path |> wrap
+          else
+            if CLI.recovery then
+              recov_from_file (module ParErr) file_path |> wrap_recovery
             else
               incr_from_file (module ParErr) file_path |> wrap
+
+        in match Options.input with
+             None           -> from_stdin ()
+           | Some file_path -> from_file file_path
   end
