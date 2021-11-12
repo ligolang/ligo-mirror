@@ -6,15 +6,14 @@ module PreprocParams = Preprocessor.CLI.Make (Config)
 module LexerParams   = LexerLib.CLI.Make (PreprocParams)
 module Options       = LexerParams.Options
 module Token         = Lexing_pascaligo.Token
-module Self_tokens   = Lexing_pascaligo.Self_tokens
-module LexerMainGen  = Lexing_shared.LexerMainGen
-module MainGen =
-  LexerMainGen.Make (Config) (Options) (Token) (Self_tokens)
+module Self_passes   = Lexing_pascaligo_self.Self_passes.Make (Token)
+module LexerMainGen  = Lexing_shared.LexerMainGen.Make
+                         (Config) (Options) (Token) (Self_passes)
 
 let () =
-  let open MainGen in
+  let open! LexerMainGen in
   match check_cli () with
-    MainGen.Ok ->
+    Ok ->
       let Std.{out; err}, _ = scan_all ()
       in Printf.printf  "%s%!" out;
          Printf.eprintf "%s%!" err

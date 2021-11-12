@@ -32,7 +32,7 @@ module Make (PreprocParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
         "      --bytes      Bytes for source locations";
         "      --pre        Run the preprocessor";
         "      --post=<pass> Run postprocessing up to pass <pass> \
-                             (none, 1, 2, ..., all)"
+                             (none/0, 1, 2, ..., all)"
       ] in
       begin
         Buffer.add_string buffer (String.concat "\n" options);
@@ -40,7 +40,7 @@ module Make (PreprocParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
         buffer
       end
 
-    (* Specifying the command-line options a la GNU *)
+    (* Global references for the CLI options *)
 
     type post_pass = Pass of int | All
 
@@ -49,19 +49,18 @@ module Make (PreprocParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
     and units      = ref false
     and bytes      = ref false
     and pre        = ref false
-    and post       = ref None
+    and post       = ref (Some All : post_pass option)
 
     and help       = ref false
     and version    = ref false
     and cli        = ref false
 
+    (* --post *)
+
     let print_post = function
       None        -> "none"
     | Some Pass n -> string_of_int n
     | Some All    -> "all"
-
-    (* See [GetoptLib.Getopt] for the layout of the command line and
-       the specification of the options. *)
 
     let post_arg arg =
       if !post = None then
@@ -69,10 +68,16 @@ module Make (PreprocParams: Preprocessor.CLI.PARAMETERS) : PARAMETERS =
         else if arg = "all" then post := Some All
         else match Stdlib.int_of_string_opt arg with
                None -> raise (Getopt.Error "Invalid pass number.")
-             | Some num -> if num < 0 then
-                            raise (Getopt.Error "Invalid pass number.")
-                          else if num <> 0 then post := Some (Pass num)
-      else raise (Getopt.Error "Only one pass allowed.")
+             | Some 0 -> post := None
+             | Some num when num < 0 ->
+                 raise (Getopt.Error "Invalid pass number.")
+             | Some num -> post := Some (Pass num)
+      else raise (Getopt.Error "Only one --post option allowed.")
+
+    (* Specifying the command-line options a la GNU
+
+       See [GetoptLib.Getopt] for the layout of the command line and
+       the specification of the options. *)
 
     let specs =
       Getopt.[

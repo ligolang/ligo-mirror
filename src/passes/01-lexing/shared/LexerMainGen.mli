@@ -14,10 +14,11 @@ module Unit    = LexerLib.Unit
    building the preprocessor, the lexer, composing and calling them,
    and apply the self pass on the lexical units to obtain tokens. *)
 
-module Make (Config     : Config.S)
-            (Options    : Options.S)
-            (Token      : Token.S)
-            (Self_units : Self_units.S with type lex_unit = Token.t Unit.t) :
+module Make (Config  : Config.S)
+            (Options : Options.S)
+            (Token   : Token.S)
+            (Passes  : Pipeline.PASSES
+                       with type lex_unit = Token.t Unit.t) :
   sig
     (* Checking the CLI *)
 
@@ -49,9 +50,11 @@ module Make (Config     : Config.S)
 
     type lex_unit = token Unit.t
 
-    val scan_all : unit -> Std.t * (lex_unit list, lex_unit error) result
+    type units = lex_unit list
+
+    val scan_all : unit -> Std.t * (units, lex_unit error) result
 
     (* Filtering tokens *)
 
-    val filter_tokens : lex_unit list -> token list
+    val filter_tokens : units -> token list
   end

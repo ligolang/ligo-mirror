@@ -43,7 +43,7 @@ module T =
     | Bytes    of (lexeme * Hex.t) wrap
     | Int      of (lexeme * Z.t) wrap
     | Nat      of (lexeme * Z.t) wrap
-    | Mutez    of (lexeme * Z.t) wrap
+    | Mutez    of (lexeme * Int64.t) wrap
     | Ident    of lexeme wrap
     | UIdent   of lexeme wrap
     | Lang     of lexeme reg reg
@@ -59,7 +59,7 @@ module T =
     | RBRACE   of lexeme wrap  (* "}"   *)
     | LBRACKET of lexeme wrap  (* "["   *)
     | RBRACKET of lexeme wrap  (* "]"   *)
-    | CONS     of lexeme wrap  (* "#"   *)
+    | SHARP    of lexeme wrap  (* "#"   *)
     | VBAR     of lexeme wrap  (* "|"   *)
     | ARROW    of lexeme wrap  (* "->"  *)
     | ASS      of lexeme wrap  (* ":="  *)
@@ -154,7 +154,7 @@ module T =
     | "RBRACE"   -> "}"
     | "LBRACKET" -> "["
     | "RBRACKET" -> "]"
-    | "CONS"     -> "#"
+    | "SHARP"    -> "#"
     | "VBAR"     -> "|"
     | "ARROW"    -> "->"
     | "ASS"      -> ":="
@@ -226,7 +226,7 @@ module T =
     let sprintf = Printf.sprintf
 
     type token = t
-
+(*
     (* Verbatim strings need to be escaped, but OCaml escaping
        function for strings escapes the double quotes, so we need to
        unescape those. *)
@@ -235,6 +235,7 @@ module T =
       let escaped = String.escaped s in
       let regexp = Str.regexp "\\\\\"" in
       Str.global_replace regexp "\"" escaped
+*)
 
     let proj_token = function
       (* Preprocessing directives *)
@@ -260,7 +261,7 @@ module T =
         t#region, sprintf "Nat (%S, %s)" s (Z.to_string n)
     | Mutez t ->
         let (s, n) = t#payload in
-        t#region, sprintf "Mutez (%S, %s)" s (Z.to_string n)
+        t#region, sprintf "Mutez (%S, %s)" s (Int64.to_string n)
     | Ident t ->
         t#region, sprintf "Ident %S" t#payload
     | UIdent t ->
@@ -280,7 +281,7 @@ module T =
     | RBRACE   t -> t#region, "RBRACE"
     | LBRACKET t -> t#region, "LBRACKET"
     | RBRACKET t -> t#region, "RBRACKET"
-    | CONS     t -> t#region, "CONS"
+    | SHARP    t -> t#region, "SHARP"
     | VBAR     t -> t#region, "VBAR"
     | ARROW    t -> t#region, "ARROW"
     | ASS      t -> t#region, "ASS"
@@ -349,11 +350,11 @@ module T =
 
       (* Literals *)
 
-    | String t   -> sprintf "%S" (String.escaped t#payload)
+    | String t   -> sprintf "%S" t#payload (* Escaped *)
     | Verbatim t -> String.escaped t#payload
     | Bytes t    -> fst t#payload
     | Int t
-    | Nat t
+    | Nat t      -> fst t#payload
     | Mutez t    -> fst t#payload
     | Ident t
     | UIdent t   -> t#payload
@@ -370,7 +371,7 @@ module T =
     | RBRACE   _ -> "}"
     | LBRACKET _ -> "["
     | RBRACKET _ -> "]"
-    | CONS     _ -> "#"
+    | SHARP    _ -> "#"
     | VBAR     _ -> "|"
     | ARROW    _ -> "->"
     | ASS      _ -> ":="
@@ -506,54 +507,32 @@ module T =
 
     let mk_string lexeme region = String (wrap lexeme region)
 
+    (* Verbatim strings *)
+
     let mk_verbatim lexeme region = Verbatim (wrap lexeme region)
 
     (* Bytes *)
 
-    let mk_bytes lexeme region =
-      let norm = Str.(global_replace (regexp "_") "" lexeme) in
-      let value = lexeme, `Hex norm
+    let mk_bytes lexeme bytes region =
+      let value = lexeme, `Hex bytes
       in Bytes (wrap value region)
 
-    (* Numerical values *)
+    (* Integers *)
 
-    type int_err = Non_canonical_zero
+    let mk_int lexeme z region = Int (wrap (lexeme, z) region)
 
-    let mk_int lexeme region =
-      let z =
-        Str.(global_replace (regexp "_") "" lexeme) |> Z.of_string
-      in if   Z.equal z Z.zero && lexeme <> "0"
-         then Error Non_canonical_zero
-         else Ok (Int (wrap (lexeme, z) region))
+    (* Natural numbers *)
 
-    type nat_err =
-      Invalid_natural
-    | Unsupported_nat_syntax
-    | Non_canonical_zero_nat
+    type nat_err = Wrong_nat_syntax of string (* Not PascaLIGO *)
 
-    let mk_nat lexeme region =
-      match String.index_opt lexeme 'n' with
-        None -> Error Invalid_natural
-      | Some _ ->
-          let z =
-            Str.(global_replace (regexp "_") "" lexeme) |>
-              Str.(global_replace (regexp "n") "") |>
-              Z.of_string in
-          if   Z.equal z Z.zero && lexeme <> "0n"
-          then Error Non_canonical_zero_nat
-          else Ok (Nat (wrap (lexeme, z) region))
+    let mk_nat nat z region = Ok (Nat (wrap (nat ^ "n", z) region))
 
-    type mutez_err =
-      Unsupported_mutez_syntax
-    | Non_canonical_zero_tez
+    (* Mutez *)
 
-    let mk_mutez lexeme region =
-      let z = Str.(global_replace (regexp "_") "" lexeme) |>
-                Str.(global_replace (regexp "mutez") "") |>
-                Z.of_string in
-      if   Z.equal z Z.zero && lexeme <> "0mutez"
-      then Error Non_canonical_zero_tez
-      else Ok (Mutez (wrap (lexeme, z) region))
+    type mutez_err = Wrong_mutez_syntax of string (* Not PascaLIGO *)
+
+    let mk_mutez nat ~suffix int64 region =
+      Ok (Mutez (wrap (nat ^ suffix, int64) region))
 
     (* End-Of-File *)
 
@@ -594,7 +573,7 @@ module T =
       | "^"   -> Ok (CARET    (wrap lexeme region))
       | "->"  -> Ok (ARROW    (wrap lexeme region))
       | "=/=" -> Ok (NE       (wrap lexeme region))
-      | "#"   -> Ok (CONS     (wrap lexeme region))
+      | "#"   -> Ok (SHARP    (wrap lexeme region))
       | ":="  -> Ok (ASS      (wrap lexeme region))
 
       (* Invalid symbols *)
@@ -618,15 +597,53 @@ module T =
 
     (* Code injection *)
 
-    type lang_err = Unsupported_lang_syntax
+    type lang_err = Wrong_lang_syntax of string (* Not PascaLIGO *)
 
     let mk_lang lang region = Ok (Lang Region.{value=lang; region})
 
     (* PREDICATES *)
 
-    let is_eof = function EOF _ -> true | _ -> false
+    let is_int    = function Int    _ -> true | _ -> false
+    let is_string = function String _ -> true | _ -> false
+    let is_bytes  = function Bytes  _ -> true | _ -> false
 
-    let support_string_delimiter c = (c = '"')
+    let hex_digits = ["A"; "B"; "C"; "D"; "E"; "F";
+                      "a"; "b"; "c"; "d"; "e"; "f"]
+
+    let is_hex = function
+      UIdent t | Ident t -> List.mem t#payload hex_digits
+    | _ -> false
+
+    let is_sym = function
+      SEMI _
+    | COMMA _
+    | LPAR _
+    | RPAR _
+    | LBRACE _
+    | RBRACE _
+    | LBRACKET _
+    | RBRACKET _
+    | SHARP _
+    | VBAR _
+    | ARROW _
+    | ASS _
+    | EQ _
+    | COLON _
+    | LT _
+    | LE _
+    | GT _
+    | GE _
+    | NE _
+    | PLUS _
+    | MINUS _
+    | SLASH _
+    | TIMES _
+    | DOT _
+    | WILD _
+    | CARET _ -> true
+    | _ -> false
+
+    let is_eof = function EOF _ -> true | _ -> false
 
     let verbatim_delimiters = ("{|", "|}")
   end

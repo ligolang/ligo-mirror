@@ -93,7 +93,8 @@ module Make (Options : Options.S) (Token : Token.S) =
 
     let mk_bytes bytes state buffer =
       let State.{region; state; _} = state#sync buffer in
-      let token = Token.mk_bytes bytes region
+      let norm = Str.(global_replace (regexp "_") "" bytes) in
+      let token = Token.mk_bytes bytes norm region
       in token, state
 
     (* Integers *)
@@ -245,8 +246,8 @@ let ident      = small (letter | '_' | digit)*
 let ext_ident  = (letter | digit | '_' | ':')+
 let uident     = capital (letter | '_' | digit)*
 let attr       = letter (letter | '_' | ':' | digit)*
-let hexa_digit = digit | ['A'-'F' 'a'-'f']
-let byte       = hexa_digit hexa_digit
+let hex_digit  = digit | ['A'-'F' 'a'-'f']
+let byte       = hex_digit hex_digit
 let byte_seq   = byte | byte (byte | '_')* byte
 let bytes      = "0x" (byte_seq? as bytes)
 let string     = [^'"' '\\' '\n']*  (* For strings of #include *)

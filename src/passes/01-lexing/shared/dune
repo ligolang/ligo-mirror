@@ -2,7 +2,7 @@
 
 (ocamllex Lexer)
 
-;; Build of the lexer as a library
+;; Build of the common lexer facilities as a library
 
 (library
   (name lexing_shared)
@@ -20,6 +20,6 @@
      str)
   (modules
      Errors Formatter Token Common Wrap
-     Lexer Self_units LexerMainGen UnlexerGen)
+     Lexer Pipeline LexerMainGen UnlexerGen)
   (modules_without_implementation
-     Token Self_units))
+     Token))

@@ -1,0 +1,13 @@
+;; Build of the self passes on the lexical units of PascaLIGO
+
+(library
+  (name lexing_pascaligo_self)
+  (public_name ligo.lexing.pascaligo.self)
+  (instrumentation (backend bisect_ppx))
+  (libraries
+     ;; Vendors
+     simple-utils
+     LexerLib
+     ;; LIGO
+     lexing_shared)
+  (modules Self_passes Style))
