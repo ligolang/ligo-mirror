@@ -527,7 +527,7 @@ and expr =
 | E_CodeInj   of code_inj reg
 | E_Equal     of equal bin_op reg              (* "="   *)
 | E_Cond      of (expr, expr) conditional reg
-| E_Cons      of cons bin_op reg
+| E_Cons      of sharp bin_op reg
 | E_App       of data_ctor_app reg
 | E_Div       of slash bin_op reg              (* "/"   *)
 | E_Fun       of fun_expr reg
@@ -786,6 +786,7 @@ let pattern_to_region = function
 | P_Cons    {region; _}
 | P_Int     {region; _}
 | P_List    {region; _}
+| P_ModPath {region; _}
 | P_Nat     {region; _} -> region
 | P_Nil      t -> t#region
 | P_Par     {region; _}

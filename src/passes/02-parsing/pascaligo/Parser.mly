@@ -141,7 +141,7 @@ let apply_type_ctor lexeme token args =
 
 let apply_map lexeme token args =
   let region    = cover token#region args.region in
-  let type_ctor = mk_reg token lexeme
+  let type_ctor = mk_reg token#region lexeme
   in mk_reg region (type_ctor, args)
 
 let mk_mod_path :
