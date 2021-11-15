@@ -47,101 +47,101 @@ module T =
     | Verbatim of lexeme wrap
     | Bytes    of (lexeme * Hex.t) wrap
     | Int      of (lexeme * Z.t) wrap
-   (* | Nat      of (lexeme * Z.t) *)
-   (* | Mutez    of (lexeme * Z.t) *)
-    | Ident   of lexeme wrap
+ (* | Nat      of (lexeme * Z.t) *)
+ (* | Mutez    of (lexeme * Z.t) *)
+    | Ident    of lexeme wrap
     | UIdent   of lexeme wrap
-   (* | Lang     of lexeme reg*)
+ (* | Lang     of lexeme reg *)
     | Attr     of string wrap
 
     (* Symbols *)
 
-    | MINUS    of lexeme wrap  (* "-"    *)
-    | PLUS     of lexeme wrap  (* "+"    *)
-    | SLASH    of lexeme wrap (* "/"    *)
-    | TIMES    of lexeme wrap  (* "*"    *)
-    | REM      of lexeme wrap  (* "%"    *)
-    (*| PLUS2    of Region.t  (* "++"   *)
-    | MINUS2   of Region.t  (* "--"   *) *)
+    | MINUS    of lexeme wrap  (* -    *)
+    | PLUS     of lexeme wrap  (* +    *)
+    | SLASH    of lexeme wrap  (* /    *)
+    | TIMES    of lexeme wrap  (* *    *)
+    | REM      of lexeme wrap  (* %    *)
+  (*| PLUS2    of lexeme wrap  (* ++   *)
+    | MINUS2   of lexeme wrap  (* --   *) *)
 
-    | LPAR     of lexeme wrap  (* "("    *)
-    | RPAR     of lexeme wrap  (* ")"    *)
-    | LBRACKET of lexeme wrap  (* "["    *)
-    | RBRACKET of lexeme wrap  (* "]"    *)
-    | LBRACE   of lexeme wrap  (* "{"    *)
-    | RBRACE   of lexeme wrap  (* "}"    *)
+    | LPAR     of lexeme wrap  (* (    *)
+    | RPAR     of lexeme wrap  (* )    *)
+    | LBRACKET of lexeme wrap  (* [    *)
+    | RBRACKET of lexeme wrap  (* ]    *)
+    | LBRACE   of lexeme wrap  (* {    *)
+    | RBRACE   of lexeme wrap  (* }    *)
 
-    | COMMA    of lexeme wrap  (* ","    *)
-    | SEMI     of lexeme wrap  (* ";"    *)
-    | COLON    of lexeme wrap  (* ":"    *)
-    | DOT      of lexeme wrap (* "."    *)
-    | ELLIPSIS of lexeme wrap (* "..."  *)
+    | COMMA    of lexeme wrap  (* ,    *)
+    | SEMI     of lexeme wrap  (* ;    *)
+    | COLON    of lexeme wrap  (* :    *)
+    | DOT      of lexeme wrap  (* .    *)
+    | ELLIPSIS of lexeme wrap  (* ...  *)
 
-    | BOOL_OR  of lexeme wrap (* "||"   *)
-    | BOOL_AND of lexeme wrap (* "&&"   *)
-    | BOOL_NOT of lexeme wrap (* "!"    *)
+    | BOOL_OR  of lexeme wrap  (* ||   *)
+    | BOOL_AND of lexeme wrap  (* &&   *)
+    | BOOL_NOT of lexeme wrap  (* !    *)
 
-    (*| BIT_AND  of Region.t  (* "&"    *)
-    | BIT_NOT  of Region.t  (* "~"    *)
-    | BIT_XOR  of Region.t  (* "^"    *)
-    | SHIFT_L  of Region.t  (* "<<<"  *)
-    | SHIFT_R  of Region.t  (* ">>>"  *) *)
+ (* | BIT_AND  of lexeme wrap  (* &    *)
+    | BIT_NOT  of lexeme wrap  (* ~    *)
+    | BIT_XOR  of lexeme wrap  (* ^    *)
+    | SHIFT_L  of lexeme wrap  (* <<<  *)
+    | SHIFT_R  of lexeme wrap  (* >>>  *) *)
 
-    | EQ       of lexeme wrap (* "="    *)
-    | EQ2      of lexeme wrap (* "=="  *)
-    | NE       of lexeme wrap (* "!="  *)
+    | EQ       of lexeme wrap  (* =    *)
+    | EQ2      of lexeme wrap  (* ==   *)
+    | NE       of lexeme wrap  (* !=   *)
 
-    | LT       of lexeme wrap (* "<"    *)
-    | GT       of lexeme wrap (* ">"    *)
-    | LE       of lexeme wrap (* "<="   *)
-    | GE       of lexeme wrap (* ">="   *)
+    | LT       of lexeme wrap  (* <    *)
+    | GT       of lexeme wrap  (* >    *)
+    | LE       of lexeme wrap  (* <=   *)
+    | GE       of lexeme wrap  (* >=   *)
 
-    | PLUS_EQ  of lexeme wrap (* "+="   *)
-    | MINUS_EQ of lexeme wrap (* "-="   *)
-    | MULT_EQ  of lexeme wrap (* "*="   *)
-    | REM_EQ   of lexeme wrap (* "%="   *)
-    | DIV_EQ   of lexeme wrap (* "/="   *)
-    (* | SL_EQ    of Region.t  (* "<<<=" *)
-    | SR_EQ    of Region.t  (* ">>>=" *)
-    | AND_EQ   of Region.t  (* "&="   *)
-    | OR_EQ    of Region.t  (* "|="   *)
-    | XOR_EQ   of Region.t  (* "^="   *) *)
+    | PLUS_EQ  of lexeme wrap  (* +=   *)
+    | MINUS_EQ of lexeme wrap  (* -=   *)
+    | MULT_EQ  of lexeme wrap  (* *=   *)
+    | REM_EQ   of lexeme wrap  (* %=   *)
+    | DIV_EQ   of lexeme wrap  (* /=   *)
+ (* | SL_EQ    of lexeme wrap  (* <<<= *)
+    | SR_EQ    of lexeme wrap  (* >>>= *)
+    | AND_EQ   of lexeme wrap  (* &=   *)
+    | OR_EQ    of lexeme wrap  (* |=   *)
+    | XOR_EQ   of lexeme wrap  (* ^=   *) *)
 
-    | VBAR     of lexeme wrap (* "|"    *)
-    | ARROW    of lexeme wrap (* "=>"   *)
-    | WILD     of lexeme wrap (* "_"    *)
+    | VBAR     of lexeme wrap  (* |    *)
+    | ARROW    of lexeme wrap  (* =>   *)
+    | WILD     of lexeme wrap  (* _    *)
 
     (* JavaScript Keywords *)
 
-    (* | Break    of Region.t  (* break    *) *)
-    | Case     of lexeme wrap (* case     *)
-    (* | Class    of Region.t  (* class    *) *)
-    | Const    of lexeme wrap (* const    *)
-    | Default  of lexeme wrap (* default  *)
-    | Else     of lexeme wrap (* else     *)
-    | Export   of lexeme wrap (* export   *)
-    | For      of lexeme wrap (* for      *)
-    | If       of lexeme wrap (* if       *)
-    | Import   of lexeme wrap (* import   *)
-    | Let      of lexeme wrap (* let      *)
-    | Of       of lexeme wrap (* of       *)
-    | Return   of lexeme wrap (* return   *)
-    | Break    of lexeme wrap (* break    *)
-    | Switch   of lexeme wrap (* switch   *)
-    (* | This     of Region.t  (* this     *) *)
-    (* | Void     of Region.t  (* void     *) *)
-    | While    of lexeme wrap (* while    *)
-    (* | With     of Region.t  (* with     *)  *)
+ (* | Break    of lexeme wrap  (* break    *) *)
+    | Case     of lexeme wrap  (* case     *)
+ (* | Class    of lexeme wrap  (* class    *) *)
+    | Const    of lexeme wrap  (* const    *)
+    | Default  of lexeme wrap  (* default  *)
+    | Else     of lexeme wrap  (* else     *)
+    | Export   of lexeme wrap  (* export   *)
+    | For      of lexeme wrap  (* for      *)
+    | If       of lexeme wrap  (* if       *)
+    | Import   of lexeme wrap  (* import   *)
+    | Let      of lexeme wrap  (* let      *)
+    | Of       of lexeme wrap  (* of       *)
+    | Return   of lexeme wrap  (* return   *)
+    | Break    of lexeme wrap  (* break    *)
+    | Switch   of lexeme wrap  (* switch   *)
+ (* | This     of lexeme wrap  (* this     *) *)
+ (* | Void     of lexeme wrap  (* void     *) *)
+    | While    of lexeme wrap  (* while    *)
+ (* | With     of lexeme wrap  (* with     *) *)
 
     (* TypeScript keywords *)
 
-    | As          of lexeme wrap (* as          *)
-    | Namespace   of lexeme wrap (* namespace   *)
-    | Type        of lexeme wrap (* type        *)
+    | As          of lexeme wrap  (* as        *)
+    | Namespace   of lexeme wrap  (* namespace *)
+    | Type        of lexeme wrap  (* type      *)
 
     (* Virtual tokens *)
 
-    | ZWSP of lexeme wrap (* Zero-Width SPace *)
+    | ZWSP of lexeme wrap  (* Zero-Width SPace *)
 
     (* End-Of-File *)
 
@@ -162,13 +162,13 @@ module T =
       "Ident"    -> id_sym ()
     | "UIdent"   -> ctor_sym ()
     | "Int"      -> "1"
-    (* | "Nat"      -> "1n" *)
-    (* | "Mutez"    -> "1mutez" *)
+ (* | "Nat"      -> "1n" *)
+ (* | "Mutez"    -> "1mutez" *)
     | "String"   -> "\"a string\""
     | "Verbatim" -> "{|verbatim|}"
     | "Bytes"    -> "0xAA"
     | "Attr"     -> "[@attr]"
-    (* | "Lang"     -> "[%Michelson" *)
+ (* | "Lang"     -> "[%Michelson" *)
 
     (* Symbols *)
 
@@ -177,8 +177,8 @@ module T =
     | "SLASH"    -> "/"
     | "TIMES"    -> "*"
     | "REM"      -> "%"
-    (* | "PLUS2"    -> "++" *)
-    (* | "MINUS2"   -> "--" *)
+ (* | "PLUS2"    -> "++" *)
+ (* | "MINUS2"   -> "--" *)
 
     | "LPAR"     -> "("
     | "RPAR"     -> ")"
@@ -197,7 +197,7 @@ module T =
     | "BOOL_AND" -> "&&"
     | "BOOL_NOT" -> "!"
 
-    (* | "BIT_AND"  -> "&"
+ (* | "BIT_AND"  -> "&"
     | "BIT_NOT"  -> "~"
     | "BIT_XOR"  -> "^"
     | "SHIFT_L"  -> "<<<"
@@ -217,7 +217,7 @@ module T =
     | "MULT_EQ"  -> "*="
     | "REM_EQ"   -> "%="
     | "DIV_EQ"   -> "/="
-    (* | "SL_EQ"    -> "<<<="
+ (* | "SL_EQ"    -> "<<<="
     | "SR_EQ"    -> ">>>="
     | "AND_EQ"   -> "&="
     | "OR_EQ"    -> "|="
@@ -229,9 +229,9 @@ module T =
 
     (* JavaScript Keywords *)
 
-    (* | "Break"    -> "break" *)
+ (* | "Break"    -> "break" *)
     | "Case"     -> "case"
-    (* | "Class"    -> "class" *)
+ (* | "Class"    -> "class" *)
     | "Const"    -> "const"
     | "Default"  -> "default"
     | "Else"     -> "else"
@@ -244,10 +244,10 @@ module T =
     | "Return"   -> "return"
     | "Break"    -> "break"
     | "Switch"   -> "switch"
-    (* | "This"     -> "this" *)
-    (* | "Void"     -> "void" *)
+ (* | "This"     -> "this" *)
+ (* | "Void"     -> "void" *)
     | "While"    -> "while"
-    (* | "With"     -> "with" *)
+ (* | "With"     -> "with" *)
 
     (* TypeScript keywords *)
 
@@ -299,7 +299,7 @@ module T =
     | Int t ->
         let (s, n) = t#payload in
         t#region, sprintf "Int (%S, %s)" s (Z.to_string n)
-    (* | Nat Region.{w_region=region; value = s,n} ->
+ (* | Nat Region.{w_region=region; value = s,n} ->
         region, sprintf "Nat (%S, %s)" s (Z.to_string n)
     | Mutez Region.{w_region=region; value = s,n} ->
         region, sprintf "Mutez (%S, %s)" s (Z.to_string n) *)
@@ -307,7 +307,7 @@ module T =
         t#region, sprintf "Ident %S" t#payload
     | UIdent t ->
         t#region, sprintf "UIdent %S" t#payload
-    (* | Lang Region.{w_region=region; value} ->
+ (* | Lang Region.{w_region=region; value} ->
         region, sprintf "Lang %S" (value.Region.value) *)
     | Attr t ->
         t#region, sprintf "Attr %S" t#payload
@@ -319,7 +319,7 @@ module T =
     | SLASH    t -> t#region, "SLASH"
     | TIMES    t -> t#region, "TIMES"
     | REM      t -> t#region, "REM"
-    (* | PLUS2    t -> t#region, "PLUS2"
+ (* | PLUS2    t -> t#region, "PLUS2"
     | MINUS2   t -> t#region, "MINUS2" *)
 
     | LPAR     t -> t#region, "LPAR"
@@ -339,7 +339,7 @@ module T =
     | BOOL_AND t -> t#region, "BOOL_AND"
     | BOOL_NOT t -> t#region, "BOOL_NOT"
 
-    (* | BIT_AND  t -> t#region, "BIT_AND"
+ (* | BIT_AND  t -> t#region, "BIT_AND"
     | BIT_NOT  t -> t#region, "BIT_NOT"
     | BIT_XOR  t -> t#region, "BIT_XOR"
     | SHIFT_L  t -> t#region, "SHIFT_L"
@@ -359,7 +359,7 @@ module T =
     | MULT_EQ  t -> t#region, "MULT_EQ"
     | REM_EQ   t -> t#region, "REM_EQ"
     | DIV_EQ   t -> t#region, "DIV_EQ"
-    (* | SL_EQ    t -> t#region, "SL_EQ"
+ (* | SL_EQ    t -> t#region, "SL_EQ"
     | SR_EQ    t -> t#region, "SR_EQ"
     | AND_EQ   t -> t#region, "AND_EQ"
     | OR_EQ    t -> t#region, "OR_EQ"
@@ -371,9 +371,9 @@ module T =
 
     (* JavaScript Keywords *)
 
-    (* | Break    t -> t#region, "Break" *)
+ (* | Break    t -> t#region, "Break" *)
     | Case     t -> t#region, "Case"
-    (* | Class    t -> t#region, "Class" *)
+ (* | Class    t -> t#region, "Class" *)
     | Const    t -> t#region, "Const"
     | Default  t -> t#region, "Default"
     | Else     t -> t#region, "Else"
@@ -386,10 +386,10 @@ module T =
     | Return   t -> t#region, "Return"
     | Break    t -> t#region, "Break"
     | Switch   t -> t#region, "Switch"
-    (* | This     t -> t#region, "This" *)
-    (* | Void     t -> t#region, "Void" *)
+ (* | This     t -> t#region, "This" *)
+ (* | Void     t -> t#region, "Void" *)
     | While    t -> t#region, "While"
-    (* | With     t -> t#region, "With" *)
+ (* | With     t -> t#region, "With" *)
 
     (* TypeScript keywords *)
 
@@ -431,88 +431,88 @@ module T =
 
     (* Symbols *)
 
-    | MINUS    _ -> "-"
-    | PLUS     _ -> "+"
-    | SLASH    _ -> "/"
-    | TIMES    _ -> "*"
-    | REM      _ -> "%"
-    (* | PLUS2    _ -> "++"
-    | MINUS2   _ -> "--" *)
+    | MINUS    t
+    | PLUS     t
+    | SLASH    t
+    | TIMES    t
+    | REM      t
+ (* | PLUS2    t -> "++"
+    | MINUS2   t -> "--" *)
 
-    | LPAR     _ -> "("
-    | RPAR     _ -> ")"
-    | LBRACKET _ -> "["
-    | RBRACKET _ -> "]"
-    | LBRACE   _ -> "{"
-    | RBRACE   _ -> "}"
+    | LPAR     t
+    | RPAR     t
+    | LBRACKET t
+    | RBRACKET t
+    | LBRACE   t
+    | RBRACE   t
 
-    | COMMA    _ -> ","
-    | SEMI     _ -> ";"
-    | COLON    _ -> ":"
-    | DOT      _ -> "."
-    | ELLIPSIS _ -> "..."
+    | COMMA    t
+    | SEMI     t
+    | COLON    t
+    | DOT      t
+    | ELLIPSIS t
 
-    | BOOL_OR  _ -> "||"
-    | BOOL_AND _ -> "&&"
-    | BOOL_NOT _ -> "!"
+    | BOOL_OR  t
+    | BOOL_AND t
+    | BOOL_NOT t
 
-    (* | BIT_AND  _ -> "&"
-    | BIT_NOT  _ -> "~"
-    | BIT_XOR  _ -> "^"
-    | SHIFT_L  _ -> "<<<"
-    | SHIFT_R  _ -> ">>>" *)
+ (* | BIT_AND  t -> "&"
+    | BIT_NOT  t -> "~"
+    | BIT_XOR  t -> "^"
+    | SHIFT_L  t -> "<<<"
+    | SHIFT_R  t -> ">>>" *)
 
-    | EQ       _ -> "="
-    | EQ2      _ -> "=="
-    | NE       _ -> "!="
+    | EQ       t
+    | EQ2      t
+    | NE       t
 
-    | LT       _ -> "<"
-    | GT       _ -> ">"
-    | LE       _ -> "<="
-    | GE       _ -> ">="
+    | LT       t
+    | GT       t
+    | LE       t
+    | GE       t
 
-    | PLUS_EQ  _ -> "+="
-    | MINUS_EQ _ -> "-="
-    | MULT_EQ  _ -> "*="
-    | REM_EQ   _ -> "%="
-    | DIV_EQ   _ -> "/="
-    (* | SL_EQ    _ -> "<<<="
-    | SR_EQ    _ -> ">>>="
-    | AND_EQ   _ -> "&="
-    | OR_EQ    _ -> "|="
-    | XOR_EQ   _ -> "^=" *)
+    | PLUS_EQ  t
+    | MINUS_EQ t
+    | MULT_EQ  t
+    | REM_EQ   t
+    | DIV_EQ   t
+ (* | SL_EQ    t -> "<<<="
+    | SR_EQ    t -> ">>>="
+    | AND_EQ   t -> "&="
+    | OR_EQ    t -> "|="
+    | XOR_EQ   t -> "^=" *)
 
-    | VBAR     _ -> "|"
-    | ARROW    _ -> "=>"
-    | WILD     _ -> "_"
+    | VBAR     t
+    | ARROW    t
+    | WILD     t
 
     (* JavaScript Keywords *)
 
-    (* | Break    _ -> "break" *)
-    | Case     _ -> "case"
-    (* | Class    _ -> "class" *)
-    | Const    _ -> "const"
-    | Default  _ -> "default"
-    | Else     _ -> "else"
-    | Export   _ -> "export"
-    | For      _ -> "for"
-    | If       _ -> "if"
-    | Import   _ -> "import"
-    | Let      _ -> "let"
-    | Of       _ -> "of"
-    | Return   _ -> "return"
-    | Break    _ -> "break"
-    | Switch   _ -> "switch"
-    (* | This     _ -> "this" *)
-    (* | Void     _ -> "void" *)
-    | While    _ -> "while"
-    (* | With     _ -> "with" *)
+ (* | Break    t *)
+    | Case     t
+ (* | Class    t *)
+    | Const    t
+    | Default  t
+    | Else     t
+    | Export   t
+    | For      t
+    | If       t
+    | Import   t
+    | Let      t
+    | Of       t
+    | Return   t
+    | Break    t
+    | Switch   t
+ (* | This     t *)
+ (* | Void     t *)
+    | While    t
+ (* | With     t *)
 
     (* TypeScript keywords *)
 
-    | As        _ -> "as"
-    | Namespace _ -> "namespace"
-    | Type      _ -> "type"
+    | As        t
+    | Namespace t
+    | Type      t -> t#payload
 
     (* Virtual tokens *)
 
@@ -539,9 +539,9 @@ module T =
     let keywords = [
         (* JavaScript Keywords *)
 
-       (* (fun reg -> Break   (wrap reg)); *)
+    (* (fun reg -> Break   (wrap "break" reg)); *)
        (fun reg -> Case    (wrap "case"         reg));
-       (* (fun reg -> Class   (wrap reg)); *)
+    (* (fun reg -> Class   (wrap "class" reg)); *)
        (fun reg -> Const   (wrap "const"        reg));
        (fun reg -> Else    (wrap "else"         reg));
        (fun reg -> Default (wrap "default"      reg));
@@ -554,16 +554,16 @@ module T =
        (fun reg -> Return  (wrap "return"       reg));
        (fun reg -> Break   (wrap "break"        reg));
        (fun reg -> Switch  (wrap "switch"       reg));
-       (* (fun reg -> This    (wrap reg)); *)
-       (* (fun reg -> Void    (wrap reg)); *)
+    (* (fun reg -> This    (wrap "this" reg)); *)
+    (* (fun reg -> Void    (wrap "void" reg)); *)
        (fun reg -> While   (wrap "while"        reg));
-       (* (fun reg -> With    (wrap reg)); *)
+    (* (fun reg -> With    (wrap "with" reg)); *)
 
        (* TypeScript keywords *)
 
        (fun reg -> As        (wrap "as"         reg));
        (fun reg -> Namespace (wrap "namespace"  reg));
-       (fun reg -> Type      (wrap "type"       reg));
+       (fun reg -> Type      (wrap "type"       reg))
     ]
 
     let keywords =
@@ -652,8 +652,8 @@ module T =
       (* Symbols specific to JsLIGO *)
 
       | "%"   -> Ok (REM      (wrap lexeme region))
-    (* | "++"  -> Ok (PLUS2    region)
-      | "--"  -> Ok (MINUS2   region) *)
+   (* | "++"  -> Ok (PLUS2    (wrap lexeme region))
+      | "--"  -> Ok (MINUS2   (wrap lexeme region)) *)
 
       | "..." -> Ok (ELLIPSIS (wrap lexeme region))
 
@@ -661,11 +661,11 @@ module T =
       | "&&"  -> Ok (BOOL_AND (wrap lexeme region))
       | "!"   -> Ok (BOOL_NOT (wrap lexeme region))
 
-   (* | "&"   -> Ok (BIT_AND  region)
-      | "~"   -> Ok (BIT_NOT  region)
-      | "^"   -> Ok (BIT_XOR  region)
-      | "<<<" -> Ok (SHIFT_L  region)
-      | ">>>" -> Ok (SHIFT_R  region) *)
+   (* | "&"   -> Ok (BIT_AND  (wrap lexeme region))
+      | "~"   -> Ok (BIT_NOT  (wrap lexeme region))
+      | "^"   -> Ok (BIT_XOR  (wrap lexeme region))
+      | "<<<" -> Ok (SHIFT_L  (wrap lexeme region))
+      | ">>>" -> Ok (SHIFT_R  (wrap lexeme region)) *)
 
       | "==" -> Ok (EQ2      (wrap lexeme region))
       | "!=" -> Ok (NE       (wrap lexeme region))
@@ -674,15 +674,15 @@ module T =
       | "-="  -> Ok (MINUS_EQ (wrap lexeme region))
       | "*="  -> Ok (MULT_EQ  (wrap lexeme region))
       | "%="  -> Ok (REM_EQ   (wrap lexeme region))
-      | "/="   -> Ok (DIV_EQ  (wrap lexeme region))
+      | "/="  -> Ok (DIV_EQ   (wrap lexeme region))
 
-   (* | "<<<=" -> Ok (SL_EQ   region)
-      | ">>>=" -> Ok (SR_EQ   region)
-      | "&="   -> Ok (AND_EQ  region)
-      | "|="   -> Ok (OR_EQ   region)
-      | "^="   -> Ok (XOR_EQ  region) *)
+   (* | "<<<=" -> Ok (SL_EQ   (wrap lexeme region))
+      | ">>>=" -> Ok (SR_EQ   (wrap lexeme region))
+      | "&="   -> Ok (AND_EQ  (wrap lexeme region))
+      | "|="   -> Ok (OR_EQ   (wrap lexeme region))
+      | "^="   -> Ok (XOR_EQ  (wrap lexeme region)) *)
 
-      | "=>"   -> Ok (ARROW   (wrap lexeme region))
+      | "=>"   -> Ok (ARROW (wrap lexeme region))
 
       (* Invalid symbols *)
 

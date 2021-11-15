@@ -51,32 +51,32 @@ module T =
 
     (* Symbols *)
 
-    | SEMI     of lexeme wrap  (* ";"   *)
-    | COMMA    of lexeme wrap  (* ","   *)
-    | LPAR     of lexeme wrap  (* "("   *)
-    | RPAR     of lexeme wrap  (* ")"   *)
-    | LBRACE   of lexeme wrap  (* "{"   *)
-    | RBRACE   of lexeme wrap  (* "}"   *)
-    | LBRACKET of lexeme wrap  (* "["   *)
-    | RBRACKET of lexeme wrap  (* "]"   *)
-    | SHARP    of lexeme wrap  (* "#"   *)
-    | VBAR     of lexeme wrap  (* "|"   *)
-    | ARROW    of lexeme wrap  (* "->"  *)
-    | ASS      of lexeme wrap  (* ":="  *)
-    | EQ       of lexeme wrap  (* "="   *)
-    | COLON    of lexeme wrap  (* ":"   *)
-    | LT       of lexeme wrap  (* "<"   *)
-    | LE       of lexeme wrap  (* "<="  *)
-    | GT       of lexeme wrap  (* ">"   *)
-    | GE       of lexeme wrap  (* ">="  *)
-    | NE       of lexeme wrap  (* "=/=" *)
-    | PLUS     of lexeme wrap  (* "+"   *)
-    | MINUS    of lexeme wrap  (* "-"   *)
-    | SLASH    of lexeme wrap  (* "/"   *)
-    | TIMES    of lexeme wrap  (* "*"   *)
-    | DOT      of lexeme wrap  (* "."   *)
-    | WILD     of lexeme wrap  (* "_"   *)
-    | CARET    of lexeme wrap  (* "^"   *)
+    | SEMI     of lexeme wrap  (* ;   *)
+    | COMMA    of lexeme wrap  (* ,   *)
+    | LPAR     of lexeme wrap  (* (   *)
+    | RPAR     of lexeme wrap  (* )   *)
+    | LBRACE   of lexeme wrap  (* {   *)
+    | RBRACE   of lexeme wrap  (* }   *)
+    | LBRACKET of lexeme wrap  (* [   *)
+    | RBRACKET of lexeme wrap  (* ]   *)
+    | SHARP    of lexeme wrap  (* #   *)
+    | VBAR     of lexeme wrap  (* |   *)
+    | ARROW    of lexeme wrap  (* ->  *)
+    | ASS      of lexeme wrap  (* :=  *)
+    | EQ       of lexeme wrap  (* =   *)
+    | COLON    of lexeme wrap  (* :   *)
+    | LT       of lexeme wrap  (* <   *)
+    | LE       of lexeme wrap  (* <=  *)
+    | GT       of lexeme wrap  (* >   *)
+    | GE       of lexeme wrap  (* >=  *)
+    | NE       of lexeme wrap  (* =/= *)
+    | PLUS     of lexeme wrap  (* +   *)
+    | MINUS    of lexeme wrap  (* -   *)
+    | SLASH    of lexeme wrap  (* /   *)
+    | TIMES    of lexeme wrap  (* *   *)
+    | DOT      of lexeme wrap  (* .   *)
+    | WILD     of lexeme wrap  (* _   *)
+    | CARET    of lexeme wrap  (* ^   *)
 
     (* Keywords *)
 
@@ -353,71 +353,71 @@ module T =
 
     (* Symbols *)
 
-    | SEMI     _ -> ";"
-    | COMMA    _ -> ","
-    | LPAR     _ -> "("
-    | RPAR     _ -> ")"
-    | LBRACE   _ -> "{"
-    | RBRACE   _ -> "}"
-    | LBRACKET _ -> "["
-    | RBRACKET _ -> "]"
-    | SHARP    _ -> "#"
-    | VBAR     _ -> "|"
-    | ARROW    _ -> "->"
-    | ASS      _ -> ":="
-    | EQ       _ -> "="
-    | COLON    _ -> ":"
-    | LT       _ -> "<"
-    | LE       _ -> "<="
-    | GT       _ -> ">"
-    | GE       _ -> ">="
-    | NE       _ -> "=/="
-    | PLUS     _ -> "+"
-    | MINUS    _ -> "-"
-    | SLASH    _ -> "/"
-    | TIMES    _ -> "*"
-    | DOT      _ -> "."
-    | WILD     _ -> "_"
-    | CARET    _ -> "^"
+    | SEMI     t
+    | COMMA    t
+    | LPAR     t
+    | RPAR     t
+    | LBRACE   t
+    | RBRACE   t
+    | LBRACKET t
+    | RBRACKET t
+    | SHARP    t
+    | VBAR     t
+    | ARROW    t
+    | ASS      t
+    | EQ       t
+    | COLON    t
+    | LT       t
+    | LE       t
+    | GT       t
+    | GE       t
+    | NE       t
+    | PLUS     t
+    | MINUS    t
+    | SLASH    t
+    | TIMES    t
+    | DOT      t
+    | WILD     t
+    | CARET    t
 
     (* Keywords *)
 
-    | And       _ -> "and"
-    | Begin     _ -> "begin"
-    | BigMap    _ -> "big_map"
-    | Block     _ -> "block"
-    | Case      _ -> "case"
-    | Const     _ -> "const"
-    | Contains  _ -> "contains"
-    | Else      _ -> "else"
-    | End       _ -> "end"
-    | For       _ -> "for"
-    | From      _ -> "from"
-    | Function  _ -> "function"
-    | Recursive _ -> "recursive"
-    | If        _ -> "if"
-    | In        _ -> "in"
-    | Is        _ -> "is"
-    | List      _ -> "list"
-    | Map       _ -> "map"
-    | Mod       _ -> "mod"
-    | Nil       _ -> "nil"
-    | Not       _ -> "not"
-    | Of        _ -> "of"
-    | Or        _ -> "or"
-    | Patch     _ -> "patch"
-    | Record    _ -> "record"
-    | Remove    _ -> "remove"
-    | Set       _ -> "set"
-    | Skip      _ -> "skip"
-    | Step      _ -> "step"
-    | Then      _ -> "then"
-    | To        _ -> "to"
-    | Type      _ -> "type"
-    | Var       _ -> "var"
-    | While     _ -> "while"
-    | With      _ -> "with"
-    | Module    _ -> "module"
+    | And       t
+    | Begin     t
+    | BigMap    t
+    | Block     t
+    | Case      t
+    | Const     t
+    | Contains  t
+    | Else      t
+    | End       t
+    | For       t
+    | From      t
+    | Function  t
+    | Recursive t
+    | If        t
+    | In        t
+    | Is        t
+    | List      t
+    | Map       t
+    | Mod       t
+    | Nil       t
+    | Not       t
+    | Of        t
+    | Or        t
+    | Patch     t
+    | Record    t
+    | Remove    t
+    | Set       t
+    | Skip      t
+    | Step      t
+    | Then      t
+    | To        t
+    | Type      t
+    | Var       t
+    | While     t
+    | With      t
+    | Module    t -> t#payload
 
     (* End-Of-File *)
 
@@ -438,42 +438,42 @@ module T =
     (* Keywords *)
 
     let keywords = [
-      (fun reg -> And       (wrap "And"       reg));
-      (fun reg -> Begin     (wrap "Begin"     reg));
-      (fun reg -> BigMap    (wrap "BigMap"    reg));
-      (fun reg -> Block     (wrap "Block"     reg));
-      (fun reg -> Case      (wrap "Case"      reg));
-      (fun reg -> Const     (wrap "Const"     reg));
-      (fun reg -> Contains  (wrap "Contains"  reg));
-      (fun reg -> Else      (wrap "Else"      reg));
-      (fun reg -> End       (wrap "End"       reg));
-      (fun reg -> For       (wrap "For"       reg));
-      (fun reg -> From      (wrap "From"      reg));
-      (fun reg -> Function  (wrap "Function"  reg));
-      (fun reg -> If        (wrap "If"        reg));
-      (fun reg -> In        (wrap "In"        reg));
-      (fun reg -> Is        (wrap "Is"        reg));
-      (fun reg -> List      (wrap "List"      reg));
-      (fun reg -> Map       (wrap "Map"       reg));
-      (fun reg -> Mod       (wrap "Mod"       reg));
-      (fun reg -> Nil       (wrap "Nil"       reg));
-      (fun reg -> Not       (wrap "Not"       reg));
-      (fun reg -> Of        (wrap "Of"        reg));
-      (fun reg -> Or        (wrap "Or"        reg));
-      (fun reg -> Patch     (wrap "Patch"     reg));
-      (fun reg -> Record    (wrap "Record"    reg));
-      (fun reg -> Recursive (wrap "Recursive" reg));
-      (fun reg -> Remove    (wrap "Remove"    reg));
-      (fun reg -> Set       (wrap "Set"       reg));
-      (fun reg -> Skip      (wrap "Skip"      reg));
-      (fun reg -> Step      (wrap "Step"      reg));
-      (fun reg -> Then      (wrap "Then"      reg));
-      (fun reg -> To        (wrap "To"        reg));
-      (fun reg -> Type      (wrap "Type"      reg));
-      (fun reg -> Var       (wrap "Var"       reg));
-      (fun reg -> While     (wrap "While"     reg));
-      (fun reg -> With      (wrap "With"      reg));
-      (fun reg -> Module    (wrap "Module"    reg))
+      (fun reg -> And       (wrap "and"       reg));
+      (fun reg -> Begin     (wrap "begin"     reg));
+      (fun reg -> BigMap    (wrap "big_map"   reg));
+      (fun reg -> Block     (wrap "block"     reg));
+      (fun reg -> Case      (wrap "case"      reg));
+      (fun reg -> Const     (wrap "const"     reg));
+      (fun reg -> Contains  (wrap "contains"  reg));
+      (fun reg -> Else      (wrap "else"      reg));
+      (fun reg -> End       (wrap "end"       reg));
+      (fun reg -> For       (wrap "for"       reg));
+      (fun reg -> From      (wrap "from"      reg));
+      (fun reg -> Function  (wrap "function"  reg));
+      (fun reg -> If        (wrap "if"        reg));
+      (fun reg -> In        (wrap "in"        reg));
+      (fun reg -> Is        (wrap "is"        reg));
+      (fun reg -> List      (wrap "list"      reg));
+      (fun reg -> Map       (wrap "map"       reg));
+      (fun reg -> Mod       (wrap "mod"       reg));
+      (fun reg -> Nil       (wrap "nil"       reg));
+      (fun reg -> Not       (wrap "not"       reg));
+      (fun reg -> Of        (wrap "of"        reg));
+      (fun reg -> Or        (wrap "or"        reg));
+      (fun reg -> Patch     (wrap "patch"     reg));
+      (fun reg -> Record    (wrap "record"    reg));
+      (fun reg -> Recursive (wrap "recursive" reg));
+      (fun reg -> Remove    (wrap "remove"    reg));
+      (fun reg -> Set       (wrap "set"       reg));
+      (fun reg -> Skip      (wrap "skip"      reg));
+      (fun reg -> Step      (wrap "step"      reg));
+      (fun reg -> Then      (wrap "then"      reg));
+      (fun reg -> To        (wrap "to"        reg));
+      (fun reg -> Type      (wrap "type"      reg));
+      (fun reg -> Var       (wrap "var"       reg));
+      (fun reg -> While     (wrap "while"     reg));
+      (fun reg -> With      (wrap "with"      reg));
+      (fun reg -> Module    (wrap "module"    reg))
     ]
 
     let keywords =

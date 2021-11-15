@@ -51,34 +51,34 @@ module T =
 
     (* Symbols *)
 
-    | ARROW    of lexeme wrap  (* "->" *)
-    | CONS     of lexeme wrap  (* "::" *)
-    | CARET    of lexeme wrap  (* "^"  *)
-    | MINUS    of lexeme wrap  (* "-"  *)
-    | PLUS     of lexeme wrap  (* "+"  *)
-    | SLASH    of lexeme wrap  (* "/"  *)
-    | TIMES    of lexeme wrap  (* "*"  *)
-    | LPAR     of lexeme wrap  (* "("  *)
-    | RPAR     of lexeme wrap  (* ")"  *)
-    | LBRACKET of lexeme wrap  (* "["  *)
-    | RBRACKET of lexeme wrap  (* "]"  *)
-    | LBRACE   of lexeme wrap  (* "{"  *)
-    | RBRACE   of lexeme wrap  (* "}"  *)
-    | COMMA    of lexeme wrap  (* ","  *)
-    | SEMI     of lexeme wrap  (* ";"  *)
-    | VBAR     of lexeme wrap  (* "|"  *)
-    | COLON    of lexeme wrap  (* ":"  *)
-    | DOT      of lexeme wrap  (* "."  *)
-    | WILD     of lexeme wrap  (*  "_" *)
-    | EQ       of lexeme wrap  (* "="  *)
-    | NE       of lexeme wrap  (* "<>" *)
-    | LT       of lexeme wrap  (* "<"  *)
-    | GT       of lexeme wrap  (* ">"  *)
-    | LE       of lexeme wrap  (* "<=" *)
-    | GE       of lexeme wrap  (* ">=" *)
-    | BOOL_OR  of lexeme wrap  (* "||" *)
-    | BOOL_AND of lexeme wrap  (* "&&" *)
-    | QUOTE    of lexeme wrap  (* "'"  *)
+    | ARROW    of lexeme wrap  (* -> *)
+    | CONS     of lexeme wrap  (* :: *)
+    | CARET    of lexeme wrap  (* ^  *)
+    | MINUS    of lexeme wrap  (* -  *)
+    | PLUS     of lexeme wrap  (* +  *)
+    | SLASH    of lexeme wrap  (* /  *)
+    | TIMES    of lexeme wrap  (* *  *)
+    | LPAR     of lexeme wrap  (* (  *)
+    | RPAR     of lexeme wrap  (* )  *)
+    | LBRACKET of lexeme wrap  (* [  *)
+    | RBRACKET of lexeme wrap  (* ]  *)
+    | LBRACE   of lexeme wrap  (* {  *)
+    | RBRACE   of lexeme wrap  (* }  *)
+    | COMMA    of lexeme wrap  (* ,  *)
+    | SEMI     of lexeme wrap  (* ;  *)
+    | VBAR     of lexeme wrap  (* |  *)
+    | COLON    of lexeme wrap  (* :  *)
+    | DOT      of lexeme wrap  (* .  *)
+    | WILD     of lexeme wrap  (* _  *)
+    | EQ       of lexeme wrap  (* =  *)
+    | NE       of lexeme wrap  (* <> *)
+    | LT       of lexeme wrap  (* <  *)
+    | GT       of lexeme wrap  (* >  *)
+    | LE       of lexeme wrap  (* <= *)
+    | GE       of lexeme wrap  (* >= *)
+    | BOOL_OR  of lexeme wrap  (* || *)
+    | BOOL_AND of lexeme wrap  (* && *)
+    | QUOTE    of lexeme wrap  (* '  *)
 
     (* Keywords *)
 
@@ -338,60 +338,60 @@ module T =
 
     (* Symbols *)
 
-    | ARROW    _ -> "->"
-    | CONS     _ -> "::"
-    | CARET    _ -> "^"
-    | MINUS    _ -> "-"
-    | PLUS     _ -> "+"
-    | SLASH    _ -> "/"
-    | TIMES    _ -> "*"
-    | LPAR     _ -> "("
-    | RPAR     _ -> ")"
-    | LBRACKET _ -> "["
-    | RBRACKET _ -> "]"
-    | LBRACE   _ -> "{"
-    | RBRACE   _ -> "}"
-    | COMMA    _ -> ","
-    | SEMI     _ -> ";"
-    | VBAR     _ -> "|"
-    | COLON    _ -> ":"
-    | DOT      _ -> "."
-    | WILD     _ -> "_"
-    | EQ       _ -> "="
-    | NE       _ -> "<>"
-    | LT       _ -> "<"
-    | GT       _ -> ">"
-    | LE       _ -> "<="
-    | GE       _ -> ">="
-    | BOOL_OR  _ -> "||"
-    | BOOL_AND _ -> "&&"
-    | QUOTE    _ -> "'"
+    | ARROW    t
+    | CONS     t
+    | CARET    t
+    | MINUS    t
+    | PLUS     t
+    | SLASH    t
+    | TIMES    t
+    | LPAR     t
+    | RPAR     t
+    | LBRACKET t
+    | RBRACKET t
+    | LBRACE   t
+    | RBRACE   t
+    | COMMA    t
+    | SEMI     t
+    | VBAR     t
+    | COLON    t
+    | DOT      t
+    | WILD     t
+    | EQ       t
+    | NE       t
+    | LT       t
+    | GT       t
+    | LE       t
+    | GE       t
+    | BOOL_OR  t
+    | BOOL_AND t
+    | QUOTE    t
 
     (* Keywords *)
 
-    | Begin  _ -> "begin"
-    | Else   _ -> "else"
-    | End    _ -> "end"
-    | Fun    _ -> "fun"
-    | Rec    _ -> "rec"
-    | If     _ -> "if"
-    | In     _ -> "in"
-    | Let    _ -> "let"
-    | Match  _ -> "match"
-    | Mod    _ -> "mod"
-    | Land   _ -> "land"
-    | Lor    _ -> "lor"
-    | Lxor   _ -> "lxor"
-    | Lsl    _ -> "lsl"
-    | Lsr    _ -> "lsr"
-    | Not    _ -> "not"
-    | Of     _ -> "of"
-    | Or     _ -> "or"
-    | Type   _ -> "type"
-    | Then   _ -> "then"
-    | With   _ -> "with"
-    | Module _ -> "module"
-    | Struct _ -> "struct"
+    | Begin  t
+    | Else   t
+    | End    t
+    | Fun    t
+    | Rec    t
+    | If     t
+    | In     t
+    | Let    t
+    | Match  t
+    | Mod    t
+    | Land   t
+    | Lor    t
+    | Lxor   t
+    | Lsl    t
+    | Lsr    t
+    | Not    t
+    | Of     t
+    | Or     t
+    | Type   t
+    | Then   t
+    | With   t
+    | Module t
+    | Struct t -> t#payload
 
     (* End-Of-File *)
 
@@ -412,27 +412,27 @@ module T =
     (* Keywords *)
 
     let keywords = [
-      (fun reg -> Begin     (wrap "begin" reg));
-      (fun reg -> Else      (wrap "else" reg));
-      (fun reg -> End       (wrap "fnd" reg));
-      (fun reg -> Fun       (wrap "fun" reg));
-      (fun reg -> Rec       (wrap "rec" reg));
-      (fun reg -> If        (wrap "if" reg));
-      (fun reg -> In        (wrap "in" reg));
-      (fun reg -> Let       (wrap "let" reg));
-      (fun reg -> Match     (wrap "match" reg));
-      (fun reg -> Mod       (wrap "mod" reg));
-      (fun reg -> Land      (wrap "land" reg));
-      (fun reg -> Lor       (wrap "lor" reg));
-      (fun reg -> Lxor      (wrap "lxor" reg));
-      (fun reg -> Lsl       (wrap "lsl" reg));
-      (fun reg -> Lsr       (wrap "lsr" reg));
-      (fun reg -> Not       (wrap "not" reg));
-      (fun reg -> Of        (wrap "of" reg));
-      (fun reg -> Or        (wrap "or" reg));
-      (fun reg -> Then      (wrap "then" reg));
-      (fun reg -> Type      (wrap "type" reg));
-      (fun reg -> With      (wrap "with" reg));
+      (fun reg -> Begin     (wrap "begin"  reg));
+      (fun reg -> Else      (wrap "else"   reg));
+      (fun reg -> End       (wrap "fnd"    reg));
+      (fun reg -> Fun       (wrap "fun"    reg));
+      (fun reg -> Rec       (wrap "rec"    reg));
+      (fun reg -> If        (wrap "if"     reg));
+      (fun reg -> In        (wrap "in"     reg));
+      (fun reg -> Let       (wrap "let"    reg));
+      (fun reg -> Match     (wrap "match"  reg));
+      (fun reg -> Mod       (wrap "mod"    reg));
+      (fun reg -> Land      (wrap "land"   reg));
+      (fun reg -> Lor       (wrap "lor"    reg));
+      (fun reg -> Lxor      (wrap "lxor"   reg));
+      (fun reg -> Lsl       (wrap "lsl"    reg));
+      (fun reg -> Lsr       (wrap "lsr"    reg));
+      (fun reg -> Not       (wrap "not"    reg));
+      (fun reg -> Of        (wrap "of"     reg));
+      (fun reg -> Or        (wrap "or"     reg));
+      (fun reg -> Then      (wrap "then"   reg));
+      (fun reg -> Type      (wrap "type"   reg));
+      (fun reg -> With      (wrap "with"   reg));
       (fun reg -> Module    (wrap "module" reg));
       (fun reg -> Struct    (wrap "struct" reg))
     ]

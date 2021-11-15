@@ -51,36 +51,36 @@ module T =
 
     (* Symbols *)
 
-    | PLUS2    of lexeme wrap (* "++"  *)
-    | MINUS    of lexeme wrap (* "-"   *)
-    | PLUS     of lexeme wrap (* "+"   *)
-    | SLASH    of lexeme wrap (* "/"   *)
-    | TIMES    of lexeme wrap (* "*"   *)
-    | LPAR     of lexeme wrap (* "("   *)
-    | RPAR     of lexeme wrap (* ")"   *)
-    | LBRACKET of lexeme wrap (* "["   *)
-    | RBRACKET of lexeme wrap (* "]"   *)
-    | LBRACE   of lexeme wrap (* "{"   *)
-    | RBRACE   of lexeme wrap (* "}"   *)
-    | COMMA    of lexeme wrap (* ","   *)
-    | SEMI     of lexeme wrap (* ";"   *)
-    | VBAR     of lexeme wrap (* "|"   *)
-    | COLON    of lexeme wrap (* ":"   *)
-    | DOT      of lexeme wrap (* "."   *)
-    | ELLIPSIS of lexeme wrap (* "..." *)
-    | ARROW    of lexeme wrap (* "=>"  *)
-    | WILD     of lexeme wrap (* "_"   *)
-    | EQ       of lexeme wrap (* "="   *)
-    | EQ2      of lexeme wrap (* "=="  *)
-    | NE       of lexeme wrap (* "!="  *)
-    | LT       of lexeme wrap (* "<"   *)
-    | GT       of lexeme wrap (* ">"   *)
-    | LE       of lexeme wrap (* "<="  *)
-    | GE       of lexeme wrap (* ">="  *)
-    | BOOL_OR  of lexeme wrap (* "||"  *)
-    | BOOL_AND of lexeme wrap (* "&&"  *)
-    | NOT      of lexeme wrap (* "!"   *)
-    | QUOTE    of lexeme wrap (* "'"   *)
+    | PLUS2    of lexeme wrap (* ++  *)
+    | MINUS    of lexeme wrap (* -   *)
+    | PLUS     of lexeme wrap (* +   *)
+    | SLASH    of lexeme wrap (* /   *)
+    | TIMES    of lexeme wrap (* *   *)
+    | LPAR     of lexeme wrap (* (   *)
+    | RPAR     of lexeme wrap (* )   *)
+    | LBRACKET of lexeme wrap (* [   *)
+    | RBRACKET of lexeme wrap (* ]   *)
+    | LBRACE   of lexeme wrap (* {   *)
+    | RBRACE   of lexeme wrap (* }   *)
+    | COMMA    of lexeme wrap (* ,   *)
+    | SEMI     of lexeme wrap (* ;   *)
+    | VBAR     of lexeme wrap (* |   *)
+    | COLON    of lexeme wrap (* :   *)
+    | DOT      of lexeme wrap (* .   *)
+    | ELLIPSIS of lexeme wrap (* ... *)
+    | ARROW    of lexeme wrap (* =>  *)
+    | WILD     of lexeme wrap (* _   *)
+    | EQ       of lexeme wrap (* =   *)
+    | EQ2      of lexeme wrap (* ==  *)
+    | NE       of lexeme wrap (* !=  *)
+    | LT       of lexeme wrap (* <   *)
+    | GT       of lexeme wrap (* >   *)
+    | LE       of lexeme wrap (* <=  *)
+    | GE       of lexeme wrap (* >=  *)
+    | BOOL_OR  of lexeme wrap (* ||  *)
+    | BOOL_AND of lexeme wrap (* &&  *)
+    | NOT      of lexeme wrap (* !   *)
+    | QUOTE    of lexeme wrap (* '   *)
 
     (* Keywords *)
 
@@ -326,53 +326,53 @@ module T =
 
     (* Symbols *)
 
-    | PLUS2    _ -> "++"
-    | MINUS    _ -> "-"
-    | PLUS     _ -> "+"
-    | SLASH    _ -> "/"
-    | TIMES    _ -> "*"
-    | LPAR     _ -> "("
-    | RPAR     _ -> ")"
-    | LBRACKET _ -> "["
-    | RBRACKET _ -> "]"
-    | LBRACE   _ -> "{"
-    | RBRACE   _ -> "}"
-    | COMMA    _ -> ","
-    | SEMI     _ -> ";"
-    | VBAR     _ -> "|"
-    | COLON    _ -> ":"
-    | DOT      _ -> "."
-    | ELLIPSIS _ -> "..."
-    | WILD     _ -> "_"
-    | EQ       _ -> "="
-    | EQ2      _ -> "=="
-    | NE       _ -> "!="
-    | LT       _ -> "<"
-    | GT       _ -> ">"
-    | LE       _ -> "<="
-    | GE       _ -> ">="
-    | ARROW    _ -> "=>"
-    | BOOL_OR  _ -> "||"
-    | BOOL_AND _ -> "&&"
-    | NOT      _ -> "!"
-    | QUOTE    _ -> "'"
+    | PLUS2    t
+    | MINUS    t
+    | PLUS     t
+    | SLASH    t
+    | TIMES    t
+    | LPAR     t
+    | RPAR     t
+    | LBRACKET t
+    | RBRACKET t
+    | LBRACE   t
+    | RBRACE   t
+    | COMMA    t
+    | SEMI     t
+    | VBAR     t
+    | COLON    t
+    | DOT      t
+    | ELLIPSIS t
+    | WILD     t
+    | EQ       t
+    | EQ2      t
+    | NE       t
+    | LT       t
+    | GT       t
+    | LE       t
+    | GE       t
+    | ARROW    t
+    | BOOL_OR  t
+    | BOOL_AND t
+    | NOT      t
+    | QUOTE    t
 
     (* Keywords *)
 
-    | Else    _ -> "else"
-    | If      _ -> "if"
-    | Let     _ -> "let"
-    | Mod     _ -> "mod"
-    | Land    _ -> "land"
-    | Lor     _ -> "lor"
-    | Lxor    _ -> "lxor"
-    | Lsl     _ -> "lsl"
-    | Lsr     _ -> "lsr"
-    | Or      _ -> "or"
-    | Rec     _ -> "rec"
-    | Switch  _ -> "switch"
-    | Type    _ -> "type"
-    | Module  _ -> "module"
+    | Else    t
+    | If      t
+    | Let     t
+    | Mod     t
+    | Land    t
+    | Lor     t
+    | Lxor    t
+    | Lsl     t
+    | Lsr     t
+    | Or      t
+    | Rec     t
+    | Switch  t
+    | Type    t
+    | Module  t -> t#payload
 
     (* Virtual tokens *)
 
@@ -397,20 +397,20 @@ module T =
     (* Keywords *)
 
     let keywords = [
-      (fun reg -> Else   (wrap "Else"   reg));
-      (fun reg -> If     (wrap "If"     reg));
-      (fun reg -> Let    (wrap "Let"    reg));
-      (fun reg -> Rec    (wrap "Rec"    reg));
-      (fun reg -> Switch (wrap "Switch" reg));
-      (fun reg -> Mod    (wrap "Mod"    reg));
-      (fun reg -> Land   (wrap "Land"   reg));
-      (fun reg -> Lor    (wrap "Lor"    reg));
-      (fun reg -> Lxor   (wrap "Lxor"   reg));
-      (fun reg -> Lsl    (wrap "Lsl"    reg));
-      (fun reg -> Lsr    (wrap "Lsr"    reg));
-      (fun reg -> Or     (wrap "Or"     reg));
-      (fun reg -> Type   (wrap "Type"   reg));
-      (fun reg -> Module (wrap "Module" reg))
+      (fun reg -> Else   (wrap "else"   reg));
+      (fun reg -> If     (wrap "if"     reg));
+      (fun reg -> Let    (wrap "let"    reg));
+      (fun reg -> Rec    (wrap "rec"    reg));
+      (fun reg -> Switch (wrap "switch" reg));
+      (fun reg -> Mod    (wrap "mod"    reg));
+      (fun reg -> Land   (wrap "land"   reg));
+      (fun reg -> Lor    (wrap "lor"    reg));
+      (fun reg -> Lxor   (wrap "lxor"   reg));
+      (fun reg -> Lsl    (wrap "lsl"    reg));
+      (fun reg -> Lsr    (wrap "lsr"    reg));
+      (fun reg -> Or     (wrap "or"     reg));
+      (fun reg -> Type   (wrap "type"   reg));
+      (fun reg -> Module (wrap "module" reg))
     ]
 
     let keywords =

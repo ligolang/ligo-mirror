@@ -7,6 +7,10 @@ module Core   = LexerLib.Core
 module Region = Simple_utils.Region
 module Utils  = Simple_utils.Utils
 
+(* LIGO dependencies *)
+
+module Wrap = Lexing_shared.Wrap
+
 (* Signature *)
 
 module type S =
@@ -31,11 +35,7 @@ type lex_unit = token Core.lex_unit
 
 (* Virtual token *)
 
-let es6fun = Token.ES6FUN (object 
-  method region = Region.ghost
-  method attributes = []
-  method payload = ""
-end)
+let es6fun = Token.ES6FUN (Wrap.wrap_ghost "")
 
 (* Inserting the ES6FUN virtual token *)
 
@@ -67,7 +67,7 @@ let insert_es6fun_token tokens =
     (* let a : (A|B) => int = (_a:(|A|B)) => 3 *)
     | (UIdent _ as c) :: (VBAR _ as vbar) ::  rest ->
       inner (vbar :: c :: result) open_parentheses rest
-    
+
     | (_ as hd) :: (UIdent _ as c) :: rest ->
       List.rev_append (c :: hd :: result) rest
 
