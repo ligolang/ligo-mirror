@@ -33,7 +33,8 @@
 
 (* Vendor dependencies *)
 
-module Region = Simple_utils.Region
+module Region    = Simple_utils.Region
+module Directive = LexerLib.Directive
 
 (* TOKENS *)
 
@@ -50,7 +51,7 @@ module type S =
        a token is that the latter is the textual representation of the
        OCaml value denoting the token (its abstract syntax), rather
        than its lexeme (concrete syntax). Note that [concrete] is used
-       by the modukle [UnlexerGen] to transform the textual
+       by the module [UnlexerGen] to transform the textual
        representation of a token (not a lexeme) into a lexeme. *)
 
     val to_lexeme : token -> lexeme
@@ -59,6 +60,10 @@ module type S =
     val concrete  : string -> lexeme
 
     (* INJECTIONS *)
+
+    (* Preprocessing directives *)
+
+    val mk_directive : Directive.t -> token
 
     (* Integers *)
 
@@ -98,19 +103,22 @@ module type S =
     val mk_lang :
       lexeme Region.reg -> Region.t -> (token, lang_err) result
 
+    (* Bytes *)
+
+    val mk_bytes : lexeme -> string -> Region.t -> token
+
     (* Others *)
 
     val mk_ident    : lexeme -> Region.t -> token
     val mk_string   : lexeme -> Region.t -> token
     val mk_verbatim : lexeme -> Region.t -> token
-    val mk_bytes    : lexeme -> Region.t -> token
     val mk_uident   : lexeme -> Region.t -> token
     val mk_attr     : lexeme -> Region.t -> token
     val mk_eof      : Region.t -> token
 
     (* Predicates *)
 
-    val is_eof      : token -> bool
+    val is_eof : token -> bool
 
     val support_string_delimiter : char -> bool
     val verbatim_delimiters : string * string

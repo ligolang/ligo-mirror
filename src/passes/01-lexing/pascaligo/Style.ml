@@ -42,13 +42,12 @@ let is_int    = function Token.Int _ -> true | _ -> false
 let is_string = function Token.String _ -> true | _ -> false
 let is_bytes  = function Token.Bytes _ -> true | _ -> false
 
+let hex_digits = ["A"; "B"; "C"; "D"; "E"; "F";
+                  "a"; "b"; "c"; "d"; "e"; "f"]
+
 let is_hexa = function
-  Token.UIdent t -> 
-    if t#payload = "A" || t#payload = "a"|| t#payload = "B"|| t#payload = "b"|| t#payload = "C"|| t#payload = "c"
-                 || t#payload = "D"|| t#payload = "d"|| t#payload = "E"|| t#payload = "e"|| t#payload = "F"|| t#payload = "f" then true
-    else 
-      false
-  | _ -> false
+  Token.UIdent t | Token.Ident t -> List.mem t#payload hex_digits
+| _ -> false
 
 let is_sym =
   let open Token in
@@ -61,7 +60,7 @@ let is_sym =
   | RBRACE _
   | LBRACKET _
   | RBRACKET _
-  | CONS _
+  | SHARP _
   | VBAR _
   | ARROW _
   | ASS _

@@ -97,7 +97,8 @@ module Make (Token : Token.S) =
 
     let mk_bytes bytes state buffer =
       let Core.{region; state; _} = state#sync buffer in
-      let token = Token.mk_bytes bytes region
+      let norm = Str.(global_replace (regexp "_") "" bytes) in
+      let token = Token.mk_bytes bytes norm region
       in Core.Token token, state
 
     (* Integers *)
@@ -245,8 +246,8 @@ let ident      = small (letter | '_' | digit)*
 let ext_ident  = (letter | digit | '_' | ':')+
 let uident     = capital (letter | '_' | digit)*
 let attr       = letter (letter | '_' | ':' | digit)*
-let hexa_digit = digit | ['A'-'F' 'a'-'f']
-let byte       = hexa_digit hexa_digit
+let hex_digit  = digit | ['A'-'F' 'a'-'f']
+let byte       = hex_digit hex_digit
 let byte_seq   = byte | byte (byte | '_')* byte
 let bytes      = "0x" (byte_seq? as bytes)
 let string     = [^'"' '\\' '\n']*  (* For strings of #include *)
@@ -254,24 +255,23 @@ let directive  = '#' (blank* as space) (small+ as id) (* For #include *)
 
 (* Symbols *)
 
-let common_sym     =   ";" | "," | "(" | ")"  | "[" | "]"  | "{" | "}"
+let     common_sym =   ";" | "," | "(" | ")"  | "[" | "]"  | "{" | "}"
                      | "=" | ":" | "|" | "." | "_" | "^"
                      | "+" | "-" | "*" | "/"  | "<" | "<=" | ">" | ">="
-let pascaligo_sym  = "->" | "=/=" | "#" | ":="
-let cameligo_sym   = "->" | "<>" | "::" | "||" | "&&" | "'"
-let reasonligo_sym = "!" | "=>" | "!=" | "==" | "++" | "..."
-                     | "||" | "&&"
-let jsligo_sym     = "++" | "--" | "..." | "?" | "&" | "!" | "~" | "%"
+let  pascaligo_sym = "->" | "=/=" | "#" | ":="
+let   cameligo_sym = "->" | "<>" | "::" | "||" | "&&" | "'"
+let reasonligo_sym = "!" | "=>" | "!=" | "==" | "++" | "..." | "||" | "&&"
+let     jsligo_sym = "++" | "--" | "..." | "?" | "&" | "!" | "~" | "%"
                      | "<<<" | "==" | "!=" | "+=" | "-=" | "*=" | "/="
                      | "%=" | "<<<=" | "&=" | "|="
                      | "^=" | "=>" (* | ">>>" | ">>>=" *)
 
 let symbol =
-  common_sym
-| pascaligo_sym
-| cameligo_sym
+      common_sym
+|  pascaligo_sym
+|   cameligo_sym
 | reasonligo_sym
-| jsligo_sym
+|     jsligo_sym
 
 (* RULES *)
 

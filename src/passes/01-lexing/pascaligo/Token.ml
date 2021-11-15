@@ -43,7 +43,7 @@ module T =
     | Bytes    of (lexeme * Hex.t) wrap
     | Int      of (lexeme * Z.t) wrap
     | Nat      of (lexeme * Z.t) wrap
-    | Mutez    of (lexeme * Z.t) wrap
+    | Mutez    of (lexeme * Int64.t) wrap
     | Ident    of lexeme wrap
     | UIdent   of lexeme wrap
     | Lang     of lexeme reg reg
@@ -228,7 +228,7 @@ module T =
     type token = t
 
     let proj_token = function
-        (* Preprocessing directives *)
+      (* Preprocessing directives *)
 
       Directive d ->
         Directive.project d
@@ -251,7 +251,7 @@ module T =
         t#region, sprintf "Nat (%S, %s)" s (Z.to_string n)
     | Mutez t ->
         let (s, n) = t#payload in
-        t#region, sprintf "Mutez (%S, %s)" s (Z.to_string n)
+        t#region, sprintf "Mutez (%S, %s)" s (Int64.to_string n)
     | Ident t ->
         t#region, sprintf "Ident %S" t#payload
     | UIdent t ->
@@ -340,11 +340,11 @@ module T =
 
       (* Literals *)
 
-    | String t   -> sprintf "%S" (String.escaped t#payload)
+    | String t   -> sprintf "%S" t#payload (* Escaped *)
     | Verbatim t -> String.escaped t#payload
     | Bytes t    -> fst t#payload
     | Int t
-    | Nat t
+    | Nat t      -> fst t#payload
     | Mutez t    -> fst t#payload
     | Ident t
     | UIdent t   -> t#payload
@@ -489,6 +489,10 @@ module T =
         Some mk_kwd -> Ok (mk_kwd region)
       |        None -> Error Invalid_keyword
 
+    (* Directives *)
+
+    let mk_directive dir = Directive dir
+
     (* Strings *)
 
     let mk_string lexeme region = String (wrap lexeme region)
@@ -499,9 +503,8 @@ module T =
 
     (* Bytes *)
 
-    let mk_bytes lexeme region =
-      let norm  = Str.(global_replace (regexp "_") "" lexeme) in
-      let value = lexeme, `Hex norm
+    let mk_bytes lexeme bytes region =
+      let value = lexeme, `Hex bytes
       in Bytes (wrap value region)
 
     (* Integers *)
@@ -510,16 +513,16 @@ module T =
 
     (* Natural numbers *)
 
-    type nat_err = Wrong_nat_syntax of string (* Not used in PascaLIGO *)
+    type nat_err = Wrong_nat_syntax of string (* Not PascaLIGO *)
 
-    let mk_nat nat z region = Ok (Nat (wrap (nat ^ "n", z) lexeme))
+    let mk_nat nat z region = Ok (Nat (wrap (nat ^ "n", z) region))
 
     (* Mutez *)
 
-    type mutez_err = Wrong_mutez_syntax of string (* Not used in PascaLIGO *)
+    type mutez_err = Wrong_mutez_syntax of string (* Not PascaLIGO *)
 
     let mk_mutez nat ~suffix int64 region =
-      Ok (Mutez (wrap (nat ^ suffix, int64) lexeme))
+      Ok (Mutez (wrap (nat ^ suffix, int64) region))
 
     (* End-Of-File *)
 
@@ -584,7 +587,7 @@ module T =
 
     (* Code injection *)
 
-    type lang_err = Wrong_lang_syntax of string (* Not used in PascaLIGO *)
+    type lang_err = Wrong_lang_syntax of string (* Not PascaLIGO *)
 
     let mk_lang lang region = Ok (Lang Region.{value=lang; region})
 

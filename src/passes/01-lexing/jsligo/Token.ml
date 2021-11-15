@@ -151,14 +151,13 @@ module T =
 
     let gen_sym prefix =
       let count = ref 0 in
-      fun () -> incr count;
-             prefix ^ string_of_int !count
+      fun () -> incr count; prefix ^ string_of_int !count
 
     let id_sym   = gen_sym "id"
     and ctor_sym = gen_sym "C"
 
     let concrete = function
-      (* Identifiers, labels, numbers and strings *)
+      (* Literals *)
 
       "Ident"    -> id_sym ()
     | "UIdent"   -> ctor_sym ()
@@ -268,6 +267,7 @@ module T =
 
     | _  -> "\\Unknown" (* Backslash meant to trigger an error *)
 
+
     (* Projections *)
 
     let sprintf = Printf.sprintf
@@ -275,7 +275,7 @@ module T =
     type token = t
 
     let proj_token = function
-        (* Preprocessing directives *)
+      (* Preprocessing directives *)
 
       Directive d -> Directive.project d
 
@@ -406,6 +406,8 @@ module T =
     | EOF t -> t#region, "EOF"
 
 
+    (* From tokens to lexemes *)
+
     let to_lexeme = function
       (* Directives *)
 
@@ -418,7 +420,7 @@ module T =
 
       (* Literals *)
 
-    | String t   -> sprintf "%S" (String.escaped t#payload)
+    | String t   -> sprintf "%S" t#payload  (* Escaped *)
     | Verbatim t -> String.escaped t#payload
     | Bytes t    -> fst t#payload
     | Int t      -> fst t#payload
@@ -520,6 +522,7 @@ module T =
 
     | EOF _ -> ""
 
+
     (* CONVERSIONS *)
 
     let to_string ~offsets mode token =
@@ -576,6 +579,10 @@ module T =
         Some mk_kwd -> Ok (mk_kwd region)
       |        None -> Error Invalid_keyword
 
+    (* Directives *)
+
+    let mk_directive dir = Directive dir
+
     (* Strings *)
 
     let mk_string lexeme region = String (wrap lexeme region)
@@ -586,8 +593,7 @@ module T =
 
     (* Bytes *)
 
-    let mk_bytes lexeme region =
-      let norm = Str.(global_replace (regexp "_") "" lexeme) in
+    let mk_bytes lexeme norm region =
       let value = lexeme, `Hex norm
       in Bytes (wrap value region)
 
@@ -643,7 +649,7 @@ module T =
       | ">"   -> Ok (GT       (wrap lexeme region))
       | ">="  -> Ok (GE       (wrap lexeme region))
 
-    (* Symbols specific to JsLIGO *)
+      (* Symbols specific to JsLIGO *)
 
       | "%"   -> Ok (REM      (wrap lexeme region))
     (* | "++"  -> Ok (PLUS2    region)
@@ -655,7 +661,7 @@ module T =
       | "&&"  -> Ok (BOOL_AND (wrap lexeme region))
       | "!"   -> Ok (BOOL_NOT (wrap lexeme region))
 
-    (* | "&"   -> Ok (BIT_AND  region)
+   (* | "&"   -> Ok (BIT_AND  region)
       | "~"   -> Ok (BIT_NOT  region)
       | "^"   -> Ok (BIT_XOR  region)
       | "<<<" -> Ok (SHIFT_L  region)
@@ -694,7 +700,7 @@ module T =
 
     let mk_uident value region = UIdent (wrap value region)
 
-     (* Attributes *)
+    (* Attributes *)
 
     let mk_attr lexeme region = Attr (wrap lexeme region)
 
