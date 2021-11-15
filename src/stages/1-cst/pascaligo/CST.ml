@@ -243,7 +243,7 @@ and type_vars = (type_var, comma) nsepseq par reg
 
 and type_expr =
   T_App     of (type_expr * type_tuple) reg        (* M.t (x,y,z)     *)
-| T_Cart    of (type_expr * times * type_expr) reg (* x * y           *)
+| T_Cart    of (type_expr * times * (type_expr,times) nsepseq) reg (* x * y * z      *)
 | T_Fun     of (type_expr * arrow * type_expr) reg (* x -> y          *)
 | T_Int     of (lexeme * Z.t) reg                  (* 42              *)
 | T_ModPath of type_expr module_path reg           (* A.B.(x * y)     *)
@@ -276,7 +276,7 @@ and field_decl = {
 (* Compound constructs (lists, sets, records, maps) *)
 
 and 'a compound = {
-  kind       : Region.t;
+  kind       : lexeme wrap;
   enclosing  : enclosing;
   elements   : ('a, semi) sepseq;
   terminator : semi option;

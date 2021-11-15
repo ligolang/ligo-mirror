@@ -233,6 +233,11 @@ let terminate_decl semi = function
   algorithm will be in production in the near future, enabling that
   work to be carried out in a reasonable amount of time. *)
 
+%on_error_reduce nsepseq(core_type,TIMES)
+%on_error_reduce ctor_app(pattern)
+%on_error_reduce nseq(__anonymous_5)
+%on_error_reduce var_pattern
+%on_error_reduce module_path(__anonymous_3)
 %on_error_reduce field_decl
 %on_error_reduce test_clause(closed_instr)
 %on_error_reduce base_expr(closed_expr)
@@ -464,9 +469,9 @@ fun_type_level:
 | cartesian_level { $1 }
 
 cartesian_level:
-  core_type "*" cartesian_level {
+  core_type "*" nsepseq(core_type,"*") {
     let start  = type_expr_to_region $1
-    and stop   = type_expr_to_region $3 in
+    and stop   = nsepseq_to_regiontype_expr_to_region $3 in
     let region = cover start stop in
     T_Cart {region; value = $1,$2,$3}
   }
@@ -1260,7 +1265,7 @@ verb_compound(Kind,element):
       match $3 with
         Some (elts, term) -> Some elts, term
       |              None -> None, None in
-    let region = cover $2 $4
+    let region = cover $2#region $4#region
     and value  = {kind; enclosing; elements; terminator; attributes=$1}
     in {region; value} }
 
