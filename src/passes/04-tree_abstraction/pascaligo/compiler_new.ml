@@ -20,6 +20,7 @@ let mk_var var = if String.compare var Var.wildcard = 0 then Var.fresh () else V
 
 let compile_attributes : CST.attributes -> AST.attributes = fun attributes ->
   List.map ~f:(fst <@ r_split) attributes
+
 let compile_selection : CST.selection -> 'a access * location = function
   | FieldName name ->
     let (name, loc) = r_split name in
@@ -27,6 +28,7 @@ let compile_selection : CST.selection -> 'a access * location = function
   | Component comp ->
     let ((_,index), loc) = r_split comp in
     (Access_tuple index, loc)
+
 let rec compile_type_expression ~raise : CST.type_expr -> AST.type_expression =
   fun te ->
     let self = compile_type_expression ~raise in
@@ -35,14 +37,91 @@ let rec compile_type_expression ~raise : CST.type_expr -> AST.type_expression =
       let (v,loc) = r_split v in
       t_variable_ez ~loc v
     )
-    | T_Cart { region ; value } -> (
+    | T_Cart { region ; value = (fst, _ ,rest) } -> (
       let loc = Location.lift region in
-      let lst = List.map ~f:self (npseq_to_list value) in
+      let lst = List.map ~f:self (fst::npseq_to_list rest) in
       t_tuple ~loc lst
     )
-    | T_Ctor { region ; value = (ctor , args) } -> (
-      let _loc = Location.lift region in
-      ignore (ctor,args) ; failwith "problems, christian fixing now: use 'T_ModPath (T_Ctor)'"
+    | T_Sum { region ; value } -> (
+      let loc = Location.lift region in
+      let attr = compile_attributes value.attributes in
+      let cases = Utils.nsepseq_to_list value.variants in
+      let f : CST.variant CST.reg -> string * AST.type_expression * string list =
+        fun { value = {ctor ; args ; attributes} ; region } ->
+          let _loc = Location.lift region in
+          let t = Option.value ~default:(t_unit ()) (Option.map ~f:(self <@ snd) args) in
+          let case_attr = compile_attributes attributes in
+          (ctor.value, t, case_attr)
+      in
+      t_sum_ez_attr ~loc ~attr (List.map ~f cases)
+    )
+    | T_App app -> (
+      let get_t_string_singleton_opt =
+        function
+        | CST.T_String s -> Some s.value
+        | _ -> None
+      in
+      let get_t_int_singleton_opt = function
+        | CST.T_Int x ->
+          let (_,z) = x.value in
+          Some z
+        | _ -> None
+      in
+      let ((type_constant,args), loc) = r_split app in
+      match type_constant with
+      | T_Var { value = "michelson_or" as v ; _ } -> (
+        let lst = npseq_to_list args.value.inside in
+        match lst with
+        | [a ; b ; c ; d ] -> (
+          let b' = trace_option ~raise (michelson_type_wrong te v) @@ get_t_string_singleton_opt b in
+          let d' = trace_option ~raise (michelson_type_wrong te v) @@ get_t_string_singleton_opt d in
+          let a' = self a in
+          let c' = self c in
+          t_michelson_or ~loc a' b' c' d'
+          )
+        | _ -> raise.raise @@ michelson_type_wrong_arity loc v
+      )
+      | T_Var { value = "michelson_pair" as v ; _ } -> (
+        let lst = npseq_to_list args.value.inside in
+        match lst with
+        | [a ; b ; c ; d ] -> (
+          let b' = trace_option ~raise (michelson_type_wrong te v) @@ get_t_string_singleton_opt b in
+          let d' = trace_option ~raise (michelson_type_wrong te v) @@ get_t_string_singleton_opt d in
+          let a' = self a  in
+          let c' = self c  in
+          t_michelson_pair ~loc a' b' c' d'
+        )
+        | _ -> raise.raise @@ michelson_type_wrong_arity loc v
+      )
+      | T_Var { value = "sapling_state" as v ; _ } -> (
+        let lst = npseq_to_list args.value.inside in
+        match lst with
+        | [(a : CST.type_expr)] -> (
+          let sloc = Location.lift @@ Raw.type_expr_to_region a in
+          let a' = trace_option ~raise (michelson_type_wrong te v) @@ get_t_int_singleton_opt a in
+          let singleton = t_singleton ~loc:sloc (Literal_int a') in
+          t_sapling_state ~loc singleton
+        )
+        | _ -> raise.raise @@ michelson_type_wrong_arity loc v
+      )
+      | T_Var { value = "sapling_transaction" as v ; _ } -> (
+        let lst = npseq_to_list args.value.inside in
+        match lst with
+        | [(a : CST.type_expr)] -> (
+          let sloc = Location.lift @@ Raw.type_expr_to_region a in
+          let a' = trace_option ~raise (michelson_type_wrong te v) @@ get_t_int_singleton_opt a in
+          let singleton = t_singleton ~loc:sloc (Literal_int a') in
+          t_sapling_transaction ~loc singleton
+          )
+        | _ -> raise.raise @@ michelson_type_wrong_arity loc v
+      )
+      | T_Var type_constant -> (
+        let operator = Var.of_name type_constant.value in
+        let lst = npseq_to_list args.value.inside in
+        let lst = List.map ~f:self lst in
+        t_app ~loc operator lst
+      )
+      | _ -> failwith "TODO: t_app in the AST should be able to take a type expression in"
     )
     | T_Fun { region ; value = (lhs , _ , rhs) } -> (
       let loc = Location.lift region in
@@ -82,17 +161,6 @@ let rec compile_type_expression ~raise : CST.type_expr -> AST.type_expression =
       let lst = List.map ~f elements in
       t_record_ez_attr ~loc:(Location.lift region) ~attr:(compile_attributes attributes) lst
     )
-    | T_Sum { region ; value = { lead_vbar = _ ; variants ; attributes}} -> (
-      let elements = Utils.nsepseq_to_list variants in
-      let f : CST.variant CST.reg -> string * AST.type_expression * AST.attributes = fun decl -> 
-        let (({ctor;args;attributes} : CST.variant), _loc) = r_split decl in
-        let t = Option.value ~default:(t_unit ()) (Option.map ~f:(self <@ snd) args) in
-        let attributes = compile_attributes attributes in
-        (ctor.value , t ,attributes)
-      in
-      let lst = List.map ~f elements in
-      t_sum_ez_attr ~loc:(Location.lift region) ~attr:(compile_attributes attributes) lst
-    )
     | T_Int _ | T_String _ -> raise.raise @@ unsupported_string_singleton te
 
 let rec compile_expression ~raise : CST.expr -> AST.expr = fun e ->
@@ -124,18 +192,22 @@ let rec compile_expression ~raise : CST.expr -> AST.expr = fun e ->
       | [x] -> x
       | _ -> Location.wrap ~loc @@ P_tuple nested
     )
-    | P_Ctor constr_pattern -> (
+    | P_App constr_pattern -> (
       let ((constr,p_opt), loc) = r_split constr_pattern in
-      let (l , _loc) = r_split constr in
-      let _ = ignore l.module_path in (* TODO, take module into account ? maybe we can't *)
-      match l.field.value with
-      | "Unit" -> Location.wrap ~loc @@ P_unit
-      | l ->
+      let rec get_ctor : CST.pattern -> string option = function
+        | P_Par x -> get_ctor x.value.inside
+        | P_Var x when Base.Char.is_uppercase (String.get x.value.variable.value 0) -> Some x.value.variable.value
+        | _ -> None
+      in
+      match get_ctor constr with
+      | Some "Unit" -> Location.wrap ~loc @@ P_unit
+      | Some label ->
         let pv_opt = match p_opt with
           | Some p -> self (CST.P_Tuple p)
           | None -> Location.wrap ~loc P_unit
         in
-        Location.wrap ~loc @@ P_variant (Label l, pv_opt)
+        Location.wrap ~loc @@ P_variant (Label label, pv_opt)
+      | None -> failwith "TODO: error, pattern is not a constructor"
     )
     | P_List { region ; value = { elements ; attributes } } -> (
       let () = check_no_attributes attributes in
@@ -148,47 +220,51 @@ let rec compile_expression ~raise : CST.expr -> AST.expr = fun e ->
       in
       List.fold_right ~f ~init:(Location.wrap ~loc (P_list (List []))) elements        
     )
-    | P_Cons { region ; value } -> (
+    | P_Cons { region ; value = (hd,_,tl) } -> (
       let loc = Location.lift region in
-      let elements = Utils.nsepseq_to_list value in
-      let f : CST.pattern -> AST.type_expression AST.pattern -> AST.type_expression AST.pattern =
-        fun x prev ->
-          let p' = self x in
-          Location.wrap (P_list (Cons (p', prev)))
-      in
-      List.fold_right ~f ~init:(Location.wrap ~loc (P_list (List []))) elements 
+      let hd = self hd in
+      let tl = self tl in
+      Location.wrap ~loc (P_list (Cons (hd,tl)))
     )
-    | P_Nil region -> (
-      let loc = Location.lift region in
+    | P_Nil (x: _ CST.wrap) -> (
+      let loc = Location.lift x#region in
       Location.wrap ~loc (P_list (List []))
     )
-    | P_Par { region ; value } -> (
-      let loc = Location.lift region in
-      let p = self value.inside in
-      { p with location = loc }
+    | P_Par { region = _ ; value } -> (
+      self value.inside
     )
     | P_Record record_pattern -> (
       let (inj,loc) = r_split record_pattern in
       let lst = Utils.sepseq_to_list inj.elements in
-      let aux : (CST.var_pattern, CST.pattern) CST.field CST.reg -> AST.label * AST.ty_expr AST.pattern =
+      let aux : CST.field_pattern CST.reg -> AST.label * AST.ty_expr AST.pattern =
         fun x ->
           let (field, _) = r_split x in
           match field with
           | Punned { pun ; attributes } ->
-            let () = List.iter ~f:check_no_attributes [attributes;pun.attributes] in
-            let loc = Location.lift pun.variable.region in
+            let () = List.iter ~f:check_no_attributes [attributes] in
+            let loc = Location.lift pun.region in
             let attributes = if const then Stage_common.Helpers.const_attribute else Stage_common.Helpers.var_attribute in
-            let binder = { var = Location.wrap ~loc (Var.of_name pun.variable.value) ; ascr = None ; attributes } in
-            (AST.Label pun.variable.value , Location.wrap ~loc (P_var binder))
+            let binder = { var = Location.wrap ~loc (Var.of_name pun.value) ; ascr = None ; attributes } in
+            (AST.Label pun.value , Location.wrap ~loc (P_var binder))
           | Complete { field_lhs; field_rhs ; attributes ; _} ->
             let () = check_no_attributes attributes in
-            (AST.Label field_lhs.variable.value, self field_rhs)
+            (AST.Label field_lhs.value, self field_rhs)
       in
       let lst' = List.map ~f:aux lst in
       let (labels,patterns) = List.unzip lst' in
       Location.wrap ~loc (P_record (labels,patterns))
     )
-    | _ -> raise.raise @@ unsupported_pattern_type p
+    | P_Typed {region ; value = { pattern ; type_annot = (_,ty_expr) }} -> (
+      let loc = Location.lift region in
+      let p = self pattern in
+      let ty_expr = compile_type_expression ~raise ty_expr in
+      match p.wrap_content with
+      | P_var x -> (
+        Location.wrap ~loc (P_var {x with ascr = Some ty_expr})
+      )
+      | _ -> failwith "TODO: error, unsupported type annotation (only supported on variables)"
+    )
+    | P_ModPath _ | P_Bytes _ | P_Int _ | P_Nat _ | P_String _ -> raise.raise @@ unsupported_pattern_type p
 
 and compile_matching_expr : type a . raise:'b raise -> (a-> AST.expression) -> a CST.case_clause CST.reg List.Ne.t -> (AST.expression, AST.ty_expr) AST.match_case list =
   fun ~raise compiler cases ->
@@ -206,59 +282,45 @@ and compile_matching_expr : type a . raise:'b raise -> (a-> AST.expression) -> a
     in
     List.map ~f:aux cases
 
-and compile_parameters ~raise (params : CST.parameters) =
-  let compile_param_decl (param : CST.param_decl) =
-    let return a = a in
-    match param with
-      ParamConst pc ->
-      let (pc, _loc) = r_split pc in
-      let (var, loc) = r_split pc.var in
+and compile_parameters ~raise : CST.parameters -> (AST.type_expression AST.binder) list = fun params ->
+  let aux : CST.param_decl CST.reg -> AST.type_expression AST.binder = fun param ->
+    let (param, _loc) = r_split param in
+    match param.param_kind with
+    | `Var _ ->
+      let (var, loc) = r_split param.var in
       let var = Location.wrap ~loc @@ Var.of_name var.variable.value in
-      let param_type =
-        Option.map ~f:(compile_type_expression ~raise <@ snd)
-                        pc.param_type in
-      return {var;ascr= param_type ; attributes = Stage_common.Helpers.const_attribute}
-    | ParamVar pv ->
-      let (pv, _loc) = r_split pv in
-      let (var, loc) = r_split pv.var in
+      let ascr = Option.map ~f:(compile_type_expression ~raise <@ snd) param.param_type in
+      { var ; ascr ; attributes = Stage_common.Helpers.const_attribute }
+    | `Const _ ->
+      let (var, loc) = r_split param.var in
       let var = Location.wrap ~loc @@ Var.of_name var.variable.value in
-      let param_type =
-        Option.map ~f:(compile_type_expression ~raise  <@ snd)
-                        pv.param_type in
-      return {var; ascr=param_type; attributes = Stage_common.Helpers.var_attribute}
+      let ascr = Option.map ~f:(compile_type_expression ~raise  <@ snd) param.param_type in
+      { var ; ascr ; attributes = Stage_common.Helpers.var_attribute }
   in
   let (params, _loc) = r_split params in
   let params = npseq_to_list params.inside in
-  List.map ~f:compile_param_decl params
+  List.map ~f:aux params
 
-and compile_instruction ~raise : ?next: AST.expression -> CST.instruction -> _  = fun ?next instruction ->
-  let return expr = match next with
-    Some e -> e_sequence expr e
-  | None -> expr
+and compile_instruction ~raise : ?next: AST.expression -> CST.instruction -> AST.expression  = fun ?next instruction ->
+  let return expr =
+    match next with
+    | Some e -> e_sequence expr e
+    | None -> expr
   in
-  let compile_tuple_expression (tuple_expr : CST.tuple_expr) =
+  let compile_tuple_expression : CST.tuple_expr -> AST.expression = fun tuple_expr ->
     let (lst, loc) = r_split tuple_expr in
     let lst = List.map ~f:(compile_expression ~raise) @@ npseq_to_list lst.inside in
     match lst with
-      hd::[] -> hd
+    | hd::[] -> hd
     | lst -> e_tuple ~loc lst
   in
-  let compile_if_clause : ?next:AST.expression -> CST.if_clause -> _ = fun ?next if_clause ->
-    match if_clause with
-      ClauseInstr i -> compile_instruction ~raise ?next i
-    | ClauseBlock (LongBlock  block) -> compile_block ~raise ?next block
-    | ClauseBlock (ShortBlock block) ->
-      (* This looks like it should be the job of the parser *)
-      let CST.{lbrace; inside; rbrace} = block.value in
-      let region = block.region in
-      let enclosing = CST.Block (Region.ghost, lbrace, rbrace)
-      and (statements,terminator) = inside in
-      let value = CST.{enclosing;statements;terminator} in
-      let block : _ CST.reg = {value; region} in
-      compile_block ~raise ?next block
-
+  let compile_if_clause : ?next:AST.expression -> CST.test_clause -> AST.expression =
+      fun ?next if_clause ->
+        match if_clause with
+        | ClauseInstr i -> compile_instruction ~raise ?next i
+        | ClauseBlock { value = { statements ; _ } ; region = _ } -> compile_block ~raise ?next statements
   in
-  let compile_path : CST.path -> _ = fun path ->
+  (* let compile_path : CST.path -> _ = fun path ->
     match path with
       Name var ->
       let (var,loc) = r_split var in
@@ -271,8 +333,8 @@ and compile_instruction ~raise : ?next: AST.expression -> CST.instruction -> _  
       let (path, _) = List.unzip path in
       let str = e_accessor ~loc (e_variable_ez ~loc:loc_var var) path in
       (str, var, path)
-  in
-  let compile_lhs : CST.lhs -> _ = fun lhs ->
+  in *)
+  (* let compile_lhs : CST.lhs -> _ = fun lhs ->
     match lhs with
     | Path path ->
       let (_, var, path) = compile_path path in
@@ -282,23 +344,27 @@ and compile_instruction ~raise : ?next: AST.expression -> CST.instruction -> _  
       let (_, var, path) = compile_path mlu.path in
       let index = compile_expression ~raise @@ mlu.index.value.inside in
       (var, path @ [Access_map index])
-  in
+  in *)
   match instruction with
-    Cond c ->
-    let (c, loc) = r_split c in
-    let test = compile_expression ~raise c.test in
-    let ifso = compile_if_clause c.ifso in
-    let ifnot = compile_if_clause c.ifnot in
+  | I_Cond { region ; value = { test ; if_so ; if_not } } ->
+    let loc = Location.lift region in
+    let test = compile_expression ~raise test in
+    let ifso = compile_if_clause if_so in
+    let ifnot =
+      match if_not with
+      | Some (_, not_case) -> compile_if_clause not_case
+      | None -> e_skip ()
+    in
     return @@ e_cond ~loc test ifso ifnot
-  | CaseInstr ci ->
-    let (ci, loc) = r_split ci in
-    let matchee = compile_expression ~raise ci.expr in
-    let cases = compile_matching_expr ~raise compile_if_clause @@ npseq_to_ne_list ci.cases.value in
+  | I_Case { region ; value = {expr ; cases } } ->
+    let loc = Location.lift region in
+    let matchee = compile_expression ~raise expr in
+    let cases = compile_matching_expr ~raise compile_if_clause (npseq_to_ne_list cases.value) in
     return @@ e_matching ~loc matchee cases
-  | Assign a ->
-    let (a,loc) = r_split a in
-    let (var,path) = compile_lhs a.lhs in
-    let rhs = compile_expression ~raise a.rhs in
+  | I_Assign {region ; value = { lhs ; rhs }} ->
+    let loc = Location.lift region in
+    let (var,path) = compile_lhs lhs in
+    let rhs = compile_expression ~raise rhs in
     return @@ e_assign_ez ~loc var path rhs
   | Loop (While wl) ->
     let (wl, loc) = r_split wl in
