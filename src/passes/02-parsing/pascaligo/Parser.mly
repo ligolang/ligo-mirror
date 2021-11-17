@@ -119,30 +119,20 @@ module Wrap = Lexing_shared.Wrap
    make it easy in the semantic action to collate the information into
    CST nodes. *)
 
-let mk_wild t = Region.{value="_"; region=t#region}
-let mk_pun attributes pun = Punned {pun; attributes}
-
 let unwrap = Wrap.payload
 let wrap   = Wrap.wrap
 
-let mk_reg   region value = Region.{region; value}
-let mk_E_Var region value = E_Var Region.{region; value}
+let mk_reg region value = Region.{region; value}
 
-let mk_wild_attr t =
-  let value = {variable = mk_wild t; attributes=[]}
-  in {region=t#region; value}
-
-let apply_type_ctor lexeme token args =
-  let total     = cover token#region args.region in
-  let type_ctor = mk_reg token#region lexeme in
+let apply_type_ctor token args =
   let {region; value = {lpar; inside; rpar}} = args in
-  let tuple = mk_reg region {lpar; inside=inside,[]; rpar}
-  in mk_reg total (type_ctor, tuple)
+  let tuple  = mk_reg region {lpar; inside=inside,[]; rpar}
+  and region = cover token#region args.region
+  in mk_reg region (T_Var token, tuple)
 
-let apply_map lexeme token args =
-  let region    = cover token#region args.region in
-  let type_ctor = mk_reg token#region lexeme
-  in mk_reg region (type_ctor, args)
+let apply_map token args =
+  let region = cover token#region args.region
+  in mk_reg region (T_Var token, args)
 
 let mk_mod_path :
   (module_name * dot) Utils.nseq * 'a ->
@@ -156,7 +146,7 @@ let mk_mod_path :
         trans ((prev_sep, item) :: seq, next_sep) others in
     let list, last_dot = trans ([], sep) tail in
     let module_path = first, List.rev list in
-    let region = CST.nseq_to_region (fun (x,_) -> x.region) nseq in
+    let region = CST.nseq_to_region (fun (x,_) -> x#region) nseq in
     let region = Region.cover region (to_region field)
     and value = {module_path; selector=last_dot; field}
     in {value; region}
@@ -234,7 +224,7 @@ let terminate_decl semi = function
   work to be carried out in a reasonable amount of time. *)
 
 %on_error_reduce nsepseq(core_type,TIMES)
-%on_error_reduce ctor_app(pattern)
+%on_error_reduce ctor_app_pattern
 %on_error_reduce nseq(__anonymous_5)
 %on_error_reduce var_pattern
 %on_error_reduce module_path(__anonymous_3)
@@ -252,7 +242,7 @@ let terminate_decl semi = function
 %on_error_reduce field_pattern
 %on_error_reduce core_expr
 %on_error_reduce nsepseq(module_name,DOT)
-%on_error_reduce ctor_app(expr)
+%on_error_reduce ctor_app_expr
 %on_error_reduce nseq(__anonymous_0(field_decl,SEMI))
 %on_error_reduce nseq(__anonymous_0(field_path_assignment,SEMI))
 %on_error_reduce nseq(__anonymous_0(binding,SEMI))
@@ -360,7 +350,7 @@ sep_or_term_list(item,sep):
 %inline variable        : "<ident>"  { $1 }
 %inline type_param      : "<ident>"  { $1 }
 %inline type_name       : "<ident>"  { $1 }
-%inline type_ctor       : "<ident>"  { $1 }
+%inline type_ctor       : "<ident>"  { T_Var $1 }
 %inline fun_name        : "<ident>"  { $1 }
 %inline field_name      : "<ident>"  { $1 }
 %inline record_or_tuple : "<ident>"  { $1 }
@@ -371,7 +361,7 @@ sep_or_term_list(item,sep):
 
 unary_op(op,arg):
   op arg {
-    let region = cover $1 (expr_to_region $2)
+    let region = cover $1#region (expr_to_region $2)
     and value  = {op=$1; arg=$2}
     in {region; value} }
 
@@ -480,7 +470,7 @@ cartesian_level:
 core_type:
   "<string>"     { T_String (unwrap $1)  }
 | "<int>"        { T_Int    (unwrap $1)  }
-| "_"            { T_Var    (mk_wild $1) }
+| "_"            { T_Var    $1           }
 | type_ctor_app  { T_App    $1           }
 | record_type    { T_Record $1           }
 | type_name      { T_Var    $1           }
@@ -490,12 +480,14 @@ core_type:
 (* Type constructor applications *)
 
 type_ctor_app:
-  type_ctor type_tuple     { let region = cover $1#region $2.region
-                             in {region; value = $1,$2}             }
-| "map"     type_tuple     { apply_map       "map"     $1 $2        }
-| "big_map" type_tuple     { apply_map       "big_map" $1 $2        }
-| "set"     par(type_expr) { apply_type_ctor "set"     $1 $2        }
-| "list"    par(type_expr) { apply_type_ctor "list"    $1 $2        }
+  type_ctor type_tuple {
+    let region = cover (type_expr_to_region $1) $2.region
+    in mk_reg region ($1,$2)
+  }
+| "map"     type_tuple
+| "big_map" type_tuple     { apply_map       $1 $2 }
+| "set"     par(type_expr)
+| "list"    par(type_expr) { apply_type_ctor $1 $2 }
 
 type_tuple: par(nsepseq(type_expr,",")) { $1 }
 
@@ -524,7 +516,7 @@ type_tuple: par(nsepseq(type_expr,",")) { $1 }
    whence our more involved solution. *)
 
 qualified_type:
-  type_in_module(type_ctor { T_Var $1 }) type_tuple {
+  type_in_module(type_ctor) type_tuple {
     let region = cover (type_expr_to_region $1) $2.region
     in T_App {region; value=$1,$2}
   }
@@ -605,7 +597,7 @@ field_decl:
 (* Inlining the definition of the non-terminal [type_annotation]
    enables the syntactic context of its occurrences, yielding more
    precise syntax error messages. (Otherwise we have only one error
-   message about a type annotation in all contexts). *)
+   message about a type annotation in all contexts.) *)
 
 %inline
 type_annotation: ":" type_expr { $1,$2 }
@@ -655,7 +647,7 @@ param_decl:
   param_kind var_pattern ioption(param_type) {
     let kind_reg, param_kind = $1
     and stop   = match $3 with
-                         None -> $2.region
+                         None -> $2#region
                  | Some (_,t) -> type_expr_to_region t in
     let region = cover kind_reg stop
     and value  = {param_kind; var=$2; param_type=$3}
@@ -666,10 +658,8 @@ param_kind:
 | "const" { $1#region, `Const $1 }
 
 var_pattern:
-  attributes variable {
-    {$2 with value = {variable=$2; attributes=$1}}
-  }
-| "_" { mk_wild_attr $1 }
+  attributes variable { $2#set_attributes $1 }
+| "_"                 { $1                   }
 
 param_type:
   ":" fun_type_level { $1,$2 }
@@ -705,7 +695,7 @@ declarations:
 
 module_alias:
   "module" module_name "is" nsepseq(module_name,".") {
-    let stop   = nsepseq_to_region (fun x -> x.region) $4 in
+    let stop   = nsepseq_to_region (fun x -> x#region) $4 in
     let region = cover $1#region stop in
     let value  = {kwd_module=$1; alias=$2; kwd_is=$3;
                   mod_path=$4; terminator=None}
@@ -850,10 +840,8 @@ verb_case(rhs):
 cases(rhs):
   nsepseq(case_clause(rhs),"|") {
     fun rhs_to_region ->
-      let mk_clause pre_clause = pre_clause rhs_to_region in
-      let region = nsepseq_to_region (fun x -> x.region) value
-      and value  = Utils.nsepseq_map mk_clause $1
-      in {region; value} }
+      let mk_clause pre_clause = pre_clause rhs_to_region
+      in Utils.nsepseq_map mk_clause $1 }
 
 case_clause(rhs):
   pattern "->" rhs {
@@ -885,7 +873,7 @@ terse_block:
      let statements, terminator = $3
      and enclosing : block_enclosing = Braces ($1,$2,$4) in
      let start  = match $1 with None -> $2 | Some b -> b in
-     let region = cover start $4
+     let region = cover start#region $4#region
      and value  = {enclosing; statements; terminator}
      in {region; value} }
 
@@ -893,7 +881,7 @@ verb_block:
   "begin" sep_or_term_list(statement,";") "end" {
      let statements, terminator = $2
      and enclosing : block_enclosing = BeginEnd ($1,$3) in
-     let region    = cover $1 $3
+     let region    = cover $1#region $3#region
      and value     = {enclosing; statements; terminator}
      in {region; value} }
 
@@ -1057,7 +1045,7 @@ block_with(right_expr):
 
 fun_expr(right_expr):
   attributes "function" parameters ioption(type_annotation) "is" right_expr {
-    let region = cover $2 (expr_to_region $6)
+    let region = cover $2#region (expr_to_region $6)
     and value  = {kwd_function=$2; param=$3; ret_type=$4;
                   kwd_is=$5; return=$6; attributes=$1}
     in {region; value} }
@@ -1170,7 +1158,7 @@ core_expr:
 | list_expr       { E_List      $1 }
 | record_expr     { E_Record    $1 }
 | code_inj        { E_CodeInj   $1 }
-| ctor_expr       { E_App       $1 }
+| ctor_app_expr   { E_App       $1 }
 | map_expr        { E_Map       $1 }
 | big_map_expr    { E_BigMap    $1 }
 | set_expr        { E_Set       $1 }
@@ -1254,7 +1242,7 @@ terse_compound(Kind,element):
       match $4 with
         Some (elts, term) -> Some elts, term
       |              None -> None, None in
-    let region = cover $2 $5
+    let region = cover $2#region $5#region
     and value  = {kind; enclosing; elements; terminator; attributes=$1}
     in {region; value} }
 
@@ -1271,12 +1259,10 @@ verb_compound(Kind,element):
 
 (* Constructed expressions *)
 
-ctor_expr: ctor_app(expr) { $1 }
-
-ctor_app(payload):
-  ctor par(nsepseq(payload,",")) {
-    mk_reg (cover $1#region $2.region) ($1, Some $2) }
-| ctor { {region=$1#region; value = ($1, None)} }
+ctor_app_expr:
+  ctor par(nsepseq(expr,",")) {
+    mk_reg (cover $1#region $2.region) (E_Ctor $1, Some $2) }
+| ctor { {region=$1#region; value = (E_Ctor $1, None)} }
 
 (* Tuples of expressions *)
 
@@ -1324,7 +1310,8 @@ field_path:
   record_or_tuple "." nsepseq(selection,".") {
     let stop   = nsepseq_to_region selection_to_region $3 in
     let region = cover $1#region stop
-    and value  = {record_or_tuple=(E_Var $1); selector=$2; field_path=$3}
+    and value  = {record_or_tuple=(E_Var $1); selector=$2;
+                  field_path=$3}
     in E_Proj {region; value}
   }
 | variable  { E_Var $1 }
@@ -1401,21 +1388,22 @@ core_pattern:
 | "<nat>"            { P_Nat     $1 }
 | "<bytes>"          { P_Bytes   $1 }
 | "<string>"         { P_String  $1 }
+| "<mutez>"          { P_Mutez   $1 }
 | "nil"              { P_Nil     $1 }
 | var_pattern        { P_Var     $1 }
 | list_pattern       { P_List    $1 }
 | ctor_app_pattern   { P_App     $1 }
 | tuple_pattern      { P_Tuple   $1 }
 | record_pattern     { P_Record  $1 }
-| qualified_pattern  { P_ModPath $1 }
+| qualified_pattern  { $1 }
 | par(pattern)
 | par(typed_pattern) { P_Par     $1 }
 
 (**)
 
 qualified_pattern:
-  pattern_in_module(type_ctor { P_App $1 }) tuple_pattern {
-    let region = cover $1.region $2.region
+  pattern_in_module(ctor { P_Ctor $1 }) tuple_pattern {
+    let region = cover (pattern_to_region $1) $2.region
     and value  = $1, Some $2
     in P_App {region; value}
   }
@@ -1435,19 +1423,15 @@ list_pattern:
 
 tuple_pattern: par(tuple(pattern)) { $1 }
 
-(* Constructed patterns (note how we do not reuse [tuple_pattern] in
-   order to obtain more syntactic contexts for the error messages:
-   discriminate between tuple patterns and constructor parameters. *)
+(* Constructed patterns
 
-ctor_app_pattern: ctor_app(pattern) { $1 }
+   Note that we do not use [tuple_pattern] because tuples must have at
+   least two components. *)
 
-     (**)
-(*
 ctor_app_pattern:
-  type_ctor tuple_pattern {
-    let region = cover $1#region $2.region
-    and value  = P_Var $1, Some $2
-    in P_App {region; value} } *)
+  ctor par(nsepseq(pattern,",")) {
+    mk_reg (cover $1#region $2.region) (P_Ctor $1, Some $2) }
+| ctor { {region=$1#region; value = (P_Ctor $1, None)} }
 
 (* Record patterns *)
 
@@ -1466,8 +1450,8 @@ field_pattern:
     in {region = $2#region; value}
   }
 | "_" {
-    let value = Punned {pun=(mk_wild $1); attributes=[]}
-    in {region=$1; value} }
+    let value = Punned {pun=$1; attributes=[]}
+    in {region=$1#region; value} }
 
 (* Typed patterns *)
 

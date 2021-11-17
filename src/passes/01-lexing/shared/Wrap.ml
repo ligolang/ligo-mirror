@@ -12,7 +12,7 @@ type attr_val = AttrString of string
 
 type attribute = attr_key * attr_val option
 
-type attributes = attribute list
+type attributes = attribute Region.reg list
 
 let attr_to_lexeme (key, value_opt) =
   match value_opt with
@@ -47,6 +47,7 @@ let wrap ?(attributes=[]) payload region =
   end
 
 let wrap_ghost payload = wrap payload Region.ghost
+let ghost = wrap_ghost
 
 let payload wrap =
   Region.{region=wrap#region; value=wrap#payload}

@@ -22,12 +22,16 @@
 %token                  <string Wrap.wrap> Verbatim "<verbatim>" [@recover.expr wrap_ghost "<invalid-verbatim-literal>"]
 %token        <(lexeme * Hex.t) Wrap.wrap> Bytes    "<bytes>" [@recover.expr wrap_ghost ("<invalid-bytes-literal>", `Hex "")]
 %token          <(string * Z.t) Wrap.wrap> Int      "<int>" [@recover.expr wrap_ghost ("<invalid-int-literal>", Z.zero)]
-(* %token          <(string * Z.t) Wrap.wrap> Nat      "<nat>"*)
-(* %token          <(string * Z.t) Wrap.wrap> Mutez    "<mutez>"*)
+(*
+%token          <(string * Z.t) Wrap.wrap> Nat      "<nat>"
+%token      <(string * Int64.t) Wrap.wrap> Mutez    "<mutez>"
+*)
 %token                  <string Wrap.wrap> Ident    "<ident>" [@recover.expr wrap_ghost "<invalid-ident>"]
 %token                  <string Wrap.wrap> UIdent   "<uident>" [@recover.expr wrap_ghost "<invalid-uident>"]
-%token                  <string Wrap.wrap> Attr     "[@attr]" [@recover.expr wrap_ghost "<invalid-attr-literal>"]
-// %token       <lexeme Region.reg Region.reg> Lang     "[%lang"
+%token         <Wrap.attribute Region.reg> Attr     "[@attr]" [@recover.expr wrap_ghost "<invalid-attr-literal>"]
+(*
+%token       <lexeme Region.reg Region.reg> Lang     "[%lang"
+ *)
 
   (* Symbols *)
 

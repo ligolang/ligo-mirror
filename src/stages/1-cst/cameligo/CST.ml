@@ -18,7 +18,7 @@ type 'a reg = 'a Region.reg
 
 type lexeme = string
 
-type 'payload wrap = 'payload Token.wrap 
+type 'payload wrap = 'payload Wrap.t
 
 (* Keywords of OCaml *)
 
