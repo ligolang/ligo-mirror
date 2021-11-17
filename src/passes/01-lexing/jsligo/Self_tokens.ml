@@ -46,8 +46,10 @@ let tokens_of = function
   Stdlib.Ok lex_units ->
     let apply tokens = function
       Core.Token token -> token::tokens
-    | Core.Markup (Markup.BlockCom {value; region}) -> Token.BlockCom (Token.wrap value region) :: tokens
-    | Core.Markup (Markup.LineCom {value; region}) -> Token.LineCom (Token.wrap value region) :: tokens
+    | Core.Markup (Markup.BlockCom {value; region}) ->
+        Token.BlockCom (Token.wrap value region) :: tokens
+    | Core.Markup (Markup.LineCom {value; region}) ->
+        Token.LineCom (Token.wrap value region) :: tokens
     | Core.Markup _ -> tokens
     | Core.Directive d -> Token.Directive d :: tokens
     in List.fold_left apply [] lex_units |> List.rev |> ok
@@ -82,12 +84,12 @@ let automatic_semicolon_insertion tokens =
     let (r, _) = Token.proj_token token in
     let (r2, _) = Token.proj_token t in
     if r#stop#line < r2#start#line  then (
-      inner (t :: SEMI (Token.wrap ";" (Region.make ~start:(r#shift_one_uchar (-1))#stop ~stop:r#stop)) :: token :: result) rest 
+      inner (t :: SEMI (Token.wrap ";" (Region.make ~start:(r#shift_one_uchar (-1))#stop ~stop:r#stop)) :: token :: result) rest
     )
     else (
-      match token with 
-        RBRACE _ as t -> 
-        inner (t :: SEMI (Token.wrap ";" (Region.make ~start:(r#shift_one_uchar (-1))#stop ~stop:r#stop)) :: token :: result) rest 
+      match token with
+        RBRACE _ as t ->
+        inner (t :: SEMI (Token.wrap ";" (Region.make ~start:(r#shift_one_uchar (-1))#stop ~stop:r#stop)) :: token :: result) rest
       | _ ->
         inner (t :: token :: result) rest
     )
@@ -105,32 +107,28 @@ let attribute_regexp = Str.regexp "@\\([a-zA-Z:0-9_]+\\)"
 
 let collect_attributes str =
   let rec inner result str =
-    try (
+    try
       let r = Str.search_forward attribute_regexp str 0 in
       let s = Str.matched_group 0 str in
       let s = String.sub s 1 (String.length s - 1) in
-      let next = (String.sub str (r + String.length s) (String.length str - (r + + String.length s))) in
+      let next = String.sub str (r + String.length s)
+                            (String.length str - (r + String.length s)) in
       inner (s :: result) next
-    )
-    with
-    | Not_found -> result
-  in
-  inner [] str
+    with Not_found -> result
+  in inner [] str
 
 let attributes tokens =
   let open! Token in
   let rec inner result = function
     LineCom c :: tl
   | BlockCom c :: tl ->
-      let attributes = collect_attributes c#payload in
-      let attributes = List.map (fun e ->
-        Attr (Token.wrap e c#region)
-      ) attributes in
-      inner (attributes @ result) tl
+      let attrs = collect_attributes c#payload in
+      let attrs =
+        List.map (fun a -> Attr {region=c#region; value=(a,None)}) attrs in
+      inner (attrs @ result) tl
   | hd :: tl -> inner (hd :: result) tl
   | [] -> List.rev result
-  in
-  inner [] tokens
+  in inner [] tokens
 
 let attributes units = apply attributes units
 
@@ -173,7 +171,7 @@ let print_tokens tokens =
 
 (* insert vertical bar for sum type *)
 
-let vertical_bar_insert tokens =
+let vertical_bar_insertion tokens =
   let open! Token in
   let rec aux acc insert_token = function
     (VBAR _ as hd) :: tl ->
@@ -185,7 +183,7 @@ let vertical_bar_insert tokens =
     else (
       List.rev_append (hd :: acc) tl
     )
-  | (RBRACKET _ as hd) :: tl -> 
+  | (RBRACKET _ as hd) :: tl ->
     aux (hd::acc) true tl
   | hd :: tl ->
     aux (hd::acc) insert_token tl
@@ -194,23 +192,23 @@ let vertical_bar_insert tokens =
   in
   aux [] false tokens
 
-let vertical_bar_insert tokens =
+let vertical_bar_insertion tokens =
   let open! Token in
-  let rec aux acc = function 
+  let rec aux acc = function
     (VBAR _ as hd) :: tl ->
-      aux (vertical_bar_insert (hd::acc)) tl
+      aux (vertical_bar_insertion (hd::acc)) tl
   | hd :: tl -> aux (hd::acc) tl
   | [] -> List.rev acc
   in aux [] tokens
 
-let vertical_bar_insert units = apply vertical_bar_insert units
+let vertical_bar_insertion units = apply vertical_bar_insertion units
 
 (* COMPOSING FILTERS (exported) *)
 
 let filter =
   attributes
   <@ automatic_semicolon_insertion
-  <@ vertical_bar_insert
+  <@ vertical_bar_insertion
   (*  <@ print_tokens*)
   <@ tokens_of
   (*  <@ print_units*)

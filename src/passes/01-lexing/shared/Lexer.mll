@@ -186,9 +186,9 @@ module Make (Token : Token.S) =
 
     (* Attributes *)
 
-    let mk_attr attr state buffer =
+    let mk_attr key value state buffer =
       let Core.{region; state; _} = state#sync buffer
-      in Core.Token (Token.mk_attr attr region), state
+      in Core.Token (Token.mk_attr ~key ?value region), state
 
     (* Data constructors and module names *)
 
@@ -245,12 +245,12 @@ let ident      = small (letter | '_' | digit)*
                | '_' (letter | '_' (letter | digit) | digit)+
 let ext_ident  = (letter | digit | '_' | ':')+
 let uident     = capital (letter | '_' | digit)*
+let string     = [^'"' '\\' '\n']*  (* For #include and attributes *)
 let attr       = letter (letter | '_' | ':' | digit)*
 let hex_digit  = digit | ['A'-'F' 'a'-'f']
 let byte       = hex_digit hex_digit
 let byte_seq   = byte | byte (byte | '_')* byte
 let bytes      = "0x" (byte_seq? as bytes)
-let string     = [^'"' '\\' '\n']*  (* For strings of #include *)
 let directive  = '#' (blank* as space) (small+ as id) (* For #include *)
 
 (* Symbols *)
@@ -279,17 +279,23 @@ let symbol =
    through recursive calls. *)
 
 rule scan state = parse
-  ident | '@' ext_ident   { mk_ident         state lexbuf }
-| uident                  { mk_uident        state lexbuf }
-| bytes                   { mk_bytes bytes   state lexbuf }
-| nat "n"                 { mk_nat   nat     state lexbuf }
-| nat "mutez"             { mk_mutez nat     state lexbuf }
-| nat tz_or_tez           { mk_tez   nat tez state lexbuf }
-| natural                 { mk_int           state lexbuf }
-| symbol                  { mk_sym           state lexbuf }
-| eof                     { mk_eof           state lexbuf }
-| "[@" (attr as attr) "]" { mk_attr  attr    state lexbuf }
-| "[%" (attr as lang)     { mk_lang  lang    state lexbuf }
+  ident | '@' ext_ident { mk_ident         state lexbuf }
+| uident                { mk_uident        state lexbuf }
+| bytes                 { mk_bytes bytes   state lexbuf }
+| nat "n"               { mk_nat   nat     state lexbuf }
+| nat "mutez"           { mk_mutez nat     state lexbuf }
+| nat tz_or_tez         { mk_tez   nat tez state lexbuf }
+| natural               { mk_int           state lexbuf }
+| symbol                { mk_sym           state lexbuf }
+| eof                   { mk_eof           state lexbuf }
+| "[%" (attr as lang)   { mk_lang  lang    state lexbuf }
+
+| "[@" (attr as key) (blank+ (string as value))? "]" {
+    let value =
+      match value with
+        None -> None
+      | Some string -> Some (Wrap.AttrString string)
+    in mk_attr key value state lexbuf }
 
 | decimal tz_or_tez {
     mk_tez_dec integral fractional tez state lexbuf }

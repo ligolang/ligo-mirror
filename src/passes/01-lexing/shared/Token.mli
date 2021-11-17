@@ -38,10 +38,10 @@ module Directive = LexerLib.Directive
 
 (* TOKENS *)
 
-type lexeme = string
-
 module type S =
   sig
+    type lexeme = string
+
     type token
     type t = token
 
@@ -107,19 +107,33 @@ module type S =
 
     val mk_bytes : lexeme -> string -> Region.t -> token
 
+    (* Attributes *)
+
+    val mk_attr :
+      key:string -> ?value:Wrap.attr_val -> Region.t -> token
+
     (* Others *)
 
     val mk_ident    : lexeme -> Region.t -> token
     val mk_string   : lexeme -> Region.t -> token
     val mk_verbatim : lexeme -> Region.t -> token
     val mk_uident   : lexeme -> Region.t -> token
-    val mk_attr     : lexeme -> Region.t -> token
     val mk_eof      : Region.t -> token
 
     (* Predicates *)
 
-    val is_eof : token -> bool
+    val is_int    : token -> bool
+    val is_string : token -> bool
+    val is_bytes  : token -> bool
+    val is_hex    : token -> bool
+    val is_sym    : token -> bool
+    val is_eof    : token -> bool
+
+    (* String delimiters *)
 
     val support_string_delimiter : char -> bool
+
+    (* Verbatim strings *)
+
     val verbatim_delimiters : string * string
   end

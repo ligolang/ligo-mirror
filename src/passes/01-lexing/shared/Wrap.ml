@@ -4,7 +4,7 @@
 
 module Region = Simple_utils.Region
 
-(* Wrapping tokens with metadata *)
+(* Attributes *)
 
 type attr_key = string
 
@@ -13,6 +13,18 @@ type attr_val = AttrString of string
 type attribute = attr_key * attr_val option
 
 type attributes = attribute list
+
+let attr_to_lexeme (key, value_opt) =
+  match value_opt with
+    None -> Printf.sprintf "[@%s]" key
+  | Some AttrString value -> Printf.sprintf "[@%s %s]" key value
+
+let attr_to_string (key, value_opt) =
+  match value_opt with
+    None -> Printf.sprintf "%S" key
+  | Some AttrString value -> Printf.sprintf "(%S, %s)" key value
+
+(* Wrapping tokens with metadata *)
 
 type 'payload wrap = <
   payload    : 'payload;

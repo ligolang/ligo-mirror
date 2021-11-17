@@ -35,7 +35,7 @@ type lex_unit = token Core.lex_unit
 
 (* Virtual token *)
 
-let es6fun = Token.ES6FUN (Wrap.wrap_ghost "")
+let es6fun = Token.ES6FUN Region.ghost
 
 (* Inserting the ES6FUN virtual token *)
 
