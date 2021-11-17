@@ -157,7 +157,7 @@ let e_big_map ?loc lst : expression = make_e ?loc @@ E_big_map lst
 
 let e_while ?loc cond body = make_e ?loc @@ E_while {cond; body}
 let e_for ?loc binder start final incr f_body = make_e ?loc @@ E_for {binder;start;final;incr;f_body}
-let e_for_each ?loc fe_binder collection collection_type fe_body = make_e ?loc @@ E_for_each {fe_binder;collection;collection_type;fe_body}
+let e_for_each ?loc fe_binder collection fe_body = make_e ?loc @@ E_for_each {fe_binder;collection;fe_body}
 
 let e_bool ?loc   b : expression =
   if b then e_constructor ?loc "True" (e_unit ())
@@ -190,7 +190,7 @@ let e_typed_set ?loc lst k = e_annotation ?loc (e_set lst) (t_set k)
 
 
 let e_assign ?loc variable access_path expression = make_e ?loc @@ E_assign {variable;access_path;expression}
-let e_assign_ez ?loc variable access_path expression = e_assign ?loc (Location.wrap ?loc @@ Var.of_name variable) access_path expression
+let e_assign_ez ?loc ?loc_var variable access_path expression = e_assign ?loc (Location.wrap ?loc:loc_var @@ Var.of_name variable) access_path expression
 
 
 let get_e_accessor = fun t ->

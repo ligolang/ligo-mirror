@@ -185,7 +185,6 @@ and 'exp for_ = {
 and 'exp for_each = {
   fe_binder : expression_variable * expression_variable option ;
   collection : 'exp ;
-  collection_type : collect_type ;
   fe_body : 'exp ;
   }
 

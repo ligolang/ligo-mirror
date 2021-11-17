@@ -24,7 +24,7 @@ module Ord =
   struct
     type t = CST.variable
     let compare v1 v2 =
-      String.compare v1.value v2.value
+      String.compare v1#payload v2#payload
   end
 
 module VarSet = Set.Make (Ord)
@@ -99,7 +99,7 @@ let reserved_ctors =
   |> add "Unit"
 
   let check_reserved_names ~raise vars =
-  let is_reserved elt = SSet.mem elt.value reserved in
+  let is_reserved elt = SSet.mem elt#payload reserved in
   let inter = VarSet.filter is_reserved vars in
   if not (VarSet.is_empty inter) then
     let clash = VarSet.choose inter in

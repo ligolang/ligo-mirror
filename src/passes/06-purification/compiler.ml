@@ -206,7 +206,12 @@ and compile_expression' ~raise ~last : I.expression -> O.expression option -> O.
       let let_binder = binder self_type let_binder in
       let rhs = self rhs in
       let let_result = self let_result in
-      return @@ O.E_let_in {let_binder;mut=false; attributes; rhs; let_result}
+      let mut =
+        match let_binder.attributes.const_or_var with
+        | None | Some `Const -> false
+        | Some `Var -> true
+      in
+      return @@ O.E_let_in {let_binder;mut; attributes; rhs; let_result}
     | I.E_type_in ti ->
       let ti = type_in self self_type ti in
       return @@ O.E_type_in ti
@@ -292,11 +297,12 @@ and compile_expression' ~raise ~last : I.expression -> O.expression option -> O.
       let expression = self expression in
       let loc = e.location in
       let rhs = match access_path with
-        [] -> expression
-      | _  -> O.e_update ~loc (O.e_variable ~loc variable) access_path expression in
-      fun expr ->
-        O.e_let_in_ez ~loc variable true [] rhs
-        @@ Option.value ~default:(O.e_skip ()) expr
+        | [] -> expression
+        | _  -> O.e_update ~loc (O.e_variable ~loc variable) access_path expression
+      in
+      (fun expr_opt ->
+        O.e_let_in_ez ~loc variable true [] rhs (Option.value ~default:(O.e_skip ()) expr_opt)
+      )
     | I.E_for f ->
       let f = compile_for ~raise ~last f in
       f
@@ -449,7 +455,7 @@ and compile_for ~raise ~last I.{binder;start;final;incr;f_body} =
   else
     restore_mutable_variable return_expr captured_name_list env_rec
 
-and compile_for_each ~raise ~last I.{fe_binder;collection;collection_type; fe_body} =
+and compile_for_each ~raise ~last I.{fe_binder;collection;fe_body} =
   let env_rec = Location.wrap @@ Var.fresh ~name:"env_rec" () in
   let args    = Location.wrap @@ Var.fresh ~name:"args" () in
 

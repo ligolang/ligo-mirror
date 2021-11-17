@@ -29,32 +29,32 @@ let error_ppformat : display_format:string display_format ->
       `Reserved_name var ->
       Format.fprintf f
         "@[<hv>%a@.Reserved name %S.@.Hint: Change the name.@]"
-        Snippet.pp_lift var.region
-        var.value
+        Snippet.pp_lift var#region
+        var#payload
     | `Duplicate_variant var ->
       Format.fprintf f
         "Duplicate constructor %S in this sum type declaration.\n\
         Hint: Change the constructor.\n"
-        var.value
+        var#payload
     | `Non_linear_pattern var ->
       Format.fprintf f
         "@[<hv>%a@.Repeated variable %S in this pattern.@.Hint: Change the name.@]"
-        Snippet.pp_lift var.region
-        var.value
+        Snippet.pp_lift var#region
+        var#payload
     | `Non_linear_type_decl var ->
       Format.fprintf f
         "@[<hv>%a@.Repeated type variable %S in type declaration.@.Hint: Change the name.@]"
-        Snippet.pp_lift var.region
-        var.value
+        Snippet.pp_lift var#region
+        var#payload
     | `Duplicate_field_name var ->
       Format.fprintf f
         "Duplicate field name %S in this record declaration.\n\
         Hint: Change the name.\n"
-        var.value
+        var#payload
     | `Duplicate_parameter var ->
       Format.fprintf f
         "Duplicate parameter %S.\nHint: Change the name.\n"
-        var.value
+        var#payload
   )
 
 let error_jsonformat : self_cst_pascaligo_error -> Yojson.Safe.t = fun a ->
@@ -69,35 +69,35 @@ let error_jsonformat : self_cst_pascaligo_error -> Yojson.Safe.t = fun a ->
     let message = `String "Reserved name" in
     let content = `Assoc [
       ("message", message );
-      ("var", `String var.value);] in
+      ("var", `String var#payload);] in
     json_error ~stage ~content
   | `Duplicate_variant var ->
     let message = `String "Duplicate constructor in this sum type declaration."  in
     let content = `Assoc [
       ("message", message );
-      ("var", `String var.value);] in
+      ("var", `String var#payload);] in
     json_error ~stage ~content
   | `Non_linear_pattern var ->
     let message = `String "Repeated variable in this pattern." in
     let content = `Assoc [
       ("message", message );
-      ("var", `String var.value);] in
+      ("var", `String var#payload);] in
     json_error ~stage ~content
   | `Non_linear_type_decl var ->
     let message = `String "Repeated type variable in type declaration." in
     let content = `Assoc [
       ("message", message );
-      ("var", `String var.value);] in
+      ("var", `String var#payload);] in
     json_error ~stage ~content
   | `Duplicate_field_name var ->
     let message = `String "Duplicate field name in this record declaration." in
     let content = `Assoc [
       ("message", message );
-      ("var", `String var.value);] in
+      ("var", `String var#payload);] in
     json_error ~stage ~content
   | `Duplicate_parameter var ->
     let message = `String "Duplicate parameter \nHint: Change the name." in
     let content = `Assoc [
       ("message", message );
-      ("var", `String var.value);] in
+      ("var", `String var#payload);] in
     json_error ~stage ~content

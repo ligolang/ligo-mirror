@@ -390,17 +390,10 @@ let for_ expression {binder; start; final; incr; f_body} =
     ("f_body", expression f_body);
   ]
 
-let collect_type = function
-  | Map  -> `List [ `String "Map"; `Null]
-  | Set  -> `List [ `String "Set"; `Null]
-  | List -> `List [ `String "List"; `Null]
-  | Any  -> `List [ `String "Any"; `Null]
-
-let for_each expression {fe_binder;collection;collection_type;fe_body} =
+let for_each expression {fe_binder;collection;fe_body} =
   `Assoc [
     ("binder",  `List [ expression_variable_to_yojson @@ fst fe_binder; option expression_variable_to_yojson @@ snd fe_binder]);
     ("collection", expression collection);
-    ("collection_type", collect_type collection_type);
     ("body", expression fe_body);
   ]
 
