@@ -461,7 +461,7 @@ fun_type_level:
 cartesian_level:
   core_type "*" nsepseq(core_type,"*") {
     let start  = type_expr_to_region $1
-    and stop   = nsepseq_to_regiontype_expr_to_region $3 in
+    and stop   = nsepseq_to_region type_expr_to_region $3 in
     let region = cover start stop in
     T_Cart {region; value = $1,$2,$3}
   }
@@ -628,12 +628,9 @@ unqualified_decl(OP):
 fun_decl:
   attributes ioption("recursive") "function" fun_name parameters
   ioption(type_annotation) "is" expr {
-    let kwd_recursive = $2 in
-    let kwd_function = $3 in
-    let kwd_is = $7 in
-    let start  = match kwd_recursive with
+    let start  = match $2 with
                    Some start -> start
-                 | None -> kwd_function in
+                 | None -> $3 in
     let stop   = expr_to_region $8 in
     let region = cover start#region stop
     and value  = {attributes=$1; kwd_recursive=$2; kwd_function=$3;
@@ -893,7 +890,7 @@ verb_block:
 
 assignment(right_expr):
   lhs ":=" right_expr {
-    let stop   = lhs_to_region $3 in
+    let stop   = expr_to_region $3 in
     let region = cover (expr_to_region $1) stop
     and value  = {lhs=$1; assign=$2; rhs=$3}
     in {region; value} }
@@ -1275,7 +1272,7 @@ tuple(item):
 
 call_expr:
   path_expr arguments {
-    let region = cover (expr_to_region) $2.region
+    let region = cover (expr_to_region $1) $2.region
     in mk_reg region ($1,$2) }
 
 arguments: par(nsepseq(expr,",")) { $1 }
