@@ -10,6 +10,7 @@ module Directive = LexerLib.Directive
 module Utils     = Simple_utils.Utils
 module Region    = Simple_utils.Region
 module Token     = Lexing_cameligo.Token
+module Wrap      = Lexing_shared.Wrap
 
 open Utils
 type 'a reg = 'a Region.reg
