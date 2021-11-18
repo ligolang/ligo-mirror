@@ -5,10 +5,11 @@
   (libraries
     ;; Input
     lexing_pascaligo
+    cst_shared
     ;; Vendors
     LexerLib
     simple-utils
     ;; Third party
     hex
     zarith)
-  (modules CST Printer))
+  (modules CST PrintCST))
