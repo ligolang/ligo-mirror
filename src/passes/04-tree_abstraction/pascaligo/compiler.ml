@@ -576,18 +576,24 @@ and compile_statement ~raise : ?next:AST.expression -> CST.statement -> AST.expr
     let next = Option.value ~default:(e_skip ()) next in
     let dd = compile_data_declaration ~raise ~next dd in
     (Some dd)
-  | S_VarDecl _var_decl -> ( failwith "TODO: not sure"
-    (* let vd, loc = r_split var_decl in
+  | S_VarDecl var_decl -> (
+    let vd, loc = r_split var_decl in
     let type_ = Option.map ~f:(compile_type_expression ~raise <@ snd) vd.var_type in
     match vd.pattern with
-    | P_Var name ->
+    | P_Var name -> (
       let name, ploc = w_split name in
       let init = compile_expression ~raise vd.init in
-      let p = Location.wrap ~loc:ploc @@ Var.of_name name in
-      return loc p type_ Stage_common.Helpers.var_attribute [] init
+      let var = Location.wrap ~loc:ploc @@ Var.of_name name in
+      match next with
+      | Some next ->
+        Some (e_let_in ~loc {var;ascr=type_;attributes=Stage_common.Helpers.var_attribute} [] init next)
+      | None -> None
+    )
     | pattern ->
       (* not sure what to do with  attributes in that case *)
-      compile_let_destructuring ~raise loc vd.init pattern next type_ *)
+      let next = trace_option ~raise (failwith "TODO: error, ...") next in
+      let x = compile_let_destructuring ~raise ~const:false loc vd.init pattern next type_ in
+      Some x
   )
 
 and compile_block ~raise : ?next:AST.expression -> CST.block CST.reg -> AST.expression =
