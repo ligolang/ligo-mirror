@@ -143,8 +143,8 @@ type 'a brackets = {
 (* The Concrete Syntax Tree *)
 
 type t = {
-    decl : declaration nseq;
-    eof  : eof
+  decl : declaration nseq;
+  eof  : eof
 }
 
 and cst = t
