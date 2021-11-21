@@ -7,26 +7,16 @@
    requested on the command-line of the LIGO compiler with the option
    "print-cst" (see file [src/bin/cli.ml]). *)
 
-(* STATE *)
+(* Local dependencies *)
 
-(* The printing of the CST itself makes use of a threaded data
-   structure: the _state_. The fields for padding the beggining of the
-   lines in the tree layout, [pad_path] and [pad_node], make up the
-   tree layout. The printing is done to the string buffer bound to the
-   field [buffer], which is imperatively updated (see module
-   [Stdlib.Buffer].) *)
-
-type state
-
-val mk_state :
-  ?buffer:Buffer.t -> offsets:bool -> [`Point|`Byte] -> state
+module Tree = Cst_shared.Tree
 
 (* IMPORTANT: If you add or remove a printing function, please mirror
    your changes in the aliases below accordingly. If you export
    functions printing special nodes of the CST, please call them
    "print_<node>_to_<dest>". *)
 
-type ('src, 'dst) printer = state -> 'src -> 'dst
+type ('src, 'dst) printer = Tree.state -> 'src -> 'dst
 
 (* Printing nodes *)
 

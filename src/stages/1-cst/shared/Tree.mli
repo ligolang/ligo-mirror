@@ -11,8 +11,6 @@ module Region = Simple_utils.Region
 
 module Wrap = Lexing_shared.Wrap
 
-type wrap = string Wrap.t
-
 (* STATE *)
 
 (* The printing of the tree makes use of a threaded data structure:
@@ -51,12 +49,12 @@ val print_node : ?region:Region.t -> string printer
 (* The call [print_literal state wrap] prints a leaf for a literal
    [wrap] (therefore the label for the leaf has type [string]). *)
 
-val print_literal : wrap printer
+val print_literal : string Wrap.t printer
 
 (* The call [print_literal_wo_reg state wrap] is the same as
    [print_literal] but without printing the region. *)
 
-val print_literal_wo_reg : wrap printer
+val print_literal_wo_reg : string Wrap.t printer
 
 (* Making subtrees (children) from
      * general values ([mk_child]),
@@ -69,11 +67,9 @@ val print_literal_wo_reg : wrap printer
 
 type child = (state -> unit) option
 
-val mk_child : wrap printer -> wrap -> child
-
-val mk_child_opt : wrap printer -> wrap option -> child
-
-val mk_child_list : (state -> wrap list -> unit) -> wrap list -> child
+val mk_child      :      'a printer -> 'a        -> child
+val mk_child_opt  :      'a printer -> 'a option -> child
+val mk_child_list : 'a list printer -> 'a list   -> child
 
 (* Printing trees (root + subtrees). The call [print_tree ?region
    state label children] prints a root whose label is [label] and
@@ -86,45 +82,29 @@ type label = string
 val print_tree :
   ?region:Region.t ->
   state ->
-  label ->
-  (state -> unit) option list -> (* children *)
+  label (* root *) ->
+  child list ->
   unit
 
 (* A special case of tree occurs often: the unary tree made of a value
-   of type [wrap], that is, a tree with exactly one subtree. *)
+   of type [string Wrap.t], that is, a tree with exactly one
+   subtree. *)
 
 val print_unary :
   ?region:Region.t ->
   state ->
-  label ->
-  wrap printer (* child printer *) ->
-  wrap (* child *) ->
+  label (* root *) ->
+  'a printer (* printer for the unique child *) ->
+  'a (* unique child *) ->
   unit
 
 (* PRINTING TOKENS (LEAVES) *)
 
 type lexeme = string
 
-(* Strings *)
-
-val print_string : wrap printer
-
-(* Verbatim strings *)
-
-val print_verbatim : wrap printer
-
-(* Integers *)
-
-val print_int : label -> (lexeme * Z.t) Wrap.t printer
-
-(* Natural numbers *)
-
-val print_nat : label -> (lexeme * Z.t) Wrap.t printer
-
-(* Bytes *)
-
-val print_bytes : label -> (lexeme * Hex.t) Wrap.t printer
-
-(* Mutez *)
-
-val print_mutez : label -> (lexeme * Int64.t) Wrap.t printer
+val print_string   : string Wrap.t printer
+val print_verbatim : string Wrap.t printer
+val print_int      : label -> (lexeme * Z.t) Wrap.t printer
+val print_nat      : label -> (lexeme * Z.t) Wrap.t printer
+val print_bytes    : label -> (lexeme * Hex.t) Wrap.t printer
+val print_mutez    : label -> (lexeme * Int64.t) Wrap.t printer

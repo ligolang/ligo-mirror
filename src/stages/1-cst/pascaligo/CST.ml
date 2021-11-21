@@ -1,8 +1,8 @@
-(* Concrete Syntax Tree (CST) for LIGO *)
+(* Concrete Syntax Tree (CST) for PascaLIGO *)
 
-(* To disable warning about multiply-defined record labels. *)
+(* Disabled warnings *)
 
-[@@@warning "-30-40-42"]
+[@@@warning "-30"] (* multiply-defined record labels *)
 
 (* Vendor dependencies *)
 
@@ -22,8 +22,6 @@ type 'payload wrap = 'payload Wrap.t
 
 open Utils
 
-(* Lexemes *)
-
 type lexeme = string
 
 (* Keywords of PascaLIGO *)
@@ -31,8 +29,6 @@ type lexeme = string
 (* IMPORTANT: The types are sorted alphabetically, except the generic
    [keyword]. If you add or modify some, please make sure they remain
    in order. *)
-
-type keyword       = lexeme wrap
 
 type kwd_and       = lexeme wrap
 type kwd_begin     = lexeme wrap
@@ -111,18 +107,13 @@ type eof = lexeme wrap
 
 type variable    = lexeme wrap
 type module_name = lexeme wrap
-type fun_name    = lexeme wrap
-type type_name   = lexeme wrap
-type type_var    = lexeme wrap
-type type_ctor   = lexeme wrap
 type field_name  = lexeme wrap
 type ctor        = lexeme wrap
-type language    = lexeme reg
+
+type language    = lexeme reg   (* Not [wrap] *)
 
 type attribute   = Wrap.attribute
 type attributes  = Wrap.attributes
-
-type var_pattern = lexeme wrap
 
 (* Parentheses *)
 
@@ -140,7 +131,7 @@ type 'a brackets = {
   rbracket : rbracket
 }
 
-(* The Concrete Syntax Tree *)
+(* CONCRETE SYNTAX TREE (CST) *)
 
 type t = {
   decl : declaration nseq;
@@ -194,7 +185,7 @@ and parameters = (param_decl reg, semi) nsepseq par reg
 
 and param_decl = {
   param_kind : [`Var of kwd_var | `Const of kwd_const];
-  var        : var_pattern;
+  var        : variable;
   param_type : type_annotation option
 }
 
@@ -223,14 +214,14 @@ and module_alias = {
 
 and type_decl = {
   kwd_type   : kwd_type;
-  name       : type_name;
+  name       : variable;
   params     : type_vars option;
   kwd_is     : kwd_is;
   type_expr  : type_expr;
   terminator : semi option
 }
 
-and type_vars = (type_var, comma) nsepseq par reg
+and type_vars = (variable, comma) nsepseq par reg
 
 (* TYPE EXPRESSIONS *)
 
@@ -239,23 +230,23 @@ and type_vars = (type_var, comma) nsepseq par reg
 
 and type_expr =
   T_App     of (type_expr * type_tuple) reg        (* M.t (x,y,z)     *)
-| T_Cart    of cartesian                           (* x * y * z       *)
+| T_Cart    of cartesian                           (* x * (y * z)     *)
 | T_Fun     of (type_expr * arrow * type_expr) reg (* x -> y          *)
-| T_Int     of (lexeme * Z.t) reg                  (* 42              *)
+| T_Int     of (lexeme * Z.t) wrap                 (* 42              *)
 | T_ModPath of type_expr module_path reg           (* A.B.(x * y)     *)
 | T_Par     of type_expr par reg                   (* (t)             *)
 | T_Record  of field_decl reg compound reg (* record [a; [@a1] b : t] *)
-| T_String  of lexeme reg                          (*    "x"          *)
+| T_String  of lexeme wrap                         (*    "x"          *)
 | T_Sum     of sum_type reg               (* [@a2] | [@aa] A | B of t *)
 | T_Var     of variable                            (*  x              *)
-
-(* Cartesian type *)
-
-and cartesian = (type_expr * times * (type_expr,times) nsepseq) reg
 
 (* Application of type constructors *)
 
 and type_tuple = (type_expr, comma) nsepseq par reg
+
+(* Cartesian type *)
+
+and cartesian = (type_expr * times * (type_expr,times) nsepseq) reg
 
 (* Module paths *)
 
@@ -263,14 +254,6 @@ and 'a module_path = {
   module_path : (module_name, dot) nsepseq;
   selector    : dot;
   field       : 'a
-}
-
-(* Record types *)
-
-and field_decl = {
-  field_name : field_name;
-  field_type : type_annotation option; (* type punning *)
-  attributes : attributes
 }
 
 (* Compound constructs (lists, sets, records, maps) *)
@@ -286,6 +269,14 @@ and 'a compound = {
 and enclosing =
   Brackets of lbracket * rbracket
 | End      of kwd_end
+
+(* Record types *)
+
+and field_decl = {
+  field_name : field_name;
+  field_type : type_annotation option; (* Type punning if [None] *)
+  attributes : attributes
+}
 
 (* Sum types *)
 
@@ -303,12 +294,12 @@ and variant = {
 
 (* STATEMENTS *)
 
+and statements = (statement, semi) nsepseq
+
 and statement =
   S_Instr   of instruction
 | S_Decl    of declaration
 | S_VarDecl of var_decl reg
-
-and statements = (statement, semi) nsepseq
 
 (* Variable declaration (invalid at the top-level) *)
 
@@ -316,7 +307,7 @@ and var_decl = {
   kwd_var    : kwd_var;
   pattern    : pattern;
   var_type   : type_annotation option;
-  assign     : assign;
+  assign     : assign;                 (* := *)
   init       : expr;
   terminator : semi option;
   attributes : attributes
@@ -388,7 +379,7 @@ and block_enclosing =
   Braces   of kwd_block option * lbrace * rbrace
 | BeginEnd of kwd_begin * kwd_end
 
-(* Conditionals *)
+(* General conditionals *)
 
 and ('if_so, 'if_not) conditional = {
   kwd_if   : kwd_if;
@@ -407,7 +398,7 @@ and for_int = {
   init    : expr;
   kwd_to  : kwd_to;
   bound   : expr;
-  step    : (kwd_step * expr) option;
+  step    : (kwd_step * expr) option; (* [1] if [None] *)
   block   : block reg
 }
 
@@ -416,25 +407,19 @@ and for_int = {
 and for_in = {
   kwd_for  : kwd_for;
   var      : variable;
-  bind_to  : (arrow * variable) option;
+  bind_to  : (arrow * variable) option; (* A map if not [None]. *)
   kwd_in   : kwd_in;
   expr     : expr;
   block    : block reg
 }
 
-(* Patches (maps, records, sets) *)
+(* Patches for maps, records, and sets. *)
 
 and patch = {
   kwd_patch  : kwd_patch;
   collection : expr;
   kwd_with   : kwd_with;
   patch      : expr
-}
-
-and binding = {
-  source : expr;
-  arrow  : arrow;
-  image  : expr
 }
 
 (* Removal from collections *)
@@ -475,24 +460,17 @@ and pattern =
 | P_String  of lexeme wrap
 | P_Tuple   of tuple_pattern
 | P_Typed   of typed_pattern reg
-| P_Var     of var_pattern
+| P_Var     of variable
+
+(* Tuple pattern *)
+
+and tuple_pattern = (pattern, comma) nsepseq par reg
 
 (* Record pattern *)
 
 and record_pattern = field_pattern reg compound
 
 and field_pattern = (field_name, pattern) field
-
-(* Tuple pattern *)
-
-and tuple_pattern = (pattern, comma) nsepseq par reg
-
-(* Typed pattern *)
-
-and typed_pattern = {
-  pattern    : pattern;
-  type_annot : type_annotation
-}
 
 (* Record fields *)
 
@@ -512,58 +490,81 @@ and ('lhs, 'rhs) full_field = {
   attributes : attributes
 }
 
+(* Typed pattern *)
+
+and typed_pattern = {
+  pattern    : pattern;
+  type_annot : type_annotation
+}
+
 (* EXPRESSIONS *)
 
 (* IMPORTANT: The data constructors are sorted alphabetically. If you
    add or modify some, please make sure they remain in order. *)
 
 and expr =
-  E_Add       of plus bin_op reg               (* "+"   *)
-| E_App       of (expr * arguments option) reg
-| E_And       of kwd_and bin_op reg            (* "and" *)
+  E_Add       of plus bin_op reg               (* x + y           *)
+| E_App       of (expr * arguments option) reg (* M.t (x,y)       *)
+| E_And       of kwd_and bin_op reg            (* x and y         *)
 | E_BigMap    of binding reg compound reg
 | E_Block     of block_with reg
-| E_Bytes     of (lexeme * Hex.t) wrap
-| E_Call      of call
+| E_Bytes     of (lexeme * Hex.t) wrap         (* 0xFFFA          *)
+| E_Call      of call                          (* M.f (x,y)       *)
 | E_Case      of expr case reg
-| E_Cat       of caret bin_op reg              (* "^"   *)
+| E_Cat       of caret bin_op reg              (* "Hello" ^ world *)
 | E_CodeInj   of code_inj reg
-| E_Ctor      of ctor
-| E_Equal     of equal bin_op reg              (* "="   *)
+| E_Ctor      of ctor                          (* Empty           *)
+| E_Equal     of equal bin_op reg              (* x = y           *)
 | E_Cond      of (expr, expr) conditional reg
-| E_Cons      of sharp bin_op reg
-| E_Div       of slash bin_op reg              (* "/"   *)
-| E_Fun       of fun_expr reg
-| E_Geq       of geq bin_op reg                (* ">="  *)
-| E_Gt        of gt bin_op reg                 (* ">"   *)
-| E_Int       of (lexeme * Z.t) wrap
-| E_Leq       of leq bin_op reg                (* "<="  *)
-| E_List      of expr compound reg
-| E_Lt        of lt bin_op reg                 (* "<"   *)
-| E_Map       of binding reg compound reg
-| E_MapLookup of map_lookup reg
-| E_Mod       of kwd_mod bin_op reg            (* "mod" *)
-| E_Mult      of times bin_op reg              (* "*"   *)
-| E_Mutez     of (lexeme * Int64.t) wrap
-| E_Nat       of (lexeme * Z.t) wrap
-| E_Neg       of minus un_op reg               (* "-a"  *)
-| E_Nil       of kwd_nil
-| E_Neq       of neq bin_op reg                (* "=/=" *)
-| E_Not       of kwd_not un_op reg             (* "not" *)
-| E_Or        of kwd_or bin_op reg             (* "or"  *)
-| E_Par       of expr par reg
-| E_Record    of record_expr reg
-| E_Set       of expr compound reg
-| E_SetMem    of set_membership reg
-| E_String    of lexeme wrap
-| E_Sub       of minus bin_op reg              (* "a-b" *)
-| E_Tuple     of tuple_expr
-| E_Typed     of typed_expr par reg
-| E_Update    of update reg
-| E_Verbatim  of lexeme wrap
-| E_ModPath   of expr module_path reg
-| E_Var       of lexeme wrap
-| E_Proj      of projection reg
+| E_Cons      of sharp bin_op reg              (* head :: tail    *)
+| E_Div       of slash bin_op reg              (* x / y           *)
+| E_Fun       of fun_expr reg                  (* fun x -> x      *)
+| E_Geq       of geq bin_op reg                (* x >= y          *)
+| E_Gt        of gt bin_op reg                 (* x > y           *)
+| E_Int       of (lexeme * Z.t) wrap           (* 42              *)
+| E_Leq       of leq bin_op reg                (* x <= y          *)
+| E_List      of expr compound reg             (* list [4;5]      *)
+| E_Lt        of lt bin_op reg                 (* x < y           *)
+| E_Map       of binding reg compound reg      (* map [3 -> "x"]  *)
+| E_MapLookup of map_lookup reg                (* M.m [i]         *)
+| E_Mod       of kwd_mod bin_op reg            (* x mod n         *)
+| E_Mult      of times bin_op reg              (* x * y           *)
+| E_Mutez     of (lexeme * Int64.t) wrap       (* 5mutez          *)
+| E_Nat       of (lexeme * Z.t) wrap           (* 4n              *)
+| E_Neg       of minus un_op reg               (* -a              *)
+| E_Nil       of kwd_nil                       (* nil             *)
+| E_Neq       of neq bin_op reg                (* x =/= y         *)
+| E_Not       of kwd_not un_op reg             (* not x           *)
+| E_Or        of kwd_or bin_op reg             (* x or y          *)
+| E_Par       of expr par reg                  (* (x - M.y)       *)
+| E_Record    of record_expr
+| E_Set       of expr compound reg             (* set [x; 1]      *)
+| E_SetMem    of set_membership reg            (* x contains y    *)
+| E_String    of lexeme wrap                   (* "string"        *)
+| E_Sub       of minus bin_op reg              (* a - b           *)
+| E_Tuple     of tuple_expr                    (* (1, 2)          *)
+| E_Typed     of typed_expr par reg            (* (1 : int)       *)
+| E_Update    of update reg                    (* x with y        *)
+| E_Verbatim  of lexeme wrap                   (* {|foo|}         *)
+| E_ModPath   of expr module_path reg          (* M.N.x           *)
+| E_Var       of lexeme wrap                   (* x               *)
+| E_Proj      of projection reg                (* e.x.1           *)
+
+(* Map binding *)
+
+and binding = {
+  key   : expr;
+  arrow : arrow;
+  value : expr
+}
+
+(* Block as expression *)
+
+and block_with = {
+  block    : block reg;
+  kwd_with : kwd_with;
+  expr     : expr
+}
 
 (* Projection *)
 
@@ -574,7 +575,7 @@ and projection = {
 }
 
 and selection =
- FieldName of field_name
+  FieldName of field_name
 | Component of (lexeme * Z.t) wrap
 
 (* Binary and unary arithmetic operators *)
@@ -588,14 +589,6 @@ and 'a bin_op = {
 and 'a un_op = {
   op  : 'a;
   arg : expr
-}
-
-(* Block as expression *)
-
-and block_with = {
-  block    : block reg;
-  kwd_with : kwd_with;
-  expr     : expr
 }
 
 (* Code injection.  Note how the field [language] wraps a region in
@@ -628,7 +621,7 @@ and map_lookup = {
 
 (* Record expression *)
 
-and record_expr = (expr, expr) field reg compound
+and record_expr = (expr, expr) field reg compound reg
 
 (* Set membership *)
 
@@ -642,7 +635,7 @@ and set_membership = {
 
 and typed_expr = expr * type_annotation
 
-(* Updates *)
+(* Functional updates *)
 
 and update = {
   structure : expr;
@@ -674,14 +667,13 @@ let sepseq_to_region to_region = function
 let type_expr_to_region = function
   T_App     {region; _}
 | T_Cart    {region; _}
-| T_Fun     {region; _}
-| T_Int     {region; _}
+| T_Fun     {region; _} -> region
+| T_Int     t -> t#region
 | T_ModPath {region; _}
 | T_Par     {region; _}
-| T_Record  {region; _}
-| T_String  {region; _}
-| T_Sum     {region; _}
-  -> region
+| T_Record  {region; _} -> region
+| T_String  t -> t#region
+| T_Sum     {region; _} -> region
 | T_Var t -> t#region
 
 (* IMPORTANT: In the following function definition, the data

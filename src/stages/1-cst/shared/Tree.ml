@@ -9,8 +9,6 @@ module Region = Simple_utils.Region
 
 module Wrap = Lexing_shared.Wrap
 
-type wrap = string Wrap.t
-
 (* Utilities *)
 
 let sprintf = Printf.sprintf
@@ -69,10 +67,10 @@ let print_node ?region state label =
         sprintf "%s%s (%s)\n" state#pad_path label region
   in Buffer.add_string state#buffer node
 
-let print_literal state (wrap : wrap) =
+let print_literal state (wrap : string Wrap.t) =
   print_node ~region:wrap#region state wrap#payload
 
-let print_literal_wo_reg state (wrap : wrap) =
+let print_literal_wo_reg state (wrap : string Wrap.t) =
   print_node state wrap#payload
 
 (* Making subtrees (children) from general values ([mk_child]),
@@ -84,15 +82,15 @@ let print_literal_wo_reg state (wrap : wrap) =
 
 type child = (state -> unit) option
 
-let mk_child print wrap = Some (fun state -> print state wrap)
+let mk_child print child = Some (fun state -> print state child)
 
 let mk_child_opt print = function
         None -> None
 | Some value -> mk_child print value
 
-let mk_child_list print = function
-    [] -> None
-| list -> mk_child print list
+let mk_child_list print_list = function
+  [] -> None
+|  l -> mk_child print_list l
 
 (* Printing trees (root + subtrees). The call [print_tree state label
    ?region children] prints a node whose label is [label] and optional
@@ -121,14 +119,14 @@ type lexeme = string
 
 (* Strings *)
 
-let print_string state wrap =
+let print_string state (wrap : string Wrap.t) =
   let region = compact state wrap#region in
   let node = sprintf "%s%S (%s)\n" state#pad_path wrap#payload region
   in Buffer.add_string state#buffer node
 
 (* Verbatim strings *)
 
-let print_verbatim state wrap =
+let print_verbatim state (wrap : string Wrap.t) =
   let region = compact state wrap#region in
   let node =
     sprintf "%s{|%s|} (%s)\n" state#pad_path wrap#payload region
