@@ -47,7 +47,5 @@ let wrap ?(attributes=[]) payload region =
   end
 
 let wrap_ghost payload = wrap payload Region.ghost
-let ghost = wrap_ghost
 
-let payload wrap =
-  Region.{region=wrap#region; value=wrap#payload}
+let ghost = wrap_ghost
