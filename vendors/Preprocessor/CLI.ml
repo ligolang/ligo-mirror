@@ -23,11 +23,12 @@ module type S =
   sig
     include COMMENTS
 
-    val input     : string option (* input file     *)
-    val extension : string option (* file extension *)
-    val dirs      : string list   (* -I             *)
-    val show_pp   : bool          (* --show-pp      *)
-    val offsets   : bool          (* neg --columns  *)
+    val input            : string option (* input file     *)
+    val extension        : string option (* file extension *)
+    val dirs             : string list   (* -I             *)
+    val esy_project_path : string option (* ??? *)
+    val show_pp          : bool          (* --show-pp      *)
+    val offsets          : bool          (* neg --columns  *)
 
     type status = [
       `Done
@@ -82,6 +83,8 @@ module Make (Comments: COMMENTS) : S =
 
     let input    = ref None
     and dirs     = ref []
+
+    and esy_project_path = ref None
     and columns  = ref false
     and show_pp  = ref false
 
@@ -245,6 +248,7 @@ module Make (Comments: COMMENTS) : S =
     (* Re-exporting immutable fields with their CLI value *)
 
     let dirs    = !dirs
+    and esy_project_path = !esy_project_path
     and offsets = not !columns
     and show_pp = !show_pp
     and help    = !help

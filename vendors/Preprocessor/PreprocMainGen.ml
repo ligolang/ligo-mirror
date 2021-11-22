@@ -38,11 +38,12 @@ module Make (CLI : CLI.S) =
 
     let config =
       object
-        method block   = CLI.block
-        method line    = CLI.line
-        method input   = CLI.input
-        method offsets = CLI.offsets
-        method dirs    = CLI.dirs
+        method block            = CLI.block
+        method line             = CLI.line
+        method input            = CLI.input
+        method offsets          = CLI.offsets
+        method dirs             = CLI.dirs
+        method esy_project_path = CLI.esy_project_path
       end
 
     let preprocess () : API.result =

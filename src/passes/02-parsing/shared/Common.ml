@@ -25,11 +25,12 @@ module CLI (File : FILE) (Comments : COMMENTS) =
       struct
         include Comments
 
-        let input     = File.input
-        let extension = Some File.extension
-        let dirs      = File.dirs
-        let show_pp   = false
-        let offsets   = true
+        let input            = File.input
+        let extension        = Some File.extension
+        let dirs             = File.dirs
+        let esy_project_path = File.esy_project_path
+        let show_pp          = false
+        let offsets          = true
 
         type status = [
           `Done
@@ -135,6 +136,7 @@ module MakeParser
           let input     = Some file_path
           let extension = File.extension
           let dirs      = []
+          let esy_project_path = None (* ??? *)
         end in
       let module CLI = CLI (File) (Comments) in
       let module MainLexer =
@@ -163,6 +165,7 @@ module MakeParser
           let input     = None
           let extension = File.extension
           let dirs      = []
+          let esy_project_path = None (* ??? *)
         end in
       let module CLI = CLI (File) (Comments) in
       let module MainLexer =

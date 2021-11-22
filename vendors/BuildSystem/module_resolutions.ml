@@ -13,9 +13,9 @@ module JsonHelpers = struct
   let string_list json = List.map ~f:string (list json)
 end
 
-type t = (string * string list) list 
+(* type t = (string * string list) list option *)
 
-let resolve_paths installation graph root =
+let resolve_paths installation graph =
   let resolve p =
     Yojson.Basic.Util.member p installation |> JsonHelpers.string
   in
@@ -23,6 +23,31 @@ let resolve_paths installation graph root =
     let paths = List.sort ~compare:String.compare @@ (List.map ~f:resolve v) in 
     ((resolve k), paths) :: xs
   ) graph []
+
+
+(* string -> string list *)
+(* 
+
+    ligo-main@link-dev:./esy.json ->    [ "temp-ligo-bin@0.28.1@d41d8cd9", "ligo-list-helpers@1.0.1@d41d8cd9", "ligo-foo@1.0.4@d41d8cd9" ]
+    temp-ligo-bin@0.28.1@d41d8cd9 ->    [  ]
+    ligo-list-helpers@1.0.1@d41d8cd9 -> [ temp-ligo-bin@0.25.0@d41d8cd9 ]
+    ligo-foo@1.0.4@d41d8cd9 ->          [ "temp-ligo-bin@0.25.2@d41d8cd9", "ligo-set-helpers@1.0.2@d41d8cd9", "ligo-list-helpers@1.0.0@d41d8cd9" ]
+    ligo-set-helpers@1.0.2@d41d8cd9 ->  [ "temp-ligo-bin@0.25.0@d41d8cd9" ]
+    ligo-list-helpers@1.0.0@d41d8cd9 -> [ temp-ligo-bin@0.25.0@d41d8cd9 ]
+
+    {
+      /home/melwyn95/projects/ligo-pkg-mgmnt/ligo-main -> [
+        /home/melwyn95/.esy/source/i/ligo_list_helpers__1.0.1__6233bebd,
+        ...
+      ]
+      ...
+    }
+
+    main.mligo: #import "ligo-list-helpers/list.mligo" "ListExt"
+
+    /home/melwyn95/.esy/source/i/ligo_foo__1.0.4__f8f13fa1/foo.mligo
+*)
+
 
 let find_dependencies lock_file = 
   let open Yojson.Basic.Util in
@@ -34,7 +59,7 @@ let find_dependencies lock_file =
     let graph = Map.String.add dep deps graph in
     List.fold_left ~f:(fun graph dep -> dfs dep graph) ~init:graph deps
   in
-  root, dfs root dep_graph
+  dfs root dep_graph
   
 let make project_path =
   match project_path with
@@ -45,8 +70,8 @@ let make project_path =
       (Fpath.to_string @@ (project_path // (Fpath.v "_esy/default/installation.json"))) in
     let lock_file_json = Yojson.Basic.from_file 
       (Fpath.to_string @@ (project_path // (Fpath.v "esy.lock/index.json"))) in
-    let root, dependencies = find_dependencies lock_file_json in
-    Some (resolve_paths installation_json dependencies root)
+    let dependencies = find_dependencies lock_file_json in
+    Some (resolve_paths installation_json dependencies)
   | None -> None
 
 let get_absolute_path path = 

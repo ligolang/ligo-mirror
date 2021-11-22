@@ -13,7 +13,7 @@ module type M =
     type compilation_unit
     type meta_data
     val esy_project_path : file_name option
-    val preprocess : file_name -> file_name list -> compilation_unit * meta_data * (file_name * module_name) list
+    val preprocess : file_name -> compilation_unit * meta_data * (file_name * module_name) list
     module AST : sig
       type declaration
       type t = declaration list
@@ -41,15 +41,13 @@ module Make (M : M) =
 
 (* Build system *)
 
-  let module_resolutions = Module_resolutions.make M.esy_project_path
-
   let dependency_graph : file_name -> graph =
     fun file_name ->
     let vertices = SMap.empty in
     let dep_g = G.empty in
-    let rec dfs acc (dep_g,vertices) (file_name,_module_name,includes) =
+    let rec dfs acc (dep_g,vertices) (file_name,_module_name) =
       if not @@ SMap.mem file_name vertices then
-        let c_unit, meta_data, deps = M.preprocess file_name includes in
+        let c_unit, meta_data, deps = M.preprocess file_name in
         let vertices = SMap.add file_name (meta_data,c_unit,deps) vertices in
         let dep_g = G.add_vertex dep_g file_name in
         let dep_g =
@@ -59,8 +57,7 @@ module Make (M : M) =
         in
         let dep_g,vertices = List.fold 
           ~f:(fun acc (dep_file_name,dep_module_name) -> 
-            let includes = Module_resolutions.get_includes dep_file_name module_resolutions in
-            dfs file_name acc (dep_file_name,dep_module_name,includes)
+            dfs file_name acc (dep_file_name,dep_module_name)
           ) 
           ~init:(dep_g,vertices) deps in
         (dep_g,vertices)
@@ -68,8 +65,7 @@ module Make (M : M) =
         let dep_g = G.add_edge dep_g acc file_name in
         (dep_g,vertices)
     in
-    let includes = Module_resolutions.get_includes file_name module_resolutions in
-    dfs file_name (dep_g,vertices) @@ (file_name,file_name,includes)
+    dfs file_name (dep_g,vertices) @@ (file_name,file_name)
 
   let solve_graph : graph -> file_name -> ((file_name * vertice) list,error) result =
     fun (dep_g,vertices) file_name ->

@@ -71,11 +71,12 @@ type file_path = string
 type module_name = string
 
 type config = <
-  block   : block_comment option;
-  line    : line_comment option;
-  input   : file_path option;
-  offsets : bool;
-  dirs    : file_path list (* Directories to search for #include files *)
+  block            : block_comment option;
+  line             : line_comment option;
+  input            : file_path option;
+  offsets          : bool;
+  dirs             : file_path list; (* Directories to search for #include files *)
+  esy_project_path : file_path option
 >
 
 type state = {
