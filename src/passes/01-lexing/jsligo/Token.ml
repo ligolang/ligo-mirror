@@ -10,6 +10,7 @@ module Directive = LexerLib.Directive
 
 module SMap = Map.Make (String)
 module Wrap = Lexing_shared.Wrap
+module Attr = Lexing_shared.Attr
 
 type 'a wrap = 'a Wrap.t
 type 'a reg  = 'a Region.reg
@@ -55,7 +56,7 @@ module T =
     | Ident    of lexeme wrap
     | UIdent   of lexeme wrap
  (* | Lang     of lexeme reg *)
-    | Attr     of Wrap.attribute reg
+    | Attr     of Attr.t reg
 
     (* Symbols *)
 
@@ -297,7 +298,7 @@ module T =
     | UIdent t ->
         t#region, sprintf "UIdent %S" t#payload
     | Attr {region; value} ->
-        region, sprintf "Attr %s" (Wrap.attr_to_string value)
+        region, sprintf "Attr %s" (Attr.to_string value)
  (* | Lang {value = {value = payload; _}; region; _} ->
         region, sprintf "Lang %S" payload *)
 
@@ -407,7 +408,7 @@ module T =
     | Int t      -> fst t#payload
     | Ident t
     | UIdent t   -> t#payload
-    | Attr t     -> Wrap.attr_to_lexeme t.Region.value
+    | Attr t     -> Attr.to_lexeme t.Region.value
  (* | Lang lang  -> Region.(lang.value.value) *)
 
     (* Symbols *)

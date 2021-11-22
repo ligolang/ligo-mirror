@@ -110,7 +110,7 @@ module type S =
     (* Attributes *)
 
     val mk_attr :
-      key:string -> ?value:Wrap.attr_val -> Region.t -> token
+      key:Attr.key -> ?value:Attr.value -> Region.t -> token
 
     (* Others *)
 

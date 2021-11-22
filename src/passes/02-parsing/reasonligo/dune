@@ -12,7 +12,8 @@
  (action
    (with-stdout-to
      %{targets}
-    (run menhir-recover --external-tokens Lexing_reasonligo.Token Parser.cmly))))
+     (run menhir-recover --external-tokens Lexing_reasonligo.Token
+          Parser.cmly))))
 
 ;; Build of the ReasonLIGO parser as a library
 
@@ -36,7 +37,7 @@
     menhirLib
     hex)
   (flags (:standard -open Cst_reasonligo   ;; for CST
-                    -open Lexing_shared))) ;; and Wrap in Parser.mli
+                    -open Lexing_shared))) ;; Attr, Wrap in Parser.mli
 
 
 ;; Local build of a standalone parser for ReasonLIGO

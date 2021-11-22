@@ -1,23 +1,20 @@
 ;; Generate ['a terminal] type to complete inspection API in parsing stage
 
 (rule
- (targets MenhirToken.ml MenhirToken.mli)
- (deps (:ParToken ../../02-parsing/reasonligo/ParToken.mly))
- (action (run menhir %{ParToken} --only-tokens --inspection --table --base MenhirToken))
-)
+  (targets MenhirToken.ml MenhirToken.mli)
+  (deps (:ParToken ../../02-parsing/reasonligo/ParToken.mly))
+  (action (run menhir %{ParToken} --only-tokens --inspection --table --base MenhirToken)))
 
 (library
- (name menhir_reasonligo_tokens)
- (public_name ligo.lexing.menhir_reasonligo_tokens)
- (modules MenhirToken)
- (libraries
-   lexing_shared
-   hex)
- (flags (:standard
-          -open Lexing_shared
-            -open Wrap     ;; for [wrap]
-            -open Common)) ;; for [lexeme]
-)
+  (name menhir_reasonligo_tokens)
+  (public_name ligo.lexing.menhir_reasonligo_tokens)
+  (modules MenhirToken)
+  (libraries
+     lexing_shared
+     hex)
+  (flags (:standard
+            -open Lexing_shared
+            -open Wrap)))     ;; for [wrap]
 
 ;; Build of the ReasonLIGO lexer as a library
 

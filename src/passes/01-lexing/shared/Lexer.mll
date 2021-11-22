@@ -294,7 +294,7 @@ rule scan state = parse
     let value =
       match value with
         None -> None
-      | Some string -> Some (Wrap.AttrString string)
+      | Some string -> Some (Attr.String string)
     in mk_attr key value state lexbuf }
 
 | decimal tz_or_tez {

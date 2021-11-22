@@ -36,7 +36,7 @@
     menhirLib
     hex)
   (flags (:standard -open Cst_pascaligo    ;; for CST
-                    -open Lexing_shared))) ;; and Wrap in Parser.mli
+                    -open Lexing_shared))) ;; Wrap, Attr in Parser.mli
 
 ;; Local build of a standalone parser for PascaLIGO
 

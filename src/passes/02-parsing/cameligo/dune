@@ -36,7 +36,7 @@
     menhirLib
     hex)
   (flags (:standard -open Cst_cameligo     ;; for CST
-                    -open Lexing_shared))) ;; and Wrap in Parser.mli
+                    -open Lexing_shared))) ;; Attr, Wrap in Parser.mli
 
 ;; Local build of a standalone parser for CameLIGO
 

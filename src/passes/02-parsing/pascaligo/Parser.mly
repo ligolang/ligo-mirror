@@ -119,8 +119,7 @@ module Wrap = Lexing_shared.Wrap
    make it easy in the semantic action to collate the information into
    CST nodes. *)
 
-let unwrap = Wrap.payload
-let wrap   = Wrap.wrap
+let wrap     = Wrap.wrap
 
 let mk_reg region value = Region.{region; value}
 
@@ -223,9 +222,10 @@ let terminate_decl semi = function
   algorithm will be in production in the near future, enabling that
   work to be carried out in a reasonable amount of time. *)
 
+%on_error_reduce module_path(__anonymous_2)
+%on_error_reduce nseq(__anonymous_4)
 %on_error_reduce nsepseq(core_type,TIMES)
 %on_error_reduce ctor_app_pattern
-%on_error_reduce nseq(__anonymous_5)
 %on_error_reduce var_pattern
 %on_error_reduce module_path(__anonymous_3)
 %on_error_reduce field_decl
@@ -468,14 +468,14 @@ cartesian_level:
 | core_type { $1 }
 
 core_type:
-  "<string>"     { T_String (unwrap $1)  }
-| "<int>"        { T_Int    (unwrap $1)  }
-| "_"            { T_Var    $1           }
-| type_ctor_app  { T_App    $1           }
-| record_type    { T_Record $1           }
-| type_name      { T_Var    $1           }
-| par(type_expr) { T_Par    $1           }
-| qualified_type { $1 }
+  "<string>"     { T_String $1 }
+| "<int>"        { T_Int    $1 }
+| "_"            { T_Var    $1 }
+| type_ctor_app  { T_App    $1 }
+| record_type    { T_Record $1 }
+| type_name      { T_Var    $1 }
+| par(type_expr) { T_Par    $1 }
+| qualified_type { $1          }
 
 (* Type constructor applications *)
 
@@ -1177,7 +1177,7 @@ binding:
     let start  = expr_to_region $1
     and stop   = expr_to_region $3 in
     let region = cover start stop
-    and value  = {source=$1; arrow=$2; image=$3}
+    and value  = {key=$1; arrow=$2; value=$3}
     in {region; value} }
 
 (* Set expressions (extensional definitions) *)

@@ -15,8 +15,7 @@ module Wrap = Lexing_shared.Wrap
 
 (* Utilities *)
 
-let unwrap = Wrap.payload
-let wrap   = Wrap.wrap
+let wrap = Wrap.wrap
 
 let ghost = wrap "" ghost
 
@@ -124,11 +123,11 @@ sep_or_term_list(item,sep):
 
 (* Helpers *)
 
-%inline variable         : "<ident>"  { unwrap $1 }
-%inline type_name        : "<ident>"  { unwrap $1 }
-%inline field_name       : "<ident>"  { unwrap $1 }
-%inline struct_name      : "<ident>"  { unwrap $1 }
-%inline module_name      : "<uident>" { unwrap $1 }
+%inline variable         : "<ident>"  { $1 }
+%inline type_name        : "<ident>"  { $1 }
+%inline field_name       : "<ident>"  { $1 }
+%inline struct_name      : "<ident>"  { $1 }
+%inline module_name      : "<uident>" { $1 }
 
 (* Non-empty comma-separated values (at least two values) *)
 
@@ -238,8 +237,8 @@ fun_type_level:
 | core_type { $1 }
 
 core_type:
-  "<string>"            { TString (unwrap $1) }
-| "<int>"               { TInt    (unwrap $1) }
+  "<string>"            { TString $1 }
+| "<int>"               { TInt    $1 }
 | "_"                   { TVar {value="_"; region=$1#region } }
 | type_name             { TVar    $1 }
 | module_access_t       { TModA   $1 }

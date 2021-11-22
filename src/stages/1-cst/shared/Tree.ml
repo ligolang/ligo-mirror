@@ -107,6 +107,8 @@ let print_tree ?region state label children =
   let apply rank print = print (state#pad arity rank)
   in List.iteri apply children
 
+let print = print_tree
+
 (* A special case of tree occurs often: the unary tree, that is, a
    tree with exactly one subtree. *)
 

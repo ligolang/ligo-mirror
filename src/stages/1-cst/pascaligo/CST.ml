@@ -14,6 +14,7 @@ module Region    = Simple_utils.Region
 
 module Token = Lexing_pascaligo.Token
 module Wrap  = Lexing_shared.Wrap
+module Attr  = Lexing_shared.Attr
 
 (* Utilities *)
 
@@ -73,31 +74,31 @@ type kwd_with      = lexeme wrap
 (* IMPORTANT: The types are sorted alphabetically. If you add or
    modify some, please make sure they remain in order. *)
 
-type arrow    = lexeme wrap  (* "->"  *)
-type assign   = lexeme wrap  (* ":="  *)
-type caret    = lexeme wrap  (* "^"   *)
-type colon    = lexeme wrap  (* ":"   *)
-type comma    = lexeme wrap  (* ","   *)
-type sharp    = lexeme wrap  (* "#"   *)
-type dot      = lexeme wrap  (* "."   *)
-type equal    = lexeme wrap  (* "="   *)
-type geq      = lexeme wrap  (* ">="  *)
-type gt       = lexeme wrap  (* ">"   *)
-type lbrace   = lexeme wrap  (* "{"   *)
-type lbracket = lexeme wrap  (* "["   *)
-type leq      = lexeme wrap  (* "<="  *)
-type lpar     = lexeme wrap  (* "("   *)
-type lt       = lexeme wrap  (* "<"   *)
-type minus    = lexeme wrap  (* "-"   *)
-type neq      = lexeme wrap  (* "=/=" *)
-type plus     = lexeme wrap  (* "+"   *)
-type rbrace   = lexeme wrap  (* "}"   *)
-type rbracket = lexeme wrap  (* "]"   *)
-type rpar     = lexeme wrap  (* ")"   *)
-type semi     = lexeme wrap  (* ";"   *)
-type slash    = lexeme wrap  (* "/"   *)
-type times    = lexeme wrap  (* "*"   *)
-type vbar     = lexeme wrap  (* "|"   *)
+type arrow    = lexeme wrap  (* ->  *)
+type assign   = lexeme wrap  (* :=  *)
+type caret    = lexeme wrap  (* ^   *)
+type colon    = lexeme wrap  (* :   *)
+type comma    = lexeme wrap  (* ,   *)
+type sharp    = lexeme wrap  (* #   *)
+type dot      = lexeme wrap  (* .   *)
+type equal    = lexeme wrap  (* =   *)
+type geq      = lexeme wrap  (* >=  *)
+type gt       = lexeme wrap  (* >   *)
+type lbrace   = lexeme wrap  (* {   *)
+type lbracket = lexeme wrap  (* [   *)
+type leq      = lexeme wrap  (* <=  *)
+type lpar     = lexeme wrap  (* (   *)
+type lt       = lexeme wrap  (* <   *)
+type minus    = lexeme wrap  (* -   *)
+type neq      = lexeme wrap  (* =/= *)
+type plus     = lexeme wrap  (* +   *)
+type rbrace   = lexeme wrap  (* }   *)
+type rbracket = lexeme wrap  (* ]   *)
+type rpar     = lexeme wrap  (* )   *)
+type semi     = lexeme wrap  (* ;   *)
+type slash    = lexeme wrap  (* /   *)
+type times    = lexeme wrap  (* *   *)
+type vbar     = lexeme wrap  (* |   *)
 
 (* End-of-File *)
 
@@ -112,8 +113,8 @@ type ctor        = lexeme wrap
 
 type language    = lexeme reg   (* Not [wrap] *)
 
-type attribute   = Wrap.attribute
-type attributes  = Wrap.attributes
+type attribute   = Attr.t
+type attributes  = Attr.attributes
 
 (* Parentheses *)
 
@@ -134,7 +135,7 @@ type 'a brackets = {
 (* CONCRETE SYNTAX TREE (CST) *)
 
 type t = {
-  decl : declaration nseq;
+  decl : declarations;
   eof  : eof
 }
 
@@ -144,6 +145,8 @@ and cst = t
 
 (* IMPORTANT: The data constructors are sorted alphabetically. If you
    add or modify some, please make sure they remain in order. *)
+
+and declarations = declaration nseq
 
 and declaration =
   D_Const     of const_decl   reg
@@ -196,7 +199,7 @@ and module_decl = {
   name         : module_name;
   kwd_is       : kwd_is;
   enclosing    : block_enclosing;
-  declarations : declaration nseq;
+  declarations : declarations;
   terminator   : semi option
 }
 

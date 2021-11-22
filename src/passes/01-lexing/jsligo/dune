@@ -1,23 +1,21 @@
 ;; Generate ['a terminal] type to complete inspection API in parsing stage
 
 (rule
- (targets MenhirToken.ml MenhirToken.mli)
- (deps (:ParToken ../../02-parsing/jsligo/ParToken.mly))
- (action (run menhir %{ParToken} --only-tokens --inspection --table --base MenhirToken))
-)
+  (targets MenhirToken.ml MenhirToken.mli)
+  (deps (:ParToken ../../02-parsing/jsligo/ParToken.mly))
+  (action (run menhir %{ParToken} --only-tokens --inspection --table
+               --base MenhirToken)))
 
 (library
- (name menhir_jsligo_tokens)
- (public_name ligo.lexing.menhir_jsligo_tokens)
- (modules MenhirToken)
- (libraries
-   lexing_shared
-   hex)
- (flags (:standard
-          -open Lexing_shared
-            -open Wrap     ;; for [wrap]
-            -open Common)) ;; for [lexeme]
- )
+  (name menhir_jsligo_tokens)
+  (public_name ligo.lexing.menhir_jsligo_tokens)
+  (modules MenhirToken)
+  (libraries
+     lexing_shared
+     hex)
+  (flags (:standard
+            -open Lexing_shared
+            -open Wrap)))     ;; for [wrap]
 
 ;; Build of the JsLIGO lexer as a library
 
@@ -31,8 +29,7 @@
     menhir_jsligo_tokens
     ;; Third party
     str
-    hex)
-)
+    hex))
 
 ;; Build of a standalone lexer for JsLIGO
 
@@ -45,9 +42,7 @@
     lexing_jsligo
     ;; Third party
     str)
-  (modules Version LexerMain)
-)
-
+  (modules Version LexerMain))
 
 ;; Build of the unlexer (for covering the
 ;; error states of the LR automaton)

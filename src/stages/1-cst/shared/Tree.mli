@@ -86,6 +86,13 @@ val print_tree :
   child list ->
   unit
 
+val print : (* Alias of [print_tree] *)
+  ?region:Region.t ->
+  state ->
+  label (* root *) ->
+  child list ->
+  unit
+
 (* A special case of tree occurs often: the unary tree made of a value
    of type [string Wrap.t], that is, a tree with exactly one
    subtree. *)
