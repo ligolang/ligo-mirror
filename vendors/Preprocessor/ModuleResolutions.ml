@@ -13,8 +13,6 @@ module JsonHelpers = struct
   let string_list json = List.map ~f:string (list json)
 end
 
-(* type t = (string * string list) list option *)
-
 let resolve_paths installation graph =
   let resolve p =
     Yojson.Basic.Util.member p installation |> JsonHelpers.string

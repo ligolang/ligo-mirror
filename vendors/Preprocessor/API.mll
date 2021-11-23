@@ -285,14 +285,14 @@ let rec find file_path = function
     try Some (path, open_in path) with
       Sys_error _ -> find file_path dirs
 
-let find dir file dirs =
+let find dir file dirs external_dirs =
   let path =
     if dir = "." || dir = "" then file
     else dir ^ Filename.dir_sep ^ file in
   try Some (path, open_in path) with
     Sys_error _ ->
       let base = Filename.basename file in
-      if base = file then find file dirs else find_external_file file dirs 
+      if base = file then find file dirs else find_external_file file external_dirs 
 
 (* PRINTING *)
 
@@ -536,8 +536,9 @@ rule scan state = parse
         if state.mode = Copy then
           let incl_dir = Filename.dirname incl_file in
           let path = mk_path state in
+          let external_dirs = ModuleResolutions.get_includes file state.config#module_resolutions in
           let incl_path, incl_chan =
-            match find path incl_file state.config#dirs with
+            match find path incl_file state.config#dirs external_dirs with
               Some p -> p
             |   None -> fail state reg (File_not_found incl_file) in
           let () = print state (sprintf "\n# 1 %S 1\n" incl_path) in
@@ -545,7 +546,7 @@ rule scan state = parse
           let () =
             let open Lexing in
             incl_buf.lex_curr_p <-
-              {incl_buf.lex_curr_p with pos_fname = incl_file} in
+              {incl_buf.lex_curr_p with pos_fname = incl_path} in
           let state  = {state with chans = incl_chan::state.chans} in
           let state' = {state with mode=Copy; trace=[]} in
           let state' = scan (push_dir incl_dir state') incl_buf in
@@ -557,10 +558,12 @@ rule scan state = parse
         else scan state lexbuf
     | "import" ->
         let reg, import_file, imported_module = scan_import state lexbuf in
+        let file = Lexing.(lexbuf.lex_curr_p.pos_fname) in
         if state.mode = Copy then
           let path = mk_path state in
+          let external_dirs = ModuleResolutions.get_includes file state.config#module_resolutions in
           let import_path =
-            match find path import_file state.config#dirs with
+            match find path import_file state.config#dirs external_dirs with
               Some p -> fst p
             | None -> fail state reg (File_not_found import_file) in
           let state  = {state with
