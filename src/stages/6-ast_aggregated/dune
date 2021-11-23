@@ -1,0 +1,13 @@
+(library
+ (name ast_aggregated)
+ (public_name ligo.ast_aggregated)
+ (instrumentation
+  (backend bisect_ppx))
+ (libraries simple-utils stage_common)
+ (flags
+  (:standard
+   -open
+   Simple_utils
+   ;; SOMEDAY remove this
+   -w
+   -9)))
