@@ -70,13 +70,15 @@ type block_comment = <opening : string; closing : string>
 type file_path = string
 type module_name = string
 
+type module_resolutions = (string * string list) list
+
 type config = <
-  block            : block_comment option;
-  line             : line_comment option;
-  input            : file_path option;
-  offsets          : bool;
-  dirs             : file_path list; (* Directories to search for #include files *)
-  esy_project_path : file_path option
+  block              : block_comment option;
+  line               : line_comment option;
+  input              : file_path option;
+  offsets            : bool;
+  dirs               : file_path list; (* Directories to search for #include files *)
+  module_resolutions : module_resolutions option
 >
 
 type state = {

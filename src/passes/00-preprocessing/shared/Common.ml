@@ -45,12 +45,12 @@ module Config (File : FILE) (Comments : Comments.S) =
 
     let preprocessor =
       object
-        method block            = Preprocessor_CLI.block
-        method line             = Preprocessor_CLI.line
-        method input            = Preprocessor_CLI.input
-        method offsets          = Preprocessor_CLI.offsets
-        method dirs             = Preprocessor_CLI.dirs
-        method esy_project_path = Preprocessor_CLI.esy_project_path
+        method block              = Preprocessor_CLI.block
+        method line               = Preprocessor_CLI.line
+        method input              = Preprocessor_CLI.input
+        method offsets            = Preprocessor_CLI.offsets
+        method dirs               = Preprocessor_CLI.dirs
+        method module_resolutions = Preprocessor.ModuleResolutions.make Preprocessor_CLI.esy_project_path
       end
   end
 
@@ -86,9 +86,9 @@ module Make (File : File.S) (Comments : Comments.S) =
     let from_file esy_project_path dirs file_path =
       let module File : FILE =
         struct
-          let extension = File.extension
-          let input     = Some file_path
-          let dirs      = dirs
+          let extension        = File.extension
+          let input            = Some file_path
+          let dirs             = dirs
           let esy_project_path = esy_project_path
         end in
       let module Config = Config (File) (Comments) in
@@ -104,9 +104,9 @@ module Make (File : File.S) (Comments : Comments.S) =
     let from_string esy_project_path dirs string =
       let module File : FILE =
         struct
-          let extension = File.extension
-          let input     = None
-          let dirs      = dirs
+          let extension        = File.extension
+          let input            = None
+          let dirs             = dirs
           let esy_project_path = esy_project_path 
         end in
       let module Config = Config (File) (Comments) in

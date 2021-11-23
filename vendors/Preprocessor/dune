@@ -11,7 +11,7 @@
     getopt
     str
     fpath)
-  (modules Version CLI E_Parser E_Lexer E_AST API PreprocMainGen))
+  (modules Version CLI E_Parser E_Lexer E_AST API PreprocMainGen ModuleResolutions))
 
 ;; Building the lexers of the preprocessor
 
