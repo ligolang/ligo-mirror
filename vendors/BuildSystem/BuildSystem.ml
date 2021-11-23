@@ -12,7 +12,6 @@ module type M =
     type module_name = string
     type compilation_unit
     type meta_data
-    val esy_project_path : file_name option
     val preprocess : file_name -> compilation_unit * meta_data * (file_name * module_name) list
     module AST : sig
       type declaration
@@ -55,11 +54,7 @@ module Make (M : M) =
           if String.equal acc file_name then dep_g
           else G.add_edge dep_g acc file_name
         in
-        let dep_g,vertices = List.fold 
-          ~f:(fun acc (dep_file_name,dep_module_name) -> 
-            dfs file_name acc (dep_file_name,dep_module_name)
-          ) 
-          ~init:(dep_g,vertices) deps in
+        let dep_g,vertices = List.fold ~f:(dfs file_name) ~init:(dep_g,vertices) deps in
         (dep_g,vertices)
       else
         let dep_g = G.add_edge dep_g acc file_name in

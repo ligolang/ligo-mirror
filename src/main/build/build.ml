@@ -17,7 +17,6 @@ module M (Params : Params) =
     type module_name = string
     type compilation_unit = Buffer.t
     type meta_data = Ligo_compile.Helpers.meta
-    let esy_project_path = Params.options.esy_project_path
     let preprocess : file_name -> compilation_unit * meta_data * (file_name * module_name) list =
       fun file_name ->
       let meta = Ligo_compile.Of_source.extract_meta ~raise "auto" file_name in
