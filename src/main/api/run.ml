@@ -52,7 +52,7 @@ let interpret expression init_file syntax infer protocol_version amount balance 
       let runres  = Run.run_expression ~raise ~options compiled_exp.expr compiled_exp.expr_ty in
       Decompile.Of_michelson.decompile_expression ~raise typed_exp.type_expression runres
 
-let evaluate_call source_file entry_point parameter amount balance sender source now syntax infer protocol_version display_format werror =
+let evaluate_call source_file entry_point parameter amount balance sender source now syntax infer protocol_version display_format werror esy_project_path =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~werror ~display_format (Decompile.Formatter.expression_format) get_warnings @@
       fun ~raise ->

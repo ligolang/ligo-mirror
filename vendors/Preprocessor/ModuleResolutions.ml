@@ -78,14 +78,14 @@ let get_absolute_path path =
   else Fpath.v ((Sys.getcwd ()) ^ Fpath.dir_sep ^ path) |> Fpath.normalize |> Fpath.to_string
 
 let get_includes path module_resolutions =
-  let path = get_absolute_path path in
   match module_resolutions with
     Some module_resolutions ->
-    (match List.find ~f:(fun (mod_path, _) -> 
-        Fpath.is_prefix (Fpath.v mod_path) (Fpath.v path)
-      ) module_resolutions 
-    with
-      Some (_,paths) -> paths
-    | None -> []
-    )
+      let path = get_absolute_path path in
+      (match List.find ~f:(fun (mod_path, _) -> 
+          Fpath.is_prefix (Fpath.v mod_path) (Fpath.v path)
+        ) module_resolutions 
+      with
+        Some (_,paths) -> paths
+      | None -> []
+      )
   | None -> []
