@@ -3,18 +3,11 @@ module CST = Cst.Reasonligo
 module Predefined = Predefined.Tree_abstraction.Reasonligo
 module Token = Lexing_reasonligo.Token
 
+module Wrap = Lexing_shared.Wrap
+
 open Function
 
 (* Utils *)
-
-let ghost = 
-  object 
-    method region = Region.ghost 
-    method attributes = []
-    method payload = ""
-  end 
-
-let wrap = Region.wrap_ghost
 
 let decompile_attributes = List.map ~f:wrap
 
@@ -294,7 +287,7 @@ let rec decompile_expression : AST.expression -> CST.expr = fun expr ->
         let pattern = decompile_pattern pattern in
         (wrap ({pattern ; arrow = ghost ; rhs ; terminator = Some ghost}:_ CST.case_clause))
     in
-    let case_clauses = List.map ~f:aux cases in 
+    let case_clauses = List.map ~f:aux cases in
     let cases = list_to_nsepseq case_clauses in
     let cases = wrap cases in
     let cases : _ CST.case = {kwd_switch=ghost;lbrace=ghost;rbrace=ghost;expr;cases} in
@@ -501,11 +494,10 @@ and decompile_lambda : (AST.expr, AST.ty_expr) AST.lambda -> _ =
 
 and decompile_declaration : AST.declaration Location.wrap -> CST.declaration = fun decl ->
   let decl = Location.unwrap decl in
-  let wrap value = ({value;region=Region.ghost} : _ Region.reg) in
   match decl with
     Declaration_type {type_binder;type_expr;type_attr=_} ->
     let name = decompile_variable type_binder in
-    let params =  
+    let params =
       match type_expr.type_content with
       | T_abstraction _ -> (
         let rec aux : AST.type_expression -> _ list -> _ list  =
