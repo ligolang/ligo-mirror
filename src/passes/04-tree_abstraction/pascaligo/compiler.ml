@@ -26,7 +26,7 @@ let rec e_unpar : CST.expr -> CST.expr = fun expr ->
 
 let compile_attributes : CST.attributes -> AST.attributes = fun attributes ->
   let lst = List.map ~f:(fst <@ r_split) attributes in
-  List.filter_map lst ~f:(fun (_,opt) -> match opt with Some (AttrString s) -> Some s | None -> None)
+  List.filter_map lst ~f:(fun (_,opt) -> match opt with Some (String s) -> Some s | None -> None)
 
 let compile_selection : CST.selection -> 'a access * location = function
   | FieldName name ->
@@ -66,12 +66,12 @@ let rec compile_type_expression ~raise : CST.type_expr -> AST.type_expression =
       let loc = Location.lift region in
       let get_t_string_singleton_opt =
         function
-        | CST.T_String s -> Some s.value
+        | CST.T_String s -> Some s#payload
         | _ -> None
       in
       let get_t_int_singleton_opt = function
         | CST.T_Int x ->
-          let (_,z) = x.value in
+          let (_,z) = x#payload in
           Some z
         | _ -> None
       in
@@ -472,10 +472,10 @@ and compile_instruction ~raise : ?next: AST.expression -> CST.instruction -> AST
       | E_Map { region = _ ; value = { elements ; attributes = _ } } -> (
         let lst = Utils.sepseq_to_list elements in
         let f : AST.expression -> CST.binding CST.reg -> AST.expression =
-          fun cur { region ; value = { source ; image } } ->
+          fun cur { region ; value = { key ; value } } ->
             let loc = Location.lift region in
-            let source = compile_expression ~raise source in
-            let image = compile_expression ~raise image in
+            let source = compile_expression ~raise key in
+            let image = compile_expression ~raise value in
             let path = [ Access_map source] in
             e_update ~loc cur path image
         in
@@ -649,7 +649,7 @@ and compile_declaration ~raise : CST.declaration -> (expression, type_expression
       | None -> rhs
       | Some x ->
         let lst = Utils.nsepseq_to_list x.value.inside in
-        let aux : CST.type_var -> AST.type_expression -> AST.type_expression =
+        let aux : CST.variable -> AST.type_expression -> AST.type_expression =
           fun param type_ ->
             let (param,ploc) = w_split param in
             let ty_binder = Location.wrap ~loc:ploc @@ Var.of_name param in
