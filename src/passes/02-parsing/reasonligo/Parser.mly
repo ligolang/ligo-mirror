@@ -16,6 +16,7 @@ module Wrap = Lexing_shared.Wrap
 (* Utilities *)
 
 let wrap = Wrap.wrap
+let unwrap wrap = Region.{region=wrap#region; value=wrap#payload}
 
 let ghost = wrap "" ghost
 
@@ -123,11 +124,11 @@ sep_or_term_list(item,sep):
 
 (* Helpers *)
 
-%inline variable         : "<ident>"  { $1 }
-%inline type_name        : "<ident>"  { $1 }
-%inline field_name       : "<ident>"  { $1 }
-%inline struct_name      : "<ident>"  { $1 }
-%inline module_name      : "<uident>" { $1 }
+%inline variable         : "<ident>"  { unwrap $1 }
+%inline type_name        : "<ident>"  { unwrap $1 }
+%inline field_name       : "<ident>"  { unwrap $1 }
+%inline struct_name      : "<ident>"  { unwrap $1 }
+%inline module_name      : "<uident>" { unwrap $1 }
 
 (* Non-empty comma-separated values (at least two values) *)
 
@@ -170,7 +171,10 @@ module_:
 %inline attributes:
   ioption(nseq("[@attr]") { Utils.nseq_to_list $1 }) {
     let l = list_of_option $1 in
-    List.map unwrap l
+    let filter (attr: Attr.t reg) =
+      {attr with value = fst attr.value } in
+    List.map filter l
+             (*    List.map unwrap l*)
   }
 
 (* Type declarations *)
@@ -237,8 +241,8 @@ fun_type_level:
 | core_type { $1 }
 
 core_type:
-  "<string>"            { TString $1 }
-| "<int>"               { TInt    $1 }
+  "<string>"            { TString (unwrap $1) }
+| "<int>"               { TInt    (unwrap $1) }
 | "_"                   { TVar {value="_"; region=$1#region } }
 | type_name             { TVar    $1 }
 | module_access_t       { TModA   $1 }

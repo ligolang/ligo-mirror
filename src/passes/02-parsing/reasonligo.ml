@@ -1,6 +1,3 @@
-(* This file provides an interface to the ReasonLIGO parser and
-   pretty-printer. *)
-
 (* Vendor dependencies *)
 
 module Trace = Simple_utils.Trace

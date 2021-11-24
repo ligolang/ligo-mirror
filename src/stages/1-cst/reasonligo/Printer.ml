@@ -469,7 +469,7 @@ and print_list_expr state = function
    print_token state rbracket
 | EListComp e ->
    if e.value.elements = None
-   then 
+   then
     let token = Token.wrap "[]" e.region in
     print_token state token
    else print_injection state print_expr e
@@ -528,8 +528,8 @@ and print_arith_expr state = function
     let line = sprintf "Int %s (%s)" lex (Z.to_string z) in
     let token = Token.wrap line region in
     print_token state token
-| Mutez {region; value=lex,z} ->
-    let line = sprintf "Mutez %s (%s)" lex (Z.to_string z) in
+| Mutez {region; value=lex,int64} ->
+    let line = sprintf "Mutez %s (%s)" lex (Int64.to_string int64) in
     let token = Token.wrap line region in
     print_token state token
 | Nat {region; value=lex,z} ->
@@ -1272,7 +1272,7 @@ and pp_arith_expr state = function
     pp_int  state n
 | Mutez m ->
     pp_node state "Mutez";
-    pp_int  state m
+    pp_string state {m with value = fst m.value} (* TODO *)
 
 and pp_e_logic state = function
   BoolExpr e ->

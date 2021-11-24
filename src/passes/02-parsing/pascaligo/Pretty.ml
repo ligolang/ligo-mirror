@@ -1,40 +1,55 @@
 (* A pretty printer for PascaLIGO *)
 
-[@@@warning "-42-27-26"]
+(* Disabled warnings *)
+
+[@@@warning "-42-27-26"] (* TODO: Minimise *)
+
+(* Local dependencies *)
 
 module CST = Cst_pascaligo.CST
-open CST
+(*open CST*)
+
+(* Vendor dependencies *)
+
+(*module Directive = LexerLib.Directive*)
 module Region = Simple_utils.Region
 open! Region
-open! PPrint
-(*module Directive = LexerLib.Directive*)
 
+(* Third party dependencies *)
+
+open! PPrint
+
+(* HIGHER-ORDER PRINTERS *)
+(*
 let pp_par : ('a -> document) -> 'a par reg -> document =
-  fun printer {value; _} ->
-    string "(" ^^ nest 1 (printer value.inside ^^ string ")")
+  fun print {value; _} ->
+    string "(" ^^ nest 1 (print value.inside ^^ string ")")
 
 let pp_brackets : ('a -> document) -> 'a brackets reg -> document =
-  fun printer {value; _} ->
-    string "[" ^^ nest 1 (printer value.inside ^^ string "]")
-
-(*
-let pp_braces : ('a -> document) -> 'a braces reg -> document =
-  fun printer {value; _} ->
-    string "{" ^^ nest 1 (printer value.inside ^^ string "}")
+  fun print {value; _} ->
+    string "[" ^^ nest 1 (print value.inside ^^ string "]")
  *)
 
-let rec print ast =
+(* PRINTING THE CST *)
+
+let (*rec*) print ast = failwith "[PascaLIGO] Pretty.print: TODO"
+(*
   let decl = Utils.nseq_to_list ast.decl in
   let decl = List.filter_map pp_declaration decl
   in separate_map (hardline ^^ hardline) group decl
 
+(* DECLARATIONS (top-level) *)
+
+(* IMPORTANT: The data constructors are sorted alphabetically. If you
+   add or modify some, please make sure they remain in order. *)
+
 and pp_declaration = function
-  TypeDecl    decl -> Some (pp_type_decl  decl)
-| ConstDecl   decl -> Some (pp_const_decl decl)
-| FunDecl     decl -> Some (pp_fun_decl   decl)
-| ModuleDecl  decl -> Some (pp_module_decl  decl)
-| ModuleAlias decl -> Some (pp_module_alias decl)
-| Directive      _ -> None
+  D_Const     d -> Some (pp_const_decl   d)
+| D_Directive _ -> None
+| D_Fun       d -> Some (pp_fun_decl     d)
+| D_Module    d -> Some (pp_module_decl  d)
+| D_ModAlias  d -> Some (pp_module_alias d)
+| D_Type      d -> Some (pp_type_decl    d)
 
 (*
 and pp_dir_decl = function
@@ -50,20 +65,96 @@ and pp_dir_decl = function
     in string lexeme
 *)
 
-and pp_const_decl {value; _} =
+(* Constant declaration *)
+
+and pp_const_decl (node : const_decl reg) =
+  let {value; _} = node in
   let {pattern; const_type; init; attributes; _} = value in
-  let start = string "const " ^^ pp_pattern pattern in
-  let start = if attributes = [] then start
-              else pp_attributes attributes ^/^ start in
-  let start =
+  let prefix = string "const " ^^ pp_pattern pattern in
+  let prefix = pp_attributes' prefix attributes in
+  let prefix =
     match const_type with
-      None -> start
+      None -> prefix
     | Some (_, e) ->
-        group (start ^/^ nest 2 (string ": " ^^ pp_type_expr e)) in
-  start
+        group (prefix ^/^ nest 2 (string ": " ^^ pp_type_expr e)) in
+  prefix
   ^^ group (break 1 ^^ nest 2 (string "= " ^^ pp_expr init))
 
-(* Type declarations *)
+and pp_attributes' prefix = function
+  [] -> prefix
+| attrs -> let make s = string "[@" ^^ string s.value ^^ string "]"
+          in group (separate_map (break 0) make attrs ^/^ prefix)
+
+and pp_attributes = function
+    [] -> empty
+| attrs -> let make s = string "[@" ^^ string s.value ^^ string "]"
+           in separate_map (break 0) make attrs
+
+and pp_type_annotation prefix (_, type_expr : type_annotation) =
+  group (prefix ^/^ nest 2 (string ": " ^^ pp_type_expr type_expr))
+
+(* Function declaration *)
+
+and pp_fun_decl (node : fun_decl reg) =
+  let {kwd_recursive; fun_name; param; ret_type;
+       return; attributes; _} = node.value in
+  let prefix =
+    match kwd_recursive with
+          None -> string "function"
+      | Some _ -> string "recursive" ^/^ string "function" in
+  let prefix     = pp_attributes' prefix attributes in
+  let prefix     = group (prefix ^/^ nest 2 (pp_ident fun_name))
+  and parameters = pp_par pp_parameters param
+  and t_annot_is =
+    match ret_type with
+      None -> string " is"
+    | Some (_, e) ->
+        let ret_type = pp_type_expr e in
+        group (nest 2 (break 1 ^^ string ": " ^^ nest 2 ret_type
+                       ^^ string " is"))
+  and body =
+    let expr = pp_expr return in
+    match return with
+      E_Block _ -> group (break 1 ^^ expr)
+    | _ -> group (nest 2 (break 1 ^^ expr))
+in prefix 2 1 prefix parameters
+   ^^ t_annot_is
+   ^^ body
+
+and pp_parameters p = pp_nsepseq ";" pp_param_decl p
+
+and pp_param_decl (node : param_decl) =
+  let {param_kind; var; param_type} = node in
+  match param_kind with
+    `Var   _ -> pp_param "var" var param_type
+  | `Const _ -> pp_param "const" var param_type
+
+and pp_param prefix var param_type =
+  let name = string (prefix ^ " ") ^^ pp_pvar var in
+  match param_type with
+    None -> name
+  | Some (_, e) -> (name ^^ string " :") ^//^ pp_type_expr e
+
+and pp_pvar (node : variable) =
+  let {variable; attributes} = value in
+  let prefix = pp_ident node#payload in
+  pp_attributes' prefix node#attributes
+
+(* Module declaration (structure) *)
+
+and pp_module_decl decl =
+  let {name; module_; enclosing; _} = decl.value in
+  string "module " ^^ pp_ident name ^^ string " is {"
+  ^^ group (nest 2 (break 1 ^^ print module_)) ^^ string "}"
+
+(* Declaration of module alias *)
+
+and pp_module_alias decl =
+  let {alias; binders; _} = decl.value in
+  string "module " ^^ string alias.value
+  ^^ group (nest 2 (break 1 ^^ pp_nsepseq "." pp_ident binders))
+
+(* Type declaration *)
 
 and pp_type_decl decl =
   let {name; params; type_expr; _} = decl.value in
@@ -78,30 +169,56 @@ and pp_type_params = function
     let vars = pp_nsepseq "," pp_ident value.inside
     in string "(" ^^ nest 1 (vars ^^ string ")")
 
-and pp_module_decl decl =
-  let {name; module_; enclosing; _} = decl.value in
-  string "module " ^^ pp_ident name ^^ string " is {"
-  ^^ group (nest 2 (break 1 ^^ print module_))
-  ^^ string "}"
+(* TYPE EXPRESSIONS *)
 
-and pp_module_alias decl =
-  let {alias; binders; _} = decl.value in
-  string "module " ^^ string alias.value
-  ^^ group (nest 2 (break 1 ^^ pp_nsepseq "." pp_ident binders))
+(* IMPORTANT: The data constructors are sorted alphabetically. If you
+   add or modify some, please make sure they remain in order. *)
 
 and pp_type_expr = function
-  TProd t   -> pp_cartesian t
-| TSum t    -> pp_sum_type t
-| TRecord t -> pp_record_type t
-| TApp t    -> pp_type_app t
-| TFun t    -> pp_fun_type t
-| TPar t    -> pp_type_par t
-| TVar t    -> pp_ident t
-| TString s -> pp_string s
-| TInt    i -> pp_int i
-| TModA   t -> pp_module_access pp_type_expr t
+  T_App     t -> pp_T_App     t
+| T_Cart    t -> pp_T_Cart    t
+| T_Fun     t -> pp_T_Fun     t
+| T_Int     t -> pp_T_Int     t
+| T_ModPath t -> pp_T_ModPath t
+| T_Par     t -> pp_T_Par     t
+| T_Record  t -> pp_T_Record  t
+| T_String  t -> pp_T_String  t
+| T_Sum     t -> pp_T_Sum     t
+| T_Var     t -> pp_T_Var     t
 
-and pp_sum_type {value; _} =
+(* Application of type constructors *)
+
+and pp_T_App (node: (type_expr * type_tuple) reg) =
+  let ctor_expr, tuple = node.value in
+  pp_type_expr ctor_expr ^//^ pp_type_tuple tuple
+
+and pp_type_tuple (node: type_tuple) =
+  let node = node.value in
+  let head, tail = node.inside in
+  let rec app = function
+    []  -> empty
+  | [e] -> group (break 1 ^^ pp_type_expr e)
+  | e::items ->
+      group (break 1 ^^ pp_type_expr e ^^ string ",") ^^ app items in
+  let components =
+    if tail = []
+    then pp_type_expr head
+    else pp_type_expr head ^^ string "," ^^ app (List.map snd tail)
+  in string "(" ^^ nest 1 (components ^^ string ")")
+
+
+
+and pp_T_Var node = pp_ident node
+
+and pp_T_String node = pp_string node
+
+and pp_T_Int node = pp_int node
+
+and pp_T_ModPath node = pp_module_path pp_type_expr node
+
+(* XXX *)
+
+and pp_T_Sum {value; _} =
   let {variants; attributes; _} = value in
   let head, tail = variants in
   let head = pp_variant head in
@@ -119,7 +236,7 @@ and pp_sum_type {value; _} =
   if attributes = [] then whole
   else group (pp_attributes attributes ^/^ whole)
 
-and pp_cartesian {value; _} =
+and pp_T_Cart {value; _} =
   let head, tail = value in
   let rec app = function
     []  -> empty
@@ -136,13 +253,7 @@ and pp_variant {value; _} =
     None -> pre
   | Some (_,e) -> prefix 4 1 (pre ^^ string " of") (pp_type_expr e)
 
-and pp_attributes = function
-    [] -> empty
-| attr ->
-   let make s = string "[@" ^^ string s.value ^^ string "]"
-   in separate_map (break 0) make attr
-
-and pp_record_type fields = group (pp_ne_injection pp_field_decl fields)
+and pp_T_Record fields = group (pp_ne_injection pp_field_decl fields)
 
 and pp_field_decl {value; _} =
   let {field_name; field_type; attributes; _} = value in
@@ -152,29 +263,11 @@ and pp_field_decl {value; _} =
   let t_expr = pp_type_expr field_type
   in prefix 2 1 (group (name ^^ string " :")) t_expr
 
-and pp_fun_type {value; _} =
+and pp_T_Fun {value; _} =
   let lhs, _, rhs = value in
   group (pp_type_expr lhs ^^ string " ->" ^/^ pp_type_expr rhs)
 
-and pp_type_par t = pp_par pp_type_expr t
-
-and pp_type_app {value = ctor, tuple; _} =
-  prefix 2 1 (pp_type_constr ctor) (pp_type_tuple tuple)
-
-and pp_type_constr ctor = string ctor.value
-
-and pp_type_tuple {value; _} =
-  let head, tail = value.inside in
-  let rec app = function
-    []  -> empty
-  | [e] -> group (break 1 ^^ pp_type_expr e)
-  | e::items ->
-      group (break 1 ^^ pp_type_expr e ^^ string ",") ^^ app items in
-  let components =
-    if tail = []
-    then pp_type_expr head
-    else pp_type_expr head ^^ string "," ^^ app (List.map snd tail)
-  in string "(" ^^ nest 1 (components ^^ string ")")
+and pp_T_Par t = pp_par pp_type_expr t
 
 (* Function and procedure declarations *)
 
@@ -191,60 +284,8 @@ and pp_fun_expr {value; _} =
   ^^ t_annot
   ^^ string " is" ^^ group (nest 4 (break 1 ^^ pp_expr return))
 
-and pp_fun_decl {value; _} =
-  let {kwd_recursive; fun_name; param; ret_type;
-       return; attributes; _} = value in
-  let start =
-    match kwd_recursive with
-        None -> string "function"
-      | Some _ -> string "recursive" ^/^ string "function" in
-  let start = if attributes = [] then start
-              else pp_attributes attributes ^/^ start in
-  let start = group (start ^^ group (break 1 ^^ nest 2 (pp_ident fun_name)))
-  and parameters = pp_par pp_parameters param
-  and t_annot_is =
-    match ret_type with
-      None -> string " is"
-    | Some (_, e) ->
-        let ret_type = pp_type_expr e in
-        group (nest 2 (break 1 ^^ string ": " ^^ nest 2 ret_type
-                       ^^ string " is"))
-  and body =
-    let expr = pp_expr return in
-    match return with
-      EBlock _ -> group (break 1 ^^ expr)
-    | _ -> group (nest 2 (break 1 ^^ expr))
-in prefix 2 1 start parameters
-   ^^ t_annot_is
-   ^^ body
 
-and pp_parameters p = pp_nsepseq ";" pp_param_decl p
-
-and pp_param_decl = function
-  ParamConst c -> pp_param_const c
-| ParamVar   v -> pp_param_var v
-
-and pp_pvar {value; _} =
-  let {variable; attributes} = value in
-  let v = pp_ident variable in
-  if attributes = [] then v
-  else group (pp_attributes attributes ^/^ v)
-
-and pp_param_const {value; _} =
-  let {var; param_type; _} : param_const = value in
-  let name = string "const " ^^ pp_pvar var in
-  match param_type with
-    None -> name
-  | Some (_, e) ->
-      prefix 2 1 (name ^^ string " :") (pp_type_expr e)
-
-and pp_param_var {value; _} =
-  let {var; param_type; _} : param_var = value in
-  let name   = string "var " ^^ pp_pvar var in
-  match param_type with
-    None -> name
-  | Some (_, e) ->
-      prefix 2 1 (name ^^ string " :") (pp_type_expr e)
+(* Blocks *)
 
 and pp_block {value; _} =
   string "block {"
@@ -449,7 +490,7 @@ and pp_expr = function
 | EConstr     e -> pp_constr_expr e
 | ERecord     e -> pp_record e
 | EProj       e -> pp_projection e
-| EModA       e -> pp_module_access pp_expr e
+| EModA       e -> pp_module_path pp_expr e
 | EUpdate     e -> pp_update e
 | EMap        e -> pp_map_expr e
 | EVar        e -> pp_ident e
@@ -564,7 +605,7 @@ and pp_projection {value; _} =
   let fields = separate_map sep pp_selection fields in
   group (pp_ident struct_name ^^ string "." ^^ break 0 ^^ fields)
 
-and pp_module_access : type a.(a -> document) -> a module_access reg -> document
+and pp_module_path : type a.(a -> document) -> a module_access reg -> document
 = fun f {value; _} ->
   let {module_name; field; _} = value in
   group (pp_ident module_name ^^ string "." ^^ break 0 ^^ f field)
@@ -712,10 +753,16 @@ and pp_ppar_cons {value; _} =
   let patt1, _, patt2 = value.inside in
   let comp = prefix 2 1 (pp_pattern patt1 ^^ string " ::") (pp_pattern patt2)
   in string "(" ^^ nest 1 (comp ^^ string ")")
+ *)
 
-let print_type_expr = pp_type_expr
-let print_pattern   = pp_pattern
-let print_expr      = pp_expr
+let print_type_expr =
+  failwith "[PascaLIGO] Pretty.print_type_expr: TODO" (*pp_type_expr*)
+
+let print_pattern   = (*pp_pattern*)
+  failwith "[PascaLIGO] Pretty.print_pattern: TODO" (*pp_pattern*)
+
+let print_expr      = (*pp_expr*)
+  failwith "[PascaLIGO] Pretty.print_expr: TODO" (*pp_expr*)
 
 type cst        = CST.t
 type expr       = CST.expr

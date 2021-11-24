@@ -29,7 +29,7 @@
 *)
 %token                  <string Wrap.wrap> Ident    "<ident>" [@recover.expr wrap_ghost "<invalid-ident>"]
 %token                  <string Wrap.wrap> UIdent   "<uident>" [@recover.expr wrap_ghost "<invalid-uident>"]
-%token                 <Attr.t Region.reg> Attr     "[@attr]" [@recover.expr wrap_ghost "<invalid-attr-literal>"]
+%token                 <Attr.t Region.reg> Attr     "[@attr]"     [@recover.expr Region.wrap_ghost ("<invalid-attr-literal>", None)]
 (*
 %token       <string Region.reg Region.reg> Lang     "[%lang"
  *)

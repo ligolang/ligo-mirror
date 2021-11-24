@@ -221,8 +221,8 @@ and print_type_expr state = function
 and print_module_path :
   'a.state -> (state -> 'a -> unit) -> 'a module_path reg -> unit =
   fun state print {value; _} ->
-    print_nsepseq state "DOT" print_UIdent value.module_path; (* XXX *)
-    print_token   state value.selector "DOT";
+    print_nsepseq state "DOT" print_UIdent value.module_path;
+    print_token   state value.selector;
     print         state value.field
 
 and print_sum_type state {value; _} =
@@ -376,7 +376,7 @@ and print_pattern state = function
 | PPar {value={lpar;inside=p;rpar}; _} ->
     print_token   state lpar;
     print_pattern state p;
-    print_token   state rpar ")"
+    print_token   state rpar
 | PConstr p -> print_ctor_pattern state p
 | PRecord r ->
     print_record_pattern state r
@@ -537,8 +537,8 @@ and print_arith_expr state = function
     let line = sprintf "Int %s (%s)" lex (Z.to_string z) in
     let token = Token.wrap line region in
     print_token state token
-| Mutez {region; value=lex,z} ->
-    let line = sprintf "Mutez %s (%s)" lex (Z.to_string z) in
+| Mutez {region; value=lex,int64} ->
+    let line = sprintf "Mutez %s (%s)" lex (Int64.to_string int64) in
     let token = Token.wrap line region in
     print_token state token
 | Nat {region; value=lex,z} ->
@@ -790,7 +790,7 @@ let print_short state value =
    meaning "no subtree printed." *)
 
 let mk_child print value = Some (swap print value)
-
+(*
 let mk_child_opt print = function
         None -> None
 | Some value -> mk_child print value
@@ -798,7 +798,7 @@ let mk_child_opt print = function
 let mk_child_list print = function
     [] -> None
 | list -> mk_child print list
-
+ *)
 (* Printing trees (node + subtrees). The call [print_tree state label
    ?region children] prints a node whose label is [label] and optional
    region is [region], and whose subtrees are [children]. The latter
@@ -816,10 +816,10 @@ let print_tree state label ?region children =
 
 (* A special case of tree occurs often: the unary tree, that is, a
    tree with exactly one subtree. *)
-
+(*
 let print_unary state label ?region print_sub node =
   print_tree state label ?region [mk_child print_sub node]
-
+ *)
 (* Pretty-printing the CST *)
 
 let pp_ident state {value=name; region} =
@@ -1062,6 +1062,10 @@ and pp_bytes state {value=lexeme,hex; region} =
 and pp_int state {value=lexeme,z; region} =
   pp_loc_node (state#pad 2 0) lexeme region;
   pp_node     (state#pad 2 1) (Z.to_string z)
+
+and pp_mutez state {value=lexeme,int64; region} =
+  pp_loc_node (state#pad 2 0) lexeme region;
+  pp_node     (state#pad 2 1) (Int64.to_string int64)
 
 and pp_ctor_pattern state {value; _} =
   let constr, pat_opt = value in
@@ -1403,7 +1407,7 @@ and pp_arith_expr state = function
     pp_int  state n
 | Mutez m ->
     pp_node state "Mutez";
-    pp_int  state m
+    pp_mutez  state m
 
 and pp_e_logic state = function
   BoolExpr e ->

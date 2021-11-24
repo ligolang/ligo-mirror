@@ -15,8 +15,9 @@ module Wrap = Lexing_shared.Wrap
 
 (* Utilities *)
 
-let unwrap = Wrap.payload
-let wrap   = Wrap.wrap
+let unwrap wrap = Region.{value=wrap#payload; region=wrap#region}
+
+let wrap = Wrap.wrap
 
 let ghost = wrap "" ghost
 
@@ -207,7 +208,10 @@ stmt_or_namespace:
 %inline attributes:
   ioption(nseq("[@attr]") { Utils.nseq_to_list $1 }) {
     let l = list_of_option $1 in
-    List.map unwrap l
+    let filter (attr: Attr.t reg) =
+      {attr with value = fst attr.value } in
+    List.map filter l
+             (*    List.map unwrap l*)
   }
 
 (* Namespace Statement *)

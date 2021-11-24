@@ -13,10 +13,11 @@ module CST = Cst_cameligo.CST
 open! CST
 module Wrap = Lexing_shared.Wrap
 
-(* Utilities *)
+let wrap = Wrap.wrap
 
-let unwrap = Wrap.payload
-let wrap   = Wrap.wrap
+let unwrap wrap = Region.{region=wrap#region; value=wrap#payload}
+
+(* Utilities *)
 
 let mk_wild region =
   let variable = {value="_"; region} in
@@ -193,7 +194,7 @@ contract:
   module_ EOF { {$1 with eof=$2} }
 
 module_:
-  nseq(declaration) { {decl=$1; eof=wrap "" Region.ghost} }
+  nseq(declaration) { {decl=$1; eof = Wrap.wrap "" Region.ghost} }
 
 declaration:
   type_decl       {    TypeDecl $1 }
@@ -391,7 +392,10 @@ let_declaration:
 %inline attributes:
   ioption(nseq("[@attr]") { Utils.nseq_to_list $1 }) {
     let l = list_of_option $1 in
-    List.map unwrap l
+    let filter (attr: Attr.t reg) =
+      {attr with value = fst attr.value } in
+    List.map filter l
+             (*    List.map unwrap l*)
   }
 
 let_binding:
@@ -461,7 +465,8 @@ ctor_irrefutable:
 | const_ctor_pattern           { PConstr $1 }
 
 const_ctor_pattern:
-  "<uident>" { {$1 with value = (unwrap $1), None} }
+"<uident>" { let ctor = unwrap $1 in
+             {ctor with value = (unwrap $1), None} }
 
 non_const_ctor_irrefutable:
   "<uident>" core_irrefutable {
@@ -810,7 +815,8 @@ ctor_expr:
 | const_ctor_expr { $1 }
 
 const_ctor_expr:
-  "<uident>" { EConstr {$1 with value = (unwrap $1), None} }
+  "<uident>" { let ctor = unwrap $1 in
+               EConstr {ctor with value = (unwrap $1), None} }
 
 arguments:
   argument           { $1,[]                      }
@@ -851,7 +857,7 @@ value_in_module:
   module_path(selected_expr) { mk_mod_path $1 CST.expr_to_region }
 
 selected_expr:
-  "or"       { EVar  {value="or"; region=$1} }
+  "or"       { EVar  {value="or"; region = $1#region} }
 | field_name { EVar  $1 }
 | projection { EProj $1 }
 

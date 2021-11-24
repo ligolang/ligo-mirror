@@ -358,7 +358,7 @@ and arith_expr =
 | Neg   of minus un_op reg
 | Int   of (string * Z.t) reg
 | Nat   of (string * Z.t) reg
-| Mutez of (string * Z.t) reg
+| Mutez of (string * Int64.t) reg
 
 and logic_expr =
   BoolExpr of bool_expr

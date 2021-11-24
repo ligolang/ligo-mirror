@@ -412,14 +412,15 @@ and for_in = {
   var        : variable;
   bind_to    : (arrow * variable) option; (* A map if not [None]. *)
   kwd_in     : kwd_in;
-  collection : collection option; (* For backward compatibility *)
-  expr       : expr;
+  kind       : kind option; (* For backward compatibility *)
+  collection : expr;
   block      : block reg
 }
 
-and collection =
+and kind =
   Set  of kwd_set
 | List of kwd_list
+| Map  of kwd_map
 
 (* Patches for maps, records, and sets. *)
 

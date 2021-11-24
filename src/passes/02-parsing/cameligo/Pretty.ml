@@ -1,17 +1,19 @@
 [@@@warning "-42"]
 
 module CST = Cst_cameligo.CST
-open CST
+(*open CST*)
 module Region = Simple_utils.Region
 open! Region
 open! PPrint
 module Option = Simple_utils.Option
 module Token  = Lexing_cameligo.Token
 
-let pp_par printer {value; _} =
+(*let pp_par printer {value; _} =
   string "(" ^^ nest 1 (printer value.inside ^^ string ")")
+ *)
 
-let rec print ast =
+let (*rec*) print _ast = failwith "[CameLIGO] Pretty.print: TODO"
+(*
   let decl = Utils.nseq_to_list ast.decl in
   let decl = List.filter_map pp_declaration decl
   in separate_map (hardline ^^ hardline) group decl
@@ -538,10 +540,16 @@ and pp_fun_type {value; _} =
   group (pp_type_expr lhs ^^ string " ->" ^/^ pp_type_expr rhs)
 
 and pp_type_par t = pp_par pp_type_expr t
+ *)
 
-let print_type_expr = pp_type_expr
-let print_pattern   = pp_pattern
-let print_expr      = pp_expr
+let print_type_expr =
+  failwith "[CameLIGO] Pretty.print_type_expr: TODO" (*pp_type_expr*)
+
+let print_pattern   = (*pp_pattern*)
+  failwith "[CameLIGO] Pretty.print_pattern: TODO" (*pp_pattern*)
+
+let print_expr      = (*pp_expr*)
+  failwith "[CameLIGO] Pretty.print_expr: TODO" (*pp_expr*)
 
 type cst        = CST.t
 type expr       = CST.expr

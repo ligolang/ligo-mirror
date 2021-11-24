@@ -536,17 +536,23 @@ and print_I_ForIn state (node : for_in reg) =
     index,  None ->
       Tree.print_literal state index
   | source, Some (_, image) ->
-      print_var_binding state (source, image) in
+      print_var_binding state (source, image)
+
+  and print_collection state =
+    Tree.print_unary state "<collection>" print_expr
+
+  and print_kind state = function
+    Set kwd_set -> Tree.print_literal state kwd_set
+  | List kwd_list -> Tree.print_literal state kwd_list
+  | Map kwd_map -> Tree.print_literal state kwd_map in
 
   let children = [
-    Tree.mk_child print_index      (value.var, value.bind_to);
-    Tree.mk_child print_collection value.expr;
-    Tree.mk_child print_block      value.block]
+    Tree.mk_child     print_index      (value.var, value.bind_to);
+    Tree.mk_child_opt print_kind       value.kind;
+    Tree.mk_child     print_collection value.collection;
+    Tree.mk_child     print_block      value.block]
 
   in Tree.print state "I_ForIn" ~region children
-
-and print_collection state =
-  Tree.print_unary state "<collection>" print_expr
 
 (* Patches *)
 
