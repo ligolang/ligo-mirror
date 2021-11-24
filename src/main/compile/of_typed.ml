@@ -5,6 +5,8 @@ open Main_errors
 
 module SMap = Map.Make(String)
 
+let aggregate prg = Aggregation.compile prg
+
 let compile_with_modules ~raise : Ast_typed.module_fully_typed -> Mini_c.program = fun p ->
   trace ~raise spilling_tracer @@ compile_module p
 

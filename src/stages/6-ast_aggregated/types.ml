@@ -10,7 +10,6 @@ and type_content =
   | T_sum      of rows
   | T_record   of rows
   | T_arrow    of ty_expr arrow
-  | T_module_accessor of ty_expr module_access
   | T_singleton of literal
   | T_abstraction of ty_expr abstraction
   | T_for_all of ty_expr abstraction

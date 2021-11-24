@@ -1,0 +1,1 @@
+let compile x = Compiler.compile x
