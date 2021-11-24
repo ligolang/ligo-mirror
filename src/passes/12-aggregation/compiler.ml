@@ -54,8 +54,7 @@ and compile_declaration : Mod_env.t -> I.declaration_loc list -> O.expression =
         aggregate (alias, access, attr) ~new_env:env'
       )
     )
-    | [] -> failwith "empty module : never happens ?"
-
+    | [] -> O.e_a_unit (* TODO : this is where the main expression should be placed ? *)
 and compile_type : Mod_env.t -> I.type_expression -> O.type_expression =
   fun mod_env ty ->
     let self = compile_type mod_env in
