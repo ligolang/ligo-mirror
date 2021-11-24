@@ -1,5 +1,6 @@
 module I = Ast_typed
 module O = Ast_aggregated
+open Stage_common.Types
 
 (* README
   aggregates declarations : Declaration_constant -> E_let_in
@@ -9,7 +10,7 @@ module O = Ast_aggregated
 module Mod_env = struct
   (* env used to remember module types as they are morphed into modules *)
   module ModMap = Map.Make(struct type t = string let compare = String.compare end)
-  type t = (O.row_element O.label_map) ModMap.t
+  type t = (O.row_element label_map) ModMap.t
   let get_ty : t -> string -> O.type_expression = fun env name ->
     match ModMap.find_opt name env with
     | Some content -> O.t_record ~layout:I.default_layout content
@@ -55,15 +56,44 @@ and compile_declaration : Mod_env.t -> I.declaration_loc list -> O.expression =
     )
     | [] -> failwith "empty module : never happens ?"
 
-and compile_types : I.type_expression -> O.type_expression =
-  fun _ -> failwith "l"
+and compile_type : Mod_env.t -> I.type_expression -> O.type_expression =
+  fun mod_env ty ->
+    let self = compile_type mod_env in
+    let return type_content : O.type_expression = { type_content ; orig_var = ty.orig_var ; location = ty.location } in
+    let map_rows : I.row_element label_map -> O.row_element label_map = fun rows ->
+      let f : I.row_element -> O.row_element = fun row -> { row with associated_type = self row.associated_type} in
+      LMap.map f rows
+    in
+    match ty.type_content with
+    | T_variable x -> return (T_variable x)
+    | T_constant { language ; injection ; parameters } ->
+      let parameters = List.map parameters ~f:self in
+      return (T_constant { language ; injection ; parameters }) 
+    | T_sum { content ; layout } ->
+      let content = map_rows content in
+      return (T_sum { content ; layout })
+    | T_record { content ; layout } ->
+      let content = map_rows content in
+      return (T_record { content ; layout })
+    | T_arrow { type1 ; type2 } ->
+      let type1 = self type1 in
+      let type2 = self type2 in
+      return (T_arrow { type1 ; type2 })
+    | T_module_accessor _ -> failwith "module accessor types should not end up here"
+    | T_singleton x -> return (T_singleton x)
+    | T_abstraction { ty_binder ; kind ; type_ } ->
+      let type_ = self type_ in
+      return (T_abstraction { ty_binder ; kind ; type_ })
+    | T_for_all { ty_binder ; kind ; type_ } ->
+      let type_ = self type_ in
+      return (T_for_all { ty_binder ; kind ; type_ })
 
 and compile_expression : Mod_env.t -> I.expression -> O.expression =
   fun mod_env expr ->
     let self = compile_expression mod_env in
     let self_cases = compile_cases mod_env in
     let return expression_content : O.expression =
-      let type_expression = compile_types expr.type_expression in
+      let type_expression = compile_type mod_env expr.type_expression in
       { expression_content ; type_expression ; location = expr.location } in
     match expr.expression_content with
     | I.E_literal l ->
@@ -107,7 +137,7 @@ and compile_expression : Mod_env.t -> I.expression -> O.expression =
     )
     | I.E_type_in {type_binder; rhs; let_result} -> (
       let let_result = self let_result in
-      let rhs = compile_types rhs in
+      let rhs = compile_type mod_env rhs in
       return @@ O.E_type_in {type_binder; rhs; let_result}
     )
     | I.E_lambda { binder ; result } -> (
@@ -116,12 +146,12 @@ and compile_expression : Mod_env.t -> I.expression -> O.expression =
     )
     | I.E_type_inst { forall ; type_ } -> (
       let forall = self forall in
-      let type_ = compile_types type_ in
+      let type_ = compile_type mod_env type_ in
       return @@ O.E_type_inst { forall ; type_ }
     )
     | I.E_recursive { fun_name; fun_type; lambda = {binder;result}} -> (
       let result = self result in
-      let fun_type = compile_types fun_type in 
+      let fun_type = compile_type mod_env fun_type in 
       return @@ O.E_recursive { fun_name; fun_type; lambda = {binder;result}}
     )
     | I.E_constant { cons_name ; arguments } -> (
@@ -160,13 +190,13 @@ and compile_cases : Mod_env.t -> I.matching_expr -> O.matching_expr =
           {O.constructor;pattern;body}
         in
         let cases = List.map ~f:aux cases in
-        let tv = compile_types tv in
+        let tv = compile_type mod_env tv in
         Match_variant {cases ; tv}
       )
     | Match_record {fields; body; tv} ->
       let body = compile_expression mod_env body in
-      let tv = compile_types tv in
-      let fields = O.LMap.map (fun (v, t) -> (v, compile_types t)) fields in
+      let tv = compile_type mod_env tv in
+      let fields = O.LMap.map (fun (v, t) -> (v, compile_type mod_env t)) fields in
       Match_record {fields; body; tv}
 
 (* morph a module, to rows *)
