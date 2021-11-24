@@ -29,7 +29,7 @@ and compile_declaration : Mod_env.t -> I.declaration_loc list -> O.expression =
     match lst with
     | hd::tl -> (
       let aggregate ?(new_env = mod_env) (binder, expr, attr) = O.e_a_let_in binder expr (compile_declaration new_env tl) attr in
-      let skip (*env*) = compile_declaration mod_env tl in
+      let skip = compile_declaration mod_env tl in
       match hd.wrap_content with
       | I.Declaration_type _ -> skip
       | I.Declaration_constant { name = _ ; binder ; expr ; attr } -> (
@@ -45,20 +45,12 @@ and compile_declaration : Mod_env.t -> I.declaration_loc list -> O.expression =
         aggregate (binder, mod_as_record, attr) ~new_env:env'
       )
       | I.Module_alias { alias ; binders } -> (
-        let alias' = variable_of_module_name ~loc:hd.location alias in
-        let alias_ty = Mod_env.get_ty mod_env alias in
-        let alias_var = O.e_a_variable alias' alias_ty in
-        let access =
-          let f : O.expression -> string -> O.expression =
-            fun prev name ->
-              let label = O.Label (label_of_module_name name) in
-              let ty = Option.value ~default:(failwith "TODO") (O.get_record_field_type prev.type_expression label) in
-              O.e_a_record_access prev label ty
-          in
-          List.fold_left (List.Ne.to_list binders) ~f ~init:alias_var
-        in
+        let alias = variable_of_module_name ~loc:hd.location alias in
+        let alias_str = Var.to_name alias.wrap_content in
+        let access = module_access_to_record_access mod_env binders in
         let attr = known_attributes_for_modules None in
-        aggregate (alias', access, attr)
+        let env' = Mod_env.add mod_env (alias_str, access.type_expression) in
+        aggregate (alias, access, attr) ~new_env:env'
       )
     )
     | [] -> failwith "empty module : never happens ?"
@@ -137,8 +129,9 @@ and compile_expression : Mod_env.t -> I.expression -> O.expression =
       return @@ O.E_constant { cons_name ; arguments }
     )
     | I.E_module_accessor { module_name; element } -> (
-      ignore module_name; ignore element;
-      failwith "nope"
+      let path = O.Label (label_of_module_name module_name) in
+      let record = self element in
+      return @@ O.E_record_accessor {record; path}
     )
     | I.E_mod_in { module_binder ; rhs ; let_result } -> (
       let let_binder = Location.wrap @@ Var.of_name module_binder in
@@ -149,8 +142,13 @@ and compile_expression : Mod_env.t -> I.expression -> O.expression =
       return @@ O.e_let_in let_binder rhs let_result (known_attributes_for_modules None)
     )
     | I.E_mod_alias { alias ; binders ; result } -> (
-      ignore alias; ignore binders; ignore result;
-      failwith "nope2"
+      let alias = variable_of_module_name ~loc:Location.generated alias in
+      let alias_str = Var.to_name alias.wrap_content in
+      let access = module_access_to_record_access mod_env binders in
+      let env' = Mod_env.add mod_env (alias_str, access.type_expression) in
+      let result = compile_expression env' result in
+      let attr = known_attributes_for_modules None in
+      return @@ O.e_let_in alias access result attr
     )
 
 and compile_cases : Mod_env.t -> I.matching_expr -> O.matching_expr =
@@ -171,36 +169,43 @@ and compile_cases : Mod_env.t -> I.matching_expr -> O.matching_expr =
       let fields = O.LMap.map (fun (v, t) -> (v, compile_types t)) fields in
       Match_record {fields; body; tv}
 
-and module_to_record : Mod_env.t -> I.module_fully_typed -> O.expression_label_map * O.type_expression = (* Label x -> (exp : ty) *)
+(* morph a module, to rows *)
+and module_to_record : Mod_env.t -> I.module_fully_typed -> O.expression_label_map * O.type_expression =
   fun mod_env (Module_Fully_Typed lst) ->
-    let aux acc (m : I.declaration_loc) = match m.wrap_content with
+    let f : Mod_env.t * O.expression_label_map -> I.declaration_loc -> Mod_env.t * O.expression_label_map = fun (mod_env,acc) m ->
+      match m.wrap_content with
       | I.Declaration_constant { name = _ ; binder ; expr ; _ } ->
         let expr = compile_expression mod_env expr in
-        O.LMap.add (Label (Var.to_name binder.wrap_content)) expr acc
-      | I.Declaration_type _ -> acc
+        mod_env, O.LMap.add (Label (Var.to_name binder.wrap_content)) expr acc
+      | I.Declaration_type _ -> (mod_env, acc)
       | I.Declaration_module {module_binder ; module_ ; _ } ->
         let (content, ty) = module_to_record mod_env module_ in
         let expr = O.make_e (O.E_record content) ty in
-        O.LMap.add (Label module_binder) expr acc
+        let mod_env = Mod_env.add mod_env (module_binder,ty) in
+        mod_env, O.LMap.add (Label module_binder) expr acc
       | I.Module_alias { alias ; binders } ->
-        let alias' = variable_of_module_name ~loc:Location.generated alias in
-        let alias_ty = Mod_env.get_ty mod_env alias in
-        let alias_var = O.e_a_variable alias' alias_ty in
-          let f : O.expression -> string -> O.expression =
-            fun prev name ->
-              let label = O.Label (label_of_module_name name) in
-              let ty = Option.value ~default:(failwith "TODO") (O.get_record_field_type prev.type_expression label) in
-              O.e_a_record_access prev label ty
-          in
-        let expr = List.fold_left (List.Ne.to_list binders) ~f ~init:alias_var in
-        O.LMap.add (Label alias) expr acc
+        let alias = variable_of_module_name ~loc:Location.generated alias in
+        let alias_str = Var.to_name alias.wrap_content in
+        let access = module_access_to_record_access mod_env binders in
+        let mod_env = Mod_env.add mod_env (alias_str, access.type_expression) in
+        mod_env, O.LMap.add (Label alias_str) access acc
     in
-    let env = List.fold ~init:O.LMap.empty ~f:aux lst in
-    let ty = type_of_expression_label_map env in
-    env, ty
-    (* do not return an expression because I would like to wrap the content into E_record in compile_declaration *)
+    let _env,rows = List.fold ~init:(mod_env,O.LMap.empty) ~f lst in
+    let ty = type_of_rows rows in
+    rows, ty
 
-and type_of_expression_label_map env =
+(* morph a module access (A.B.C) to a record access (a.b.c) *)
+and module_access_to_record_access : Mod_env.t -> string Simple_utils.List.Ne.t -> O.expression = fun mod_env (fst,path) ->
+  let f : O.expression -> string -> O.expression =
+    fun prev name ->
+      let label = O.Label (label_of_module_name name) in
+      let ty = Option.value ~default:(failwith "TODO") (O.get_record_field_type prev.type_expression label) in
+      O.e_a_record_access prev label ty
+  in
+  let init = O.e_a_variable (variable_of_module_name ~loc:Location.generated fst) (Mod_env.get_ty mod_env fst) in
+  List.fold_left path ~f ~init
+
+and type_of_rows env =
   O.make_t_ez_record (List.map ~f:(fun (O.Label s, v) -> (s, v.type_expression)) (O.LMap.to_kv_list env))
 
 and label_of_module_name x = x

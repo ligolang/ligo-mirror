@@ -1,4 +1,4 @@
-(* [@@@warning "-30-32"] *)
+[@@@warning "-30"]
 
 include Stage_common.Types
 
