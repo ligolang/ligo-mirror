@@ -918,16 +918,19 @@ step_clause: "step" expr { $1,$2 }
 
 for_in:
   "for" variable "->" variable "in" ioption("map") expr block {
-    let bind_to  = Some ($3,$4) in
-    let region   = cover $1#region (expr_to_region $8)
-    and value    = {kwd_for=$1; var=$2; bind_to; kwd_in=$5;
-                    collection=$6; expr=$7; block=$8}
+    let bind_to = Some ($3,$4)
+    and kind    = match $6 with
+                    None -> None
+                  | Some kwd_map -> Some (Map kwd_map) in
+    let region  = cover $1#region $8.region
+    and value   = {kwd_for=$1; var=$2; bind_to; kwd_in=$5;
+                   kind; collection=$7; block=$8}
     in {region; value}
   }
 | "for" variable "in" ioption(collection) expr block {
     let region = cover $1#region $6.region in
     let value  = {kwd_for=$1; var=$2; bind_to=None; kwd_in=$3;
-                  collection=$4; expr=$5; block=$6}
+                  kind=$4; collection=$5; block=$6}
     in {region; value} }
 
 %inline

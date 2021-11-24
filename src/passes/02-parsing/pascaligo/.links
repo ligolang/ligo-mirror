@@ -11,8 +11,8 @@ $HOME/git/OCaml-build/Makefile
 ./Stubs/Cst_pascaligo.ml
 
 ../../../stages/1-cst/pascaligo/CST.ml
-../../../stages/1-cst/pascaligo/PrintCST.mli
-../../../stages/1-cst/pascaligo/PrintCST.ml
+../../../stages/1-cst/pascaligo/Print.mli
+../../../stages/1-cst/pascaligo/Print.ml
 ../../00-preprocessing/pascaligo/Comments.ml
 ../../00-preprocessing/pascaligo/File.ml
 ../../01-lexing/pascaligo/Self_tokens.ml

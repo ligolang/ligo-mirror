@@ -9,7 +9,7 @@
    into one file, and the header of [Parser.mly] affects this code. *)
 
 %[@recover.prelude
-  open Lexing_shared.Wrap
+  (* See [dune] file for [-open] flags *)
   module Region = Simple_utils.Region
  ]
 
@@ -21,11 +21,11 @@
 %token        <(string * Hex.t) Wrap.t> Bytes     "<bytes>"     [@recover.expr Wrap.ghost ("<invalid-bytes-literal>", `Hex "")]
 %token          <(string * Z.t) Wrap.t> Int       "<int>"       [@recover.expr Wrap.ghost ("<invalid-int-literal>", Z.zero)]
 %token          <(string * Z.t) Wrap.t> Nat       "<nat>"       [@recover.expr Wrap.ghost ("<invalid-nat-literal>", Z.zero)]
-%token      <(string * Int64.t) Wrap.t> Mutez     "<mutez>"     [@recover.expr Wrap.ghost ("<invalid-mutz-literal>", Z.zero)]
+%token      <(string * Int64.t) Wrap.t> Mutez     "<mutez>"     [@recover.expr Wrap.ghost ("<invalid-mutz-literal>", Int64.zero)]
 %token                  <string Wrap.t> Ident     "<ident>"     [@recover.expr Wrap.ghost "<invalid-ident>"]
 %token                  <string Wrap.t> UIdent    "<uident>"    [@recover.expr Wrap.ghost "<invalid-uident>"]
-%token              <Attr.t Region.reg> Attr      "[@attr]"     [@recover.expr Wrap.ghost "<invalid-attr-literal>"]
-%token      <string Region.reg Region.reg> Lang   "[%lang"      [@recover.expr Region.wrap_ghost @@
+%token              <Attr.t Region.reg> Attr      "[@attr]"     [@recover.expr Region.wrap_ghost ("<invalid-attr-literal>", None)]
+%token   <string Region.reg Region.reg> Lang      "[%lang"      [@recover.expr Region.wrap_ghost @@
                                                                  Region.wrap_ghost "<invalid-lang-literal>"]
 
   (* Symbols *)
