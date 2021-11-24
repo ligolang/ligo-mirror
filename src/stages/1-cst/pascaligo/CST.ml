@@ -408,13 +408,18 @@ and for_int = {
 (* Iteration over collections *)
 
 and for_in = {
-  kwd_for  : kwd_for;
-  var      : variable;
-  bind_to  : (arrow * variable) option; (* A map if not [None]. *)
-  kwd_in   : kwd_in;
-  expr     : expr;
-  block    : block reg
+  kwd_for    : kwd_for;
+  var        : variable;
+  bind_to    : (arrow * variable) option; (* A map if not [None]. *)
+  kwd_in     : kwd_in;
+  collection : collection option; (* For backward compatibility *)
+  expr       : expr;
+  block      : block reg
 }
+
+and collection =
+  Set  of kwd_set
+| List of kwd_list
 
 (* Patches for maps, records, and sets. *)
 

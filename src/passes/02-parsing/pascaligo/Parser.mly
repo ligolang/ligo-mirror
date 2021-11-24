@@ -119,8 +119,6 @@ module Wrap = Lexing_shared.Wrap
    make it easy in the semantic action to collate the information into
    CST nodes. *)
 
-let wrap     = Wrap.wrap
-
 let mk_reg region value = Region.{region; value}
 
 let apply_type_ctor token args =
@@ -222,6 +220,11 @@ let terminate_decl semi = function
   algorithm will be in production in the near future, enabling that
   work to be carried out in a reasonable amount of time. *)
 
+%on_error_reduce nseq(__anonymous_0(list_element,SEMI))
+%on_error_reduce nseq(__anonymous_0(set_element,SEMI))
+%on_error_reduce nsepseq(set_element,SEMI)
+%on_error_reduce nsepseq(list_element,SEMI)
+%on_error_reduce nsepseq(field_path_assignment,SEMI)
 %on_error_reduce module_path(__anonymous_2)
 %on_error_reduce nseq(__anonymous_4)
 %on_error_reduce nsepseq(core_type,TIMES)
@@ -247,7 +250,6 @@ let terminate_decl semi = function
 %on_error_reduce nseq(__anonymous_0(field_path_assignment,SEMI))
 %on_error_reduce nseq(__anonymous_0(binding,SEMI))
 %on_error_reduce nseq(__anonymous_0(core_pattern,SEMI))
-%on_error_reduce nseq(__anonymous_0(expr,SEMI))
 %on_error_reduce nseq(__anonymous_0(statement,SEMI))
 %on_error_reduce nsepseq(case_clause(expr),VBAR)
 %on_error_reduce nsepseq(core_pattern,SEMI)
@@ -260,7 +262,6 @@ let terminate_decl semi = function
 %on_error_reduce nsepseq(selection,DOT)
 %on_error_reduce field_path
 %on_error_reduce nsepseq(binding,SEMI)
-%on_error_reduce nsepseq(expr,SEMI)
 %on_error_reduce add_expr_level
 %on_error_reduce unary_expr_level
 %on_error_reduce const_decl
@@ -489,7 +490,8 @@ type_ctor_app:
 | "set"     par(type_expr)
 | "list"    par(type_expr) { apply_type_ctor $1 $2 }
 
-type_tuple: par(nsepseq(type_expr,",")) { $1 }
+type_tuple:
+  par(nsepseq(type_expr,",")) { $1 } (* One type expression is valid *)
 
 (* Type qualifications
 
@@ -917,16 +919,21 @@ step_clause: "step" expr { $1,$2 }
 for_in:
   "for" variable "->" variable "in" ioption("map") expr block {
     let bind_to  = Some ($3,$4) in
-    let region   = cover $1#region (expr_to_region $7)
+    let region   = cover $1#region (expr_to_region $8)
     and value    = {kwd_for=$1; var=$2; bind_to; kwd_in=$5;
-                    expr=$7; block=$8}
+                    collection=$6; expr=$7; block=$8}
     in {region; value}
   }
-| "for" variable "in" expr block {
-    let region = cover $1#region $5.region in
+| "for" variable "in" ioption(collection) expr block {
+    let region = cover $1#region $6.region in
     let value  = {kwd_for=$1; var=$2; bind_to=None; kwd_in=$3;
-                  expr=$4; block=$5}
+                  collection=$4; expr=$5; block=$6}
     in {region; value} }
+
+%inline
+collection:
+  "set"  { Set  $1 }
+| "list" { List $1 }
 
 (* EXPRESSIONS *)
 
@@ -1180,15 +1187,27 @@ binding:
     and value  = {key=$1; arrow=$2; value=$3}
     in {region; value} }
 
-(* Set expressions (extensional definitions) *)
+(* Set expressions and list expressions (extensional definitions)
+
+  Note that we do not use the syntactically equivalent definitions
+
+  set_expr  : compound("set",expr)  { $1 }
+  list_expr : compound("list",expr) { $1 }
+
+  because they lead to imprecise messages about nsepseq(expr,";"). To
+  discriminate on the syntactic context (here, set or list), we use
+  the productions set_element and list_element, at the cost of more
+  error messages. *)
 
 set_expr:
-  compound("set",expr) { $1 }
+  compound("set",set_element) { $1 }
 
-(* List expressions (extensional definitions) *)
+set_element: expr { $1 }
 
 list_expr:
-  compound("list",expr) { $1 }
+  compound("list",list_element) { $1 }
+
+list_element: expr { $1 }
 
 (* Record expressions
 
@@ -1202,9 +1221,9 @@ list_expr:
    Note that [field_path_assignment] starts with a [field_path]
    instead of a [field_name]. This is because we wanted the production
    [patch] to allow an expression after [with]. It is up to the tree
-   abstraction pass to filter out those field path assigmnents that
-   are not field paths in the context of a record expression _not_
-   used as a patch. *)
+   abstraction pass to filter those field path assigmnents that are
+   actually field paths in the context of a record expression, and
+   _not_ used as a patch. *)
 
 record_expr:
   compound("record",field_path_assignment) { $1 }
@@ -1257,9 +1276,11 @@ verb_compound(Kind,element):
 (* Constructed expressions *)
 
 ctor_app_expr:
-  ctor par(nsepseq(expr,",")) {
+  ctor par(nsepseq(ctor_arg,",")) {
     mk_reg (cover $1#region $2.region) (E_Ctor $1, Some $2) }
 | ctor { {region=$1#region; value = (E_Ctor $1, None)} }
+
+ctor_arg: expr { $1 }
 
 (* Tuples of expressions *)
 
@@ -1271,11 +1292,11 @@ tuple(item):
 (* Function calls *)
 
 call_expr:
-  path_expr arguments {
+  path_expr par(nsepseq(fun_arg,",")) {
     let region = cover (expr_to_region $1) $2.region
     in mk_reg region ($1,$2) }
 
-arguments: par(nsepseq(expr,",")) { $1 }
+fun_arg: expr { $1 }
 
 (* Typed expressions *)
 
@@ -1423,12 +1444,16 @@ tuple_pattern: par(tuple(pattern)) { $1 }
 (* Constructed patterns
 
    Note that we do not use [tuple_pattern] because tuples must have at
-   least two components. *)
+   least two components. We also use [ctor_param] instead of
+   [pattern], in order to distinghish constructor parameters and tuple
+   patterns in the syntax erro messages. *)
 
 ctor_app_pattern:
-  ctor par(nsepseq(pattern,",")) {
+  ctor par(nsepseq(ctor_param,",")) {
     mk_reg (cover $1#region $2.region) (P_Ctor $1, Some $2) }
 | ctor { {region=$1#region; value = (P_Ctor $1, None)} }
+
+ctor_param: pattern { $1 }
 
 (* Record patterns *)
 
