@@ -12,4 +12,4 @@
     ;; Third party
     hex
     zarith)
-  (modules CST PrintCST))
+  (modules CST Print))

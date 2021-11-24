@@ -1,24 +1,14 @@
 (* PRINTING THE CST *)
 
-(* This module produces a textual representation of a subset of the
-   Concrete Abstract Tree (CST). It aims at a readable format with the
-   most relevant nodes, with source locations. This functionality is
-   most useful when testing the parser, for example, checking that a
-   particular node corresponding to an operator has the expected
-   associativity with the same kind or the expected priority over
-   another. *)
+(* This module produces an arborescent, textual representation of a
+   subset of the Concrete Abstract Tree (CST). It aims at a readable
+   format with the most relevant nodes, with source locations. This
+   functionality is most useful when testing the parser, for example,
+   checking that a particular node corresponding to an operator has
+   the expected associativity with the same kind, or the expected
+   priority over another. *)
 
 [@@@coverage exclude_file]
-
-(* Internal dependencies *)
-
-open CST (* THE ONLY GLOBAL OPENING *)
-
-module Wrap = Lexing_shared.Wrap
-module Tree = Cst_shared.Tree
-
-type state = Tree.state
-type label = Tree.label
 
 (* Vendor dependencies *)
 
@@ -26,13 +16,20 @@ module Directive = LexerLib.Directive
 module Utils     = Simple_utils.Utils
 module Region    = Simple_utils.Region
 
-(* UTILITIES *)
+(* Internal dependencies *)
 
-let (<@) = Utils.(<@) (* Function composition operator *)
+module Tree = Cst_shared.Tree
+
+type state = Tree.state
+type label = Tree.label
+
+open CST (* THE ONLY GLOBAL OPENING *)
+
+(* UTILITIES *)
 
 type ('a, 'sep) nsepseq = ('a, 'sep) Utils.nsepseq
 
-(*  *)
+(* Higher-order printers *)
 
 let print_list :
   state -> ?region:Region.t -> label -> 'a Tree.printer -> 'a list -> unit =
@@ -40,8 +37,8 @@ let print_list :
     let children = List.map (Tree.mk_child print) list
     in Tree.print ?region state label children
 
-let print_nsepseq state ?region label print =
-  print_list state ?region label print <@ Utils.nsepseq_to_list
+let print_nsepseq state ?region label print  node =
+  print_list state ?region label print (Utils.nsepseq_to_list node)
 
 let print_attribute state (node : Attr.t reg) =
   let key, val_opt = node.value in
@@ -1133,7 +1130,8 @@ type ('src, 'dst) printer = Tree.state -> 'src -> 'dst
 
 let print_to_buffer state cst = print_cst state cst; state#buffer
 
-let print_to_string state = Buffer.contents <@ print_to_buffer state
+let print_to_string state cst =
+  Buffer.contents (print_to_buffer state cst)
 
 (* Aliases *)
 
