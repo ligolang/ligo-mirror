@@ -18,11 +18,11 @@ let dependency_graph source_file syntax display_format esy_project_path =
       (g,source_file)
 
       (*  TODO: handle -esy-project-path here  take -I inclusions paths *)
-let preprocess source_file syntax display_format =
+let preprocess source_file syntax display_format libs esy_project_path =
     format_result ~display_format Parsing.Formatter.ppx_format (fun _ -> []) @@
     fun ~raise ->
     fst @@
-    let options   = Compiler_options.make () in
+    let options   = Compiler_options.make ~libs ?esy_project_path () in
     let meta = Compile.Of_source.extract_meta ~raise syntax source_file in
     Compile.Of_source.compile ~raise ~options ~meta source_file
 

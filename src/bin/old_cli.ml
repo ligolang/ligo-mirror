@@ -271,10 +271,10 @@ let compile_file =
   in (Term.ret term , Term.info ~man ~doc cmdname)
 
 let preprocess =
-  let f source_file syntax display_format =
+  let f source_file syntax display_format libraries esy_project_path =
     return_result @@
-      Api.Print.preprocess source_file syntax display_format in
-  let term = Term.(const f $ source_file 0 $ syntax $ display_format) in
+      Api.Print.preprocess source_file syntax display_format libraries esy_project_path in
+  let term = Term.(const f $ source_file 0 $ syntax $ display_format $ libraries $ esy_project_path) in
   let cmdname = "preprocess" in
   let doc = "Subcommand: Preprocess the source file.\nWarning: Intended for development of LIGO and can break at any time." in
   let man = [`S Manpage.s_description;

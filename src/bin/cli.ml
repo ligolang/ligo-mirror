@@ -511,9 +511,9 @@ let get_scope =
 (** Print commands *)
 let print_group = Clic.{name="print";title="print title"}
 let preprocessed =
-  let f (syntax, display_format) source_file () =
+  let f (syntax, display_format, libraries, esy_project_path) source_file () =
     return_result @@
-      Api.Print.preprocess source_file syntax display_format in
+      Api.Print.preprocess source_file syntax display_format libraries esy_project_path in
   let _cmdname = "preprocessed" in
   let _doc = "Subcommand: Preprocess the source file.\nWarning: Intended for development of LIGO and can break at any time." in
   let desc =    "This sub-command runs the pre-processor on a LIGO \
@@ -526,7 +526,7 @@ let preprocessed =
   Clic.command
     ~group:print_group
     ~desc
-    Clic.(args2 syntax display_format)
+    Clic.(args4 syntax display_format libraries esy_project_path)
     Clic.(prefixes ["print"; "preprocessed"] @@ source_file @@ stop)
     f
 
