@@ -54,7 +54,7 @@ and compile_declaration : Mod_env.t -> I.declaration_loc list -> O.expression =
         aggregate (alias, access, attr) ~new_env:env'
       )
     )
-    | [] -> failwith "empty module : never happens ?"
+    | [] -> O.e_a_unit (* TODO: how to represen "programs"? *)
 
 and compile_type : Mod_env.t -> I.type_expression -> O.type_expression =
   fun mod_env ty ->
@@ -68,7 +68,7 @@ and compile_type : Mod_env.t -> I.type_expression -> O.type_expression =
     | T_variable x -> return (T_variable x)
     | T_constant { language ; injection ; parameters } ->
       let parameters = List.map parameters ~f:self in
-      return (T_constant { language ; injection ; parameters }) 
+      return (T_constant { language ; injection ; parameters })
     | T_sum { content ; layout } ->
       let content = map_rows content in
       return (T_sum { content ; layout })
@@ -151,7 +151,7 @@ and compile_expression : Mod_env.t -> I.expression -> O.expression =
     )
     | I.E_recursive { fun_name; fun_type; lambda = {binder;result}} -> (
       let result = self result in
-      let fun_type = compile_type mod_env fun_type in 
+      let fun_type = compile_type mod_env fun_type in
       return @@ O.E_recursive { fun_name; fun_type; lambda = {binder;result}}
     )
     | I.E_constant { cons_name ; arguments } -> (
@@ -214,7 +214,7 @@ and module_to_record : Mod_env.t -> I.module_fully_typed -> O.expression_label_m
         let mod_env = Mod_env.add mod_env (module_binder,ty) in
         mod_env, O.LMap.add (Label module_binder) expr acc
       | I.Module_alias { alias ; binders } ->
-        let alias = variable_of_module_name ~loc:Location.generated alias in
+        let alias = variable_of_module_name ~loc:m.location alias in
         let alias_str = Var.to_name alias.wrap_content in
         let access = module_access_to_record_access mod_env binders in
         let mod_env = Mod_env.add mod_env (alias_str, access.type_expression) in

@@ -118,7 +118,6 @@ and expression_content =
   | E_record of expression_label_map
   | E_record_accessor of record_accessor
   | E_record_update   of record_update
-  | E_module_accessor of expression module_access
 
 and type_inst = {
     forall: expression ;
