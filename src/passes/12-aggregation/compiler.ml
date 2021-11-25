@@ -7,7 +7,10 @@ open Stage_common.Types
   morph modules : Declaration_module -> E_let_in (E_record ..)
 *)
 
-type binder_repr = { var : O.expression_variable ; label : label }
+type binder_repr = {
+  var : O.expression_variable ; (* binder given to a module when it is aggregated in a let-in *)
+  label : label                 (* label the module should have if nested into another module *)
+}
 
 module Mod_env = struct
   (* env used to remember module types as they are morphed into modules *)
