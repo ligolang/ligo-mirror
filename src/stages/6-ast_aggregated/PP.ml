@@ -14,7 +14,7 @@ let lmap_sep value sep ppf m =
 let record_sep value sep ppf (m : 'a label_map) =
   let lst = LMap.to_kv_list m in
   let lst = List.dedup_and_sort ~compare:(fun (Label a,_) (Label b,_) -> String.compare a b) lst in
-  let new_pp ppf (k, v) = fprintf ppf "@[<h>%a -> %a@]" label k value v in
+  let new_pp ppf (k, v) = fprintf ppf "@[<h>%a = %a@]" label k value v in
   fprintf ppf "%a" (list_sep new_pp sep) lst
 
 let tuple_sep value sep ppf m =
@@ -26,7 +26,7 @@ let tuple_sep value sep ppf m =
 let record_sep_t value sep ppf (m : 'a label_map) =
   let lst = LMap.to_kv_list m in
   let lst = List.dedup_and_sort ~compare:(fun (Label a,_) (Label b,_) -> String.compare a b) lst in
-  let new_pp ppf (k, v) = fprintf ppf "@[<h>%a -> %a@]" label k value v in
+  let new_pp ppf (k, v) = fprintf ppf "@[<h>%a : %a@]" label k value v in
   fprintf ppf "%a" (list_sep new_pp sep) lst
 
 let tuple_sep_t value sep ppf m =
@@ -54,8 +54,8 @@ let lmap_sep_short x ~sep ~assoc ppf m =
   let lst = List.sort ~compare:(fun (Label a,_) (Label b,_) -> String.compare a b) m in
   list_sep (kv_short x ~assoc) (tag sep) ppf lst
 let lmap_sep_d x = lmap_sep x (tag " ,@ ")
-let tuple_or_record_sep_expr value = tuple_or_record_sep value "@[<h>record[%a]@]" " ,@ " "@[<h>( %a )@]" " ,@ "
-let tuple_or_record_sep_type value = tuple_or_record_sep_t value "@[<h>record[%a]@]" " ,@ " "@[<h>( %a )@]" " *@ "
+let tuple_or_record_sep_expr value = tuple_or_record_sep value "@[<h>{ %a }@]" " ;@ " "@[<h>( %a )@]" " ,@ "
+let tuple_or_record_sep_type value = tuple_or_record_sep_t value "@[<h>{ %a }@]" " ,@ " "@[<h>( %a )@]" " *@ "
 
 let type_variable ppf (t : type_variable) : unit = fprintf ppf "%a" Var.pp t
 let module_variable ppf (m : module_variable) : unit = pp_print_string ppf m
@@ -155,7 +155,7 @@ and expression_content ppf (ec: expression_content) =
   | E_matching {matchee; cases;} ->
       fprintf ppf "@[<v 2> match @[%a@] with@ %a@]" expression matchee (matching expression) cases
   | E_let_in {let_binder; rhs; let_result; attr = { inline; no_mutation; public=__LOC__ ; view = _} } ->
-      fprintf ppf "let %a = %a%a%a in %a" expression_variable let_binder expression
+      fprintf ppf "@[<hv>let %a = %a%a%a in@.%a@]" expression_variable let_binder expression
         rhs option_inline inline option_no_mutation no_mutation expression let_result
   | E_type_in   {type_binder; rhs; let_result} -> 
       fprintf ppf "@[let %a =@;<1 2>%a in@ %a@]"
