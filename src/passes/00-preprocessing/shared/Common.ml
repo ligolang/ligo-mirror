@@ -5,6 +5,19 @@
 type file_path = string
 type dirs = file_path list (* #include and #import *)
 
+(* cache module_resolutions here... :(  *)
+
+let module_resolutions = ref None
+
+let module_resolutions esy_project_path =
+  match !module_resolutions with
+    Some module_resolutions -> module_resolutions
+  | None -> 
+    let open Preprocessor in
+    let m = ModuleResolutions.make esy_project_path in
+    let () = module_resolutions := Some m in
+    m
+
 module type FILE =
   sig
     include File.S
@@ -50,7 +63,7 @@ module Config (File : FILE) (Comments : Comments.S) =
         method input              = Preprocessor_CLI.input
         method offsets            = Preprocessor_CLI.offsets
         method dirs               = Preprocessor_CLI.dirs
-        method module_resolutions = Preprocessor.ModuleResolutions.make Preprocessor_CLI.esy_project_path (* TODO: avoid re-computation *)
+        method module_resolutions = module_resolutions Preprocessor_CLI.esy_project_path
       end
   end
 
