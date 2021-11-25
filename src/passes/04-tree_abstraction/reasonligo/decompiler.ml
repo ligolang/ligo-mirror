@@ -8,7 +8,8 @@ module Wrap = Lexing_shared.Wrap
 open Function
 
 (* Utils *)
-
+let wrap = Region.wrap_ghost
+let ghost = Wrap.ghost ""
 let decompile_attributes = List.map ~f:wrap
 
 let list_to_sepseq lst =
@@ -29,9 +30,9 @@ let npseq_cons hd lst = hd,(ghost, fst lst)::(snd lst)
 
 let par a = CST.{lpar=ghost;inside=a;rpar=ghost}
 let type_vars_of_list : string Region.reg list -> CST.type_vars = fun lst ->
-  let type_var_of_name : _ -> CST.type_var Region.reg = fun name -> wrap CST.{quote=ghost;name} in
-  let x = Utils.nsepseq_map type_var_of_name (list_to_nsepseq lst) in
-  (wrap (par x))
+  let type_var_of_name = fun name -> Region.wrap_ghost (CST.{quote=Wrap.ghost "";name}) in
+  let x = list_to_nsepseq (List.map lst ~f:type_var_of_name) in
+  Region.wrap_ghost (par x)
 let inject compound a = CST.{compound;elements=a;terminator=None}
 
 let ne_inject compound fields ~attr = CST.{
@@ -41,11 +42,11 @@ let ne_inject compound fields ~attr = CST.{
   attributes=attr
   }
 
-let prefix_colon a = (ghost, a)
+let prefix_colon a = (Wrap.ghost "", a)
 
-let braces = Some (`Braces (ghost,ghost))
+let braces = Some (`Braces (Wrap.ghost "",Wrap.ghost ""))
 
-let brackets = Some (`Brackets (ghost,ghost))
+let brackets = Some (`Brackets (Wrap.ghost "",Wrap.ghost ""))
 
 (* Decompiler *)
 
@@ -190,7 +191,7 @@ let rec decompile_expression : AST.expression -> CST.expr = fun expr ->
         let ty = decompile_type_expr @@ AST.t_timestamp () in
         let time = CST.EString (String (wrap time)) in
         return_expr_with_par @@ CST.EAnnot (wrap @@ (time, ghost, ty))
-      | Literal_mutez mtez -> return_expr @@ CST.EArith (Mutez (wrap ("",mtez)))
+      | Literal_mutez mtez -> return_expr @@ CST.EArith (Mutez (wrap ("",(Z.to_int64 mtez))))
       | Literal_string (Standard str) -> return_expr @@ CST.EString (String   (wrap str))
       | Literal_string (Verbatim ver) -> return_expr @@ CST.EString (Verbatim (wrap ver))
       | Literal_bytes b ->
@@ -342,7 +343,7 @@ let rec decompile_expression : AST.expression -> CST.expr = fun expr ->
     let field_assign : CST.field_path_assignment = {field_path;assignment=ghost;field_expr} in
     let updates = updates.value.ne_elements in
     let updates =
-      wrap @@ ne_inject ~attr:[] braces @@ npseq_cons (wrap @@ field_assign) updates in
+      wrap @@ ne_inject ~attr:[] braces @@ npseq_cons (wrap field_assign) updates in
     let update : CST.update = {lbrace=ghost;record;ellipsis=ghost;comma=ghost;updates;rbrace=ghost} in
     return_expr @@ CST.EUpdate (wrap @@ update)
   | E_update {record; path; update} ->
