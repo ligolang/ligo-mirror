@@ -7,7 +7,7 @@ type self_cst_pascaligo_error = [
   `Self_cst_pascaligo_reserved_name of variable
 | `Self_cst_pascaligo_duplicate_variant of variable
 | `Self_cst_pascaligo_non_linear_pattern of variable
-| `Self_cst_pascaligo_non_linear_type_decl of type_var
+| `Self_cst_pascaligo_non_linear_type_decl of variable
 | `Self_cst_pascaligo_duplicate_field_name of variable
 | `Self_cst_pascaligo_duplicate_parameter of variable
 ] [@@deriving poly_constructor { prefix = "self_cst_pascaligo_" }]
@@ -23,27 +23,27 @@ let error_ppformat : display_format:string display_format ->
         "@[<hv>%a@.Reserved name %S.@.Hint: Change the name.@]"
         Snippet.pp_lift var#region
         var#payload
-    | `Duplicate_variant var ->
+    | `Self_cst_pascaligo_duplicate_variant var ->
       Format.fprintf f
         "Duplicate constructor %S in this sum type declaration.\n\
         Hint: Change the constructor.\n"
         var#payload
-    | `Non_linear_pattern var ->
+    | `Self_cst_pascaligo_non_linear_pattern var ->
       Format.fprintf f
         "@[<hv>%a@.Repeated variable %S in this pattern.@.Hint: Change the name.@]"
         Snippet.pp_lift var#region
         var#payload
-    | `Non_linear_type_decl var ->
+    | `Self_cst_pascaligo_non_linear_type_decl var ->
       Format.fprintf f
         "@[<hv>%a@.Repeated type variable %S in type declaration.@.Hint: Change the name.@]"
         Snippet.pp_lift var#region
         var#payload
-    | `Duplicate_field_name var ->
+    | `Self_cst_pascaligo_duplicate_field_name var ->
       Format.fprintf f
         "Duplicate field name %S in this record declaration.\n\
         Hint: Change the name.\n"
         var#payload
-    | `Duplicate_parameter var ->
+    | `Self_cst_pascaligo_duplicate_parameter var ->
       Format.fprintf f
         "Duplicate parameter %S.\nHint: Change the name.\n"
         var#payload

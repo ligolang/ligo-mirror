@@ -22,7 +22,7 @@ type literal =
   | Literal_int of z
   | Literal_nat of z
   | Literal_timestamp of z
-  | Literal_mutez of Int64.t
+  | Literal_mutez of z
   | Literal_string of ligo_string
   | Literal_bytes of bytes
   | Literal_address of string
