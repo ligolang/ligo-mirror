@@ -14,7 +14,7 @@ module Mod_env = struct
   let get_ty : t -> string -> O.type_expression = fun env name ->
     match ModMap.find_opt name env with
     | Some content -> O.t_record ~layout:I.default_layout content
-    | None -> failwith "no module 'name'"
+    | None -> failwith (Format.asprintf "no module %s" name)
   let add : t -> string * O.type_expression -> t =
     fun env (var, t) ->
       let ty = O.get_t_record_exn t in
@@ -30,9 +30,9 @@ and compile_declaration : Mod_env.t -> I.declaration_loc list -> O.expression =
     match lst with
     | hd::tl -> (
       let aggregate ?(new_env = mod_env) (binder, expr, attr) = O.e_a_let_in binder expr (compile_declaration new_env tl) attr in
-      let skip = compile_declaration mod_env tl in
+      let skip () = compile_declaration mod_env tl in
       match hd.wrap_content with
-      | I.Declaration_type _ -> skip
+      | I.Declaration_type _ -> skip ()
       | I.Declaration_constant { name = _ ; binder ; expr ; attr } -> (
         let expr = compile_expression mod_env expr in
         aggregate (binder, expr, attr)
@@ -47,14 +47,15 @@ and compile_declaration : Mod_env.t -> I.declaration_loc list -> O.expression =
       )
       | I.Module_alias { alias ; binders } -> (
         let alias = variable_of_module_name ~loc:hd.location alias in
-        let alias_str = Var.to_name alias.wrap_content in
+        let alias_str = string_of_variable alias.wrap_content in
         let access = module_access_to_record_access mod_env binders in
         let attr = known_attributes_for_modules None in
         let env' = Mod_env.add mod_env (alias_str, access.type_expression) in
         aggregate (alias, access, attr) ~new_env:env'
       )
     )
-    | [] -> O.e_a_unit (* TODO : this is where the main expression should be placed ? *)
+    | [] -> O.e_a_unit (* TODO: how to represent "programs"? *)
+
 and compile_type : Mod_env.t -> I.type_expression -> O.type_expression =
   fun mod_env ty ->
     let self = compile_type mod_env in
@@ -67,7 +68,7 @@ and compile_type : Mod_env.t -> I.type_expression -> O.type_expression =
     | T_variable x -> return (T_variable x)
     | T_constant { language ; injection ; parameters } ->
       let parameters = List.map parameters ~f:self in
-      return (T_constant { language ; injection ; parameters }) 
+      return (T_constant { language ; injection ; parameters })
     | T_sum { content ; layout } ->
       let content = map_rows content in
       return (T_sum { content ; layout })
@@ -150,7 +151,7 @@ and compile_expression : Mod_env.t -> I.expression -> O.expression =
     )
     | I.E_recursive { fun_name; fun_type; lambda = {binder;result}} -> (
       let result = self result in
-      let fun_type = compile_type mod_env fun_type in 
+      let fun_type = compile_type mod_env fun_type in
       return @@ O.E_recursive { fun_name; fun_type; lambda = {binder;result}}
     )
     | I.E_constant { cons_name ; arguments } -> (
@@ -172,7 +173,7 @@ and compile_expression : Mod_env.t -> I.expression -> O.expression =
     )
     | I.E_mod_alias { alias ; binders ; result } -> (
       let alias = variable_of_module_name ~loc:Location.generated alias in
-      let alias_str = Var.to_name alias.wrap_content in
+      let alias_str = string_of_variable alias.wrap_content in
       let access = module_access_to_record_access mod_env binders in
       let env' = Mod_env.add mod_env (alias_str, access.type_expression) in
       let result = compile_expression env' result in
@@ -205,7 +206,7 @@ and module_to_record : Mod_env.t -> I.module_fully_typed -> O.expression_label_m
       match m.wrap_content with
       | I.Declaration_constant { name = _ ; binder ; expr ; _ } ->
         let expr = compile_expression mod_env expr in
-        mod_env, O.LMap.add (Label (Var.to_name binder.wrap_content)) expr acc
+        mod_env, O.LMap.add (Label (string_of_variable binder.wrap_content)) expr acc
       | I.Declaration_type _ -> (mod_env, acc)
       | I.Declaration_module {module_binder ; module_ ; _ } ->
         let (content, ty) = module_to_record mod_env module_ in
@@ -213,8 +214,8 @@ and module_to_record : Mod_env.t -> I.module_fully_typed -> O.expression_label_m
         let mod_env = Mod_env.add mod_env (module_binder,ty) in
         mod_env, O.LMap.add (Label module_binder) expr acc
       | I.Module_alias { alias ; binders } ->
-        let alias = variable_of_module_name ~loc:Location.generated alias in
-        let alias_str = Var.to_name alias.wrap_content in
+        let alias = variable_of_module_name ~loc:m.location alias in
+        let alias_str = string_of_variable alias.wrap_content in
         let access = module_access_to_record_access mod_env binders in
         let mod_env = Mod_env.add mod_env (alias_str, access.type_expression) in
         mod_env, O.LMap.add (Label alias_str) access acc
@@ -246,3 +247,5 @@ and known_attributes_for_modules : I.module_attribute option -> O.known_attribut
     { inline = false ; no_mutation = false ; view = false ; public = false ; }
   in
   Option.value_map opt ~default ~f:(fun {public} -> { default with public})
+
+and string_of_variable v = Format.asprintf "%a" Var.pp v

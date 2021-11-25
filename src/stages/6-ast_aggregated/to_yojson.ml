@@ -93,7 +93,6 @@ and expression_content = function
   | E_record          e -> `List [ `String "E_record"; record e ]
   | E_record_accessor e -> `List [ `String "E_record_accessor"; record_accessor e ]
   | E_record_update   e -> `List [ `String "E_record_update"; record_update e ]
-  | E_module_accessor e -> `List [ `String "E_module_accessor"; module_access expression e]
   | E_type_inst       e -> `List [ `String "E_type_inst"; type_inst e ]
 
 and constant {cons_name;arguments} =

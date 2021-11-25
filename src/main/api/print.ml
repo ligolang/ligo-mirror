@@ -91,7 +91,9 @@ let ast_combined  source_file syntax infer protocol_version display_format =
         Compiler_options.make ~infer ~protocol_version ()
       in
       let typed,_ = Build.combined_contract ~raise ~add_warning ~options syntax source_file in
-      Compile.Of_typed.aggregate typed
+      let expr = Compile.Of_typed.aggregate typed in
+      let _, expr = Self_ast_aggregated.monomorphise_expression expr in
+      expr
 
 let mini_c source_file syntax infer protocol_version display_format optimize =
     Trace.warning_with @@ fun add_warning get_warnings ->
