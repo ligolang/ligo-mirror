@@ -166,6 +166,7 @@ let rec error_ppformat : display_format:string display_format ->
     | `Main_inference e -> Inference.Errors.error_ppformat ~display_format f e
     | `Main_checking e -> Checking.Errors.error_ppformat ~display_format f e
     | `Main_self_ast_typed e -> Self_ast_typed.Errors.error_ppformat ~display_format f e
+    | `Main_aggregation e -> Aggregation.Errors.error_ppformat ~display_format f e
     | `Main_self_mini_c e -> Self_mini_c.Errors.error_ppformat ~display_format f e
     | `Main_spilling e -> Spilling.Errors.error_ppformat ~display_format f  e
     | `Main_stacking e -> Stacking.Errors.error_ppformat ~display_format f e
@@ -390,6 +391,7 @@ let rec error_jsonformat : Types.all -> Yojson.Safe.t = fun a ->
   | `Main_inference e -> Inference.Errors.error_jsonformat e
   | `Main_checking e -> Checking.Errors.error_jsonformat e
   | `Main_self_ast_typed e -> Self_ast_typed.Errors.error_jsonformat e
+  | `Main_aggregation e -> Aggregation.Errors.error_jsonformat e
   | `Main_spilling e -> Spilling.Errors.error_jsonformat e
   | `Main_self_mini_c e -> Self_mini_c.Errors.error_jsonformat e
   | `Main_stacking e -> Stacking.Errors.error_jsonformat e
