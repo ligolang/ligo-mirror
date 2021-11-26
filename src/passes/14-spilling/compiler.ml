@@ -6,7 +6,7 @@ open Trace
 module Errors = Errors
 open Errors
 
-module AST = Ast_typed
+module AST = Ast_aggregated
 module Append_tree = Tree.Append
 open AST.Combinators
 open Mini_c
@@ -271,7 +271,7 @@ let rec compile_type ~raise (t:AST.type_expression) : type_expression =
     | _ -> raise.raise @@ corner_case ~loc:__LOC__ "wrong constant"
   )
   | T_sum { content = m ; layout } -> (
-      let open Ast_typed.Helpers in
+      let open AST.Helpers in
       match is_michelson_or m with
       | Some (a , b) -> (
           let aux (x : AST.row_element) =
@@ -286,7 +286,7 @@ let rec compile_type ~raise (t:AST.type_expression) : type_expression =
       | None -> Layout.t_sum ~raise ~layout return compile_type m
     )
   | T_record { content = m ; layout } -> (
-      let open Ast_typed.Helpers in
+      let open AST.Helpers in
       match is_michelson_pair m with
       | Some (a , b) -> (
           let aux (x : AST.row_element) =
@@ -306,8 +306,6 @@ let rec compile_type ~raise (t:AST.type_expression) : type_expression =
       let result' = compile_type type2 in
       return @@ (T_function (param',result'))
   )
-  | T_module_accessor _ ->
-    raise.raise @@ corner_case ~loc:__LOC__ "Module access should de resolved earlier"
   | T_singleton _ ->
     raise.raise @@ corner_case ~loc:__LOC__ "Singleton uncaught"
   | T_abstraction _ ->
@@ -323,28 +321,15 @@ let internal_error loc msg =
        "@[<v>Internal error, please report this as a bug@ %s@ %s@ @]"
        loc msg)
 
-let rec build_record_accessor ~raise record path =
-  match path with
-  | [] -> record
-  | label :: path ->
-    let t =
-      trace_option ~raise (corner_case ~loc:__LOC__ "Could not get record field type")
-      @@ get_record_field_type (get_type_expression record) label in
-    build_record_accessor ~raise
-      (Ast_typed.Combinators.make_e
-         (E_record_accessor { record = record ; path = label })
-         t)
-      path
-
 (* todo: refactor handling of recursive functions *)
-let compile_record_matching ~raise expr' return k ({ fields; body; tv } : Ast_typed.matching_content_record) =
+let compile_record_matching ~raise expr' return k ({ fields; body; tv } : AST.matching_content_record) =
   let record = 
     trace_option ~raise (corner_case ~loc:__LOC__ "getting lr tree") @@
     get_t_record tv in
   match record.layout with
   (* TODO unify with or simplify other case below? *)
   | L_comb ->
-    let record_fields = Ast_typed.Helpers.kv_list_of_t_record_or_tuple ~layout:L_comb record.content in
+    let record_fields = AST.Helpers.kv_list_of_t_record_or_tuple ~layout:L_comb record.content in
     let fields =
       List.map
         ~f:(fun (l, (row_element : _ row_element_mini_c)) ->
@@ -414,8 +399,6 @@ and compile_expression ~raise (ae:AST.expression) : expression =
   | E_type_in {type_binder=_; rhs=_; let_result} ->
     let result' = self let_result in
     result'
-  | E_mod_in _    -> raise.raise @@ corner_case ~loc:__LOC__ "E_mod_in should be morphed"
-  | E_mod_alias _ -> raise.raise @@ corner_case ~loc:__LOC__ "E_mod_alias should be morphed"
   | E_literal l -> return @@ E_literal l
   | E_variable name -> (
       return @@ E_variable (Location.map Var.todo_cast name)
@@ -456,8 +439,8 @@ and compile_expression ~raise (ae:AST.expression) : expression =
       get_t_record (get_type_expression record) in
     match record_ty.layout with
     | L_comb ->
-      let record_fields = Ast_typed.Helpers.kv_list_of_t_record_or_tuple ~layout:record_ty.layout record_ty.content in
-      let i = fst @@ Option.value_exn  (List.findi ~f:(fun _ (label, _) -> 0 = Ast_typed.Compare.label path label) record_fields) in
+      let record_fields = AST.Helpers.kv_list_of_t_record_or_tuple ~layout:record_ty.layout record_ty.content in
+      let i = fst @@ Option.value_exn  (List.findi ~f:(fun _ (label, _) -> 0 = AST.Compare.label path label) record_fields) in
       let n = List.length record_fields in
       let record = compile_expression ~raise record in
       return (E_proj (record, i, n))
@@ -485,10 +468,10 @@ and compile_expression ~raise (ae:AST.expression) : expression =
       let ty' = compile_type ~raise (ty) in
       match record_ty.layout with
       | L_comb ->
-        let record_fields = Ast_typed.Helpers.kv_list_of_t_record_or_tuple ~layout:record_ty.layout record_ty.content in
+        let record_fields = AST.Helpers.kv_list_of_t_record_or_tuple ~layout:record_ty.layout record_ty.content in
         let record = self record in
         let update = self update in
-        let i = fst @@ Option.value_exn  (List.findi ~f:(fun _ (label, _) -> 0 = Ast_typed.Compare.label path label) record_fields) in
+        let i = fst @@ Option.value_exn  (List.findi ~f:(fun _ (label, _) -> 0 = AST.Compare.label path label) record_fields) in
         let n = List.length record_fields in
         return (E_update (record, i, update, n))
       | _ ->
@@ -643,7 +626,7 @@ and compile_expression ~raise (ae:AST.expression) : expression =
               (tv' , s')
             in
             return @@ E_if_none (expr' , n , ((Location.map Var.todo_cast (snd match_some) , tv') , s'))
-          | T_sum _ when Option.is_some (Ast_typed.get_t_bool expr.type_expression) ->
+          | T_sum _ when Option.is_some (AST.get_t_bool expr.type_expression) ->
             let ctor_body (case : AST.matching_content_case) = (case.constructor, case.body) in
             let cases = AST.LMap.of_list (List.map ~f:ctor_body cases) in
             let get_case c =
@@ -720,7 +703,6 @@ and compile_expression ~raise (ae:AST.expression) : expression =
         | _ ->
           raise.raise (raw_michelson_must_be_seq ae.location code)
     )
-  | E_module_accessor _ -> raise.raise @@ corner_case ~loc:__LOC__ "E_mod_accessor should be morphed"
 
 and compile_lambda ~raise l (input_type , output_type) =
   let { binder ; result } : AST.lambda = l in
@@ -811,7 +793,7 @@ and compile_recursive ~raise {fun_name; fun_type; lambda} =
             (tv' , s')
           in
           return @@ E_if_none (expr' , n , ((Location.map Var.todo_cast (snd match_some) , tv') , s'))
-        | T_sum _ when Option.is_some (Ast_typed.get_t_bool m.matchee.type_expression) ->
+        | T_sum _ when Option.is_some (AST.get_t_bool m.matchee.type_expression) ->
           let ctor_body (case : AST.matching_content_case) = (case.constructor, case.body) in
           let cases = AST.LMap.of_list (List.map ~f:ctor_body cases) in
           let get_case c =
@@ -868,28 +850,3 @@ and compile_recursive ~raise {fun_name; fun_type; lambda} =
   let expr = Expression.make_tpl (E_variable binder, input_type) in
   let body = Expression.make (E_iterator (C_LOOP_LEFT, ((lambda.binder, input_type), body), expr)) output_type in
   Expression.make (E_closure {binder;body}) fun_type
-
-and compile_declaration ~raise env (d:AST.declaration) : toplevel_statement option =
-  match d with
-  | Declaration_type _ -> None
-  | Declaration_constant { binder ; expr ; attr = { inline } } ->
-    let expression = compile_expression ~raise expr in
-    let binder = Location.map Var.todo_cast binder in
-    let tv = Combinators.Expression.get_type expression in
-    let env' = Environment.add (binder, tv) env in
-    Some ((binder, inline, expression), environment_wrap env env')
-  | Declaration_module _ -> raise.raise @@ corner_case ~loc:__LOC__ "Declaration_module should be morphed"
-  | Module_alias _ -> raise.raise @@ corner_case ~loc:__LOC__ "Module_alias should be morphed"
-
-
-
-and compile_module ~raise ((AST.Module_Fully_Typed lst) : AST.module_fully_typed) : program =
-  let aux (prev:toplevel_statement list * Environment.t) cur =
-    let (hds, env) = prev in
-    let x = compile_declaration ~raise env cur in
-    match x with
-    | Some ((_ , env') as cur') -> (hds @ [ cur' ] , env'.post_environment)
-    | None -> prev
-  in
-  let (statements, _) = List.fold_left ~f:aux ~init:([], Environment.empty) (temp_unwrap_loc_list lst) in
-  statements

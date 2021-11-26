@@ -1,4 +1,4 @@
-module AST = Ast_typed
+module AST = Ast_aggregated
 open AST
 open Errors
 module Append_tree = Tree.Append
@@ -290,7 +290,7 @@ let match_variant_to_tree ~raise ~layout ~compile_type content : variant_pair =
             let left = `Leaf khd , thd' in
             (`Node (left , (tl' , ttl)) , tv')
           ) in
-      let lst = List.map ~f:(fun (k,({associated_type;_} : _ row_element_mini_c)) -> (k,associated_type)) @@ Ast_typed.Helpers.kv_list_of_t_sum ~layout content in
+      let lst = List.map ~f:(fun (k,({associated_type;_} : _ row_element_mini_c)) -> (k,associated_type)) @@ Helpers.kv_list_of_t_sum ~layout content in
       let vp = aux lst in
       vp
     )

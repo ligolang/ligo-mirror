@@ -1,4 +1,4 @@
-module AST = Ast_typed
+module AST = Ast_aggregated
 module Append_tree = Tree.Append
 module Errors = Errors
 open Errors
@@ -178,7 +178,7 @@ let rec decompile ~raise (v : value) (t : AST.type_expression) : AST.expression 
         get_ticket v
       in
       let v = self v ty in
-      let amt = self amt (Ast_typed.t_nat ()) in
+      let amt = self amt (AST.t_nat ()) in
       return (E_constant {cons_name=C_TICKET;arguments=[v;amt]})
     )
     | (i, _) when String.equal i contract_name ->
@@ -187,16 +187,16 @@ let rec decompile ~raise (v : value) (t : AST.type_expression) : AST.expression 
       raise.raise @@ corner_case ~loc:"unspiller" "Michelson_combs t should not be present in mini-c"
     | _ ->
       (* let () = Format.printf "%a" Mini_c.PP.value v in *)
-      let () = Format.printf "%a" Ast_typed.PP.type_content t.type_content in
+      let () = Format.printf "%a" AST.PP.type_content t.type_content in
       raise.raise @@ corner_case ~loc:"unspiller" "Wrong number of args or wrong kinds for the type constant"
   )
   | T_sum {layout ; content} ->
-      let lst = List.map ~f:(fun (k,({associated_type;_} : _ row_element_mini_c)) -> (k,associated_type)) @@ Ast_typed.Helpers.kv_list_of_t_sum ~layout content in
+      let lst = List.map ~f:(fun (k,({associated_type;_} : _ row_element_mini_c)) -> (k,associated_type)) @@ AST.Helpers.kv_list_of_t_sum ~layout content in
       let (constructor, v, tv) = Layout.extract_constructor ~raise ~layout v lst in
       let sub = self v tv in
       return (E_constructor {constructor;element=sub})
   | T_record {layout ; content } ->
-      let lst = List.map ~f:(fun (k,({associated_type;_} : _ row_element_mini_c)) -> (k,associated_type)) @@ Ast_typed.Helpers.kv_list_of_t_record_or_tuple ~layout content in
+      let lst = List.map ~f:(fun (k,({associated_type;_} : _ row_element_mini_c)) -> (k,associated_type)) @@ AST.Helpers.kv_list_of_t_record_or_tuple ~layout content in
       let lst = Layout.extract_record ~raise ~layout v lst in
       let lst = List.Assoc.map ~f:(fun (y, z) -> self y z) lst in
       let m' = AST.LMap.of_list lst in
@@ -209,8 +209,6 @@ let rec decompile ~raise (v : value) (t : AST.type_expression) : AST.expression 
       return (E_literal (Literal_string n))
   | T_variable _ ->
     raise.raise @@ corner_case ~loc:__LOC__ "trying to decompile at variable type"
-  | T_module_accessor _ ->
-    raise.raise @@ corner_case ~loc:__LOC__ "trying to decompile at module access type"
   | T_singleton _ ->
     raise.raise @@ corner_case ~loc:__LOC__ "no value is of type singleton"
   | T_abstraction _ ->

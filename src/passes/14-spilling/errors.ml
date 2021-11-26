@@ -2,10 +2,10 @@ open Simple_utils.Display
 
 type spilling_error = [
   | `Spilling_corner_case of string * string
-  | `Spilling_no_type_variable of Ast_typed.type_variable
+  | `Spilling_no_type_variable of Ast_aggregated.type_variable
   | `Spilling_unsupported_pattern_matching of Location.t
-  | `Spilling_unsupported_recursive_function of Ast_typed.expression_variable
-  | `Spilling_wrong_mini_c_value of Ast_typed.type_expression * Mini_c.value
+  | `Spilling_unsupported_recursive_function of Ast_aggregated.expression_variable
+  | `Spilling_wrong_mini_c_value of Ast_aggregated.type_expression * Mini_c.value
   | `Spilling_bad_decompile of Mini_c.value
   | `Spilling_could_not_parse_raw_michelson of Location.t * string
   | `Spilling_raw_michelson_must_be_seq of Location.t * (Location.t, string) Tezos_micheline.Micheline.node
@@ -36,11 +36,11 @@ let error_ppformat : display_format:string display_format ->
     | `Spilling_unsupported_recursive_function var ->
       let s = Format.asprintf "%a@.Invalid recursive function \"%a\".@.A recursive function can only have one argument."
         Snippet.pp var.location
-        Ast_typed.PP.expression_variable var in
+        Ast_aggregated.PP.expression_variable var in
       Format.pp_print_string f s
     | `Spilling_wrong_mini_c_value (expected , actual) ->
       let s = Format.asprintf "Invalid type.@.Expected \"%a\",@.but got \"%a\"."
-        Ast_typed.PP.type_expression expected 
+        Ast_aggregated.PP.type_expression expected
         Mini_c.PP.value actual in
       Format.pp_print_string f s
     | `Spilling_bad_decompile bad ->
@@ -90,14 +90,14 @@ let error_jsonformat : spilling_error -> Yojson.Safe.t = fun a ->
     in
     json_error ~stage ~content
   | `Spilling_unsupported_recursive_function var ->
-    let var' = Format.asprintf "%a" Ast_typed.PP.expression_variable var in
+    let var' = Format.asprintf "%a" Ast_aggregated.PP.expression_variable var in
     let content = `Assoc [
       ("message", `String "Recursive functions with only one variable are supported");
       ("value", `String var'); ]
     in
     json_error ~stage ~content
   | `Spilling_wrong_mini_c_value (expected , actual) ->
-    let expected' = Format.asprintf "%a" Ast_typed.PP.type_expression expected in
+    let expected' = Format.asprintf "%a" Ast_aggregated.PP.type_expression expected in
     let actual' = Format.asprintf "%a" Mini_c.PP.value actual in
     let content = `Assoc [
       ("message", `String "illed type of intermediary value does not match what was expected");
