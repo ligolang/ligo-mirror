@@ -14,7 +14,7 @@ let error_ppformat : display_format:string display_format ->
     match a with
     | `Aggregation_corner_case desc ->
         Format.fprintf f
-        "@[<hv>A type system corner case occurred:@.%s@]"
+        "@[<hv>An aggregation corner case occurred:@.%s@]"
         desc
   )
 
