@@ -2,15 +2,14 @@ module I = Ast_typed
 module O = Ast_aggregated
 open Stage_common.Types
 
-(* README
-  aggregates declarations : Declaration_constant -> E_let_in
-  morph modules : Declaration_module -> E_let_in (E_record ..)
+(* this pass does the following:
+  - aggregates declarations into a chain of let-ins
+  - unify modules and records
 *)
 
-type binder_repr = O.expression_variable (* binder given to a module when it is aggregated in a let-in *)
+type binder_repr = O.expression_variable
 
 module Mod_env = struct
-  (* env used to remember module types as they are morphed into modules *)
   let variable_of_module_name : loc:Location.t -> string -> O.expression_variable =
     fun ~loc str -> Location.wrap ~loc @@ Var.fresh_like (Var.of_name str)
   module ModMap = Map.Make(struct type t = string let compare = String.compare end)
@@ -62,6 +61,60 @@ and compile_declaration : Mod_env.t -> I.declaration_loc list -> O.expression =
       )
     )
     | [] -> O.e_a_unit (* TODO: how to represent "programs"? *)
+
+(*
+module_to_record mod_env ?(acc = []) lst
+morph a module [lst] to a record assuming a module environment [mod_env]. All field are pre-declared in let-ins, e.g.
+``` (I.expression ==> O.expression)
+  module My_module = struct         let My_module#1 =
+    let x = 1                         let x = 1 in
+    module AA = struct                let AA#2 =
+      let foo = 1                       let foo = 1 in
+      let bar = 2                       let bar = 2 in
+    end                                 {foo ; bar}
+  end                                 in
+  ...                                 { x = x ; AA = AA#2 }
+  ...                               in
+  ...                               ...
+```
+[acc] is used to propagate binder,labels and type up to the end when we generate the final record (here, `{ x = x ; AA = AA#1 }`)
+*)
+and module_to_record : Mod_env.t -> ?acc:(binder_repr * label * O.expression) list -> I.declaration_loc list -> O.expression =
+  fun mod_env ?(acc = []) lst ->
+    match lst with
+    | hd::tl -> (
+      let aggregate ?(new_env = mod_env) ((binder,name_opt), expr, attr) =
+        let label = match name_opt with
+          | Some name -> Label name
+          | None -> label_for_constant_decl binder
+        in
+        let acc = (binder,label,expr)::acc in
+        O.e_a_let_in binder expr (module_to_record ~acc new_env tl) attr
+      in
+      let skip () = module_to_record ~acc mod_env tl in
+      match hd.wrap_content with
+      | I.Declaration_type _ -> skip ()
+      | I.Declaration_constant { name ; binder ; expr ; attr } -> (
+        let expr = compile_expression mod_env expr in
+        aggregate ((binder,name), expr, attr)
+      )
+      | I.Declaration_module { module_binder ; module_ ; module_attr } -> (
+        let mod_as_record =
+          let (Module_Fully_Typed decls) = module_ in
+          module_to_record mod_env decls
+        in
+        let attr = known_attributes_for_modules (Some module_attr) in
+        let mod_env,binder = Mod_env.add ~loc:hd.location mod_env (module_binder,mod_as_record.type_expression) in
+        aggregate ((binder,Some module_binder), mod_as_record, attr) ~new_env:mod_env
+      )
+      | I.Module_alias { alias ; binders } -> (
+        let access = module_access_to_record_access mod_env binders in
+        let attr = known_attributes_for_modules None in
+        let mod_env,binder = Mod_env.add ~loc:hd.location mod_env (alias, access.type_expression) in
+        aggregate ((binder,Some alias), access, attr) ~new_env:mod_env
+      )
+    )
+    | [] -> record_of_binders acc
 
 and compile_type : Mod_env.t -> I.type_expression -> O.type_expression =
   fun mod_env ty ->
@@ -214,45 +267,6 @@ and compile_cases : Mod_env.t -> I.matching_expr -> O.matching_expr =
       let tv = compile_type mod_env tv in
       let fields = O.LMap.map (fun (v, t) -> (v, compile_type mod_env t)) fields in
       Match_record {fields; body; tv}
-
-
-(* morph a module, to rows *)
-and module_to_record : Mod_env.t -> ?acc:(binder_repr * label * O.expression) list -> I.declaration_loc list -> O.expression =
-  fun mod_env ?(acc = []) lst ->
-    match lst with
-    | hd::tl -> (
-      let aggregate ?(new_env = mod_env) ((binder,name_opt), expr, attr) =
-        let label = match name_opt with
-          | Some name -> Label name
-          | None -> label_for_constant_decl binder
-        in
-        let acc = (binder,label,expr)::acc in
-        O.e_a_let_in binder expr (module_to_record ~acc new_env tl) attr
-      in
-      let skip () = module_to_record ~acc mod_env tl in
-      match hd.wrap_content with
-      | I.Declaration_type _ -> skip ()
-      | I.Declaration_constant { name ; binder ; expr ; attr } -> (
-        let expr = compile_expression mod_env expr in
-        aggregate ((binder,name), expr, attr)
-      )
-      | I.Declaration_module { module_binder ; module_ ; module_attr } -> (
-        let mod_as_record =
-          let (Module_Fully_Typed decls) = module_ in
-          module_to_record mod_env decls
-        in
-        let attr = known_attributes_for_modules (Some module_attr) in
-        let mod_env,binder = Mod_env.add ~loc:hd.location mod_env (module_binder,mod_as_record.type_expression) in
-        aggregate ((binder,Some module_binder), mod_as_record, attr) ~new_env:mod_env
-      )
-      | I.Module_alias { alias ; binders } -> (
-        let access = module_access_to_record_access mod_env binders in
-        let attr = known_attributes_for_modules None in
-        let mod_env,binder = Mod_env.add ~loc:hd.location mod_env (alias, access.type_expression) in
-        aggregate ((binder,Some alias), access, attr) ~new_env:mod_env
-      )
-    )
-    | [] -> record_of_binders acc
 
 (* morph a module access (A.B.C) to a record access (a.b.c) *)
 and module_access_to_record_access : Mod_env.t -> string List.Ne.t -> O.expression = fun mod_env (fst,path) ->
