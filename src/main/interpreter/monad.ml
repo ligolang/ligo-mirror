@@ -200,7 +200,6 @@ module Command = struct
        end
     | Compile_contract_from_file (source_file, entrypoint, views) ->
       let contract_code =
-        (* let protocol_version = ctxt.internals.protocol_version in *)
         Michelson_backend.compile_contract ~raise ~add_warning ~options source_file entrypoint views in
       let size =
         let s = Ligo_compile.Of_michelson.measure ~raise contract_code in

@@ -17,7 +17,6 @@ let dependency_graph source_file syntax display_format esy_project_path =
       let g,_ = Build.dependency_graph ~raise ~add_warning ~options syntax Env source_file in
       (g,source_file)
 
-      (*  TODO: handle -esy-project-path here  take -I inclusions paths *)
 let preprocess source_file syntax display_format libs esy_project_path =
     format_result ~display_format Parsing.Formatter.ppx_format (fun _ -> []) @@
     fun ~raise ->

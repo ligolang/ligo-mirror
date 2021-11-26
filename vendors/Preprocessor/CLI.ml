@@ -23,12 +23,12 @@ module type S =
   sig
     include COMMENTS
 
-    val input            : string option (* input file     *)
-    val extension        : string option (* file extension *)
-    val dirs             : string list   (* -I             *)
-    val esy_project_path : string option (* ??? *)
-    val show_pp          : bool          (* --show-pp      *)
-    val offsets          : bool          (* neg --columns  *)
+    val input            : string option (* input file         *)
+    val extension        : string option (* file extension     *)
+    val dirs             : string list   (* -I                 *)
+    val esy_project_path : string option (* --esy-project-path *)
+    val show_pp          : bool          (* --show-pp          *)
+    val offsets          : bool          (* neg --columns      *)
 
     type status = [
       `Done
@@ -56,6 +56,8 @@ module Make (Comments: COMMENTS) : S =
 
     let add_path dirs path = dirs := !dirs @ split_at_colon path
 
+    let set_path esy_project_path path = esy_project_path := Some path 
+
     let make_help () : Buffer.t =
       let file   = Filename.basename Sys.argv.(0) in
       let buffer = Buffer.create 203 in
@@ -65,12 +67,13 @@ module Make (Comments: COMMENTS) : S =
                  and each <option> (if any) is one of the following:\n"
                 file
       and options = [
-        "  -I <paths>       Inclusion paths (colon-separated)";
-        "  -h, --help       This help";
-        "  -v, --version    Commit hash on stdout";
-        "      --cli        Print given options (debug)";
-        "      --columns    Columns for source locations";
-        "      --show-pp    Print result of preprocessing"
+        "  -I <paths>             Inclusion paths (colon-separated)";
+        "  -h, --help             This help";
+        "  -v, --version          Commit hash on stdout";
+        "      --cli              Print given options (debug)";
+        "      --columns          Columns for source locations";
+        "      --show-pp          Print result of preprocessing";
+        "      --esy-project-path Path to the root of esy project"
       ] in
       begin
         Buffer.add_string buffer header;
@@ -81,16 +84,16 @@ module Make (Comments: COMMENTS) : S =
 
     (* Specifying the command-line options a la GNU *)
 
-    let input    = ref None
-    and dirs     = ref []
+    let input            = ref None
+    and dirs             = ref []
 
     and esy_project_path = ref None
-    and columns  = ref false
-    and show_pp  = ref false
+    and columns          = ref false
+    and show_pp          = ref false
 
-    and help     = ref false
-    and version  = ref false
-    and cli      = ref false
+    and help             = ref false
+    and version          = ref false
+    and cli              = ref false
 
     (* The following has been copied and pasted from the
        implementation of the module [Getopt], under the original
@@ -161,13 +164,14 @@ module Make (Comments: COMMENTS) : S =
 
     let specs =
       let open Getopt in [
-        'I',     nolong,    None, Some (add_path dirs);
-        noshort, "columns", set columns true, None;
-        noshort, "show-pp", set show_pp true, None;
+        'I',     nolong,             None,             Some (add_path dirs);
+        noshort, "columns",          set columns true, None;
+        noshort, "show-pp",          set show_pp true, None;
 
-        noshort, "cli",     set cli true, None;
-        'h',     "help",    set help true, None;
-        'v',     "version", set version true, None;
+        noshort, "cli",              set cli true,     None;
+        'h',     "help",             set help true,    None;
+        'v',     "version",          set version true, None;
+        noshort, "esy-project-path", None,             Some (set_path esy_project_path);
       ]
 
     (* Handler of anonymous arguments.
@@ -220,6 +224,7 @@ module Make (Comments: COMMENTS) : S =
       let open SSet in
       empty
       |> add "-I"
+      |> add "--esy-project-path"
 
     let argv_copy = Array.copy Sys.argv
 
@@ -268,10 +273,11 @@ module Make (Comments: COMMENTS) : S =
       (* Options "help", "version" and "cli" are not given. *)
       let options = [
         "CLI options";
-        sprintf "input      = %s" (string_of_opt (fun x -> x) !input);
-        sprintf "dirs       = %s" string_of_dirs;
-        sprintf "show-pp    = %b" show_pp;
-        sprintf "columns    = %b" (not offsets)
+        sprintf "input            = %s" (string_of_opt (fun x -> x) !input);
+        sprintf "dirs             = %s" string_of_dirs;
+        sprintf "show-pp          = %b" show_pp;
+        sprintf "columns          = %b" (not offsets);
+        sprintf "esy-project-path = %s" (string_of_opt (fun x -> x) esy_project_path)
       ] in
     begin
       Buffer.add_string cli_buffer (String.concat "\n" options);

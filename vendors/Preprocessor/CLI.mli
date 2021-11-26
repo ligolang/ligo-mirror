@@ -24,12 +24,12 @@ module type S =
   sig
     include COMMENTS
 
-    val input            : string option (* input file     *)
-    val extension        : string option (* file extension *)
-    val dirs             : string list   (* -I             *)
-    val esy_project_path : string option (* ??? *)
-    val show_pp          : bool          (* --show-pp      *)
-    val offsets          : bool          (* neg --columns  *)
+    val input            : string option (* input file         *)
+    val extension        : string option (* file extension     *)
+    val dirs             : string list   (* -I                 *)
+    val esy_project_path : string option (* --esy-project-path *)
+    val show_pp          : bool          (* --show-pp          *)
+    val offsets          : bool          (* neg --columns      *)
 
     type status = [
       `Done

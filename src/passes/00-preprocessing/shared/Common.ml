@@ -5,8 +5,6 @@
 type file_path = string
 type dirs = file_path list (* #include and #import *)
 
-(* cache module_resolutions here... :(  *)
-
 let module_resolutions = ref None
 
 let module_resolutions esy_project_path =
