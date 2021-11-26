@@ -2,7 +2,9 @@
 
 include Stage_common.Types
 
-type te_lmap = row_element label_map
+type 'a program = 'a -> expression 
+
+and te_lmap = row_element label_map
 
 and type_content =
   | T_variable of type_variable

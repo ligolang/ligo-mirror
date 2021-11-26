@@ -1,6 +1,8 @@
 module I = Ast_typed
 module O = Ast_aggregated
 open Stage_common.Types
+open Trace
+type err = Errors.aggregation_error raise
 
 (* this pass does the following:
   - aggregates declarations into a chain of let-ins
@@ -30,25 +32,26 @@ module Mod_env = struct
   let empty = ModMap.empty
 end
 
-let rec compile : I.module_fully_typed -> O.expression =
-  fun (Module_Fully_Typed module_) -> compile_declaration Mod_env.empty module_
+let rec compile ~raise : I.expression -> I.module_fully_typed -> O.expression =
+  (*TODO*) ignore raise;
+  fun hole (Module_Fully_Typed module_) -> compile_declaration ~raise ~hole Mod_env.empty module_
 
-and compile_declaration : Mod_env.t -> I.declaration_loc list -> O.expression =
-  fun mod_env lst ->
+and compile_declaration ~raise : hole:I.expression -> Mod_env.t -> I.declaration_loc list -> O.expression =
+  fun ~hole mod_env lst ->
     match lst with
     | hd::tl -> (
-      let aggregate ?(new_env = mod_env) (binder, expr, attr) = O.e_a_let_in binder expr (compile_declaration new_env tl) attr in
-      let skip () = compile_declaration mod_env tl in
+      let aggregate ?(new_env = mod_env) (binder, expr, attr) = O.e_a_let_in binder expr (compile_declaration ~raise ~hole new_env tl) attr in
+      let skip () = compile_declaration ~raise ~hole mod_env tl in
       match hd.wrap_content with
       | I.Declaration_type _ -> skip ()
       | I.Declaration_constant { name = _ ; binder ; expr ; attr } -> (
-        let expr = compile_expression mod_env expr in
+        let expr = compile_expression ~raise mod_env expr in
         aggregate (binder, expr, attr)
       )
       | I.Declaration_module { module_binder ; module_ ; module_attr } -> (
         let mod_as_record =
           let (Module_Fully_Typed decls) = module_ in
-          module_to_record mod_env decls in
+          module_to_record ~raise mod_env decls in
         let attr = known_attributes_for_modules (Some module_attr) in
         let env',binder = Mod_env.add ~loc:hd.location mod_env (module_binder,mod_as_record.type_expression) in
         aggregate (binder, mod_as_record, attr) ~new_env:env'
@@ -60,7 +63,7 @@ and compile_declaration : Mod_env.t -> I.declaration_loc list -> O.expression =
         aggregate (alias, access, attr) ~new_env:env'
       )
     )
-    | [] -> O.e_a_unit (* TODO: how to represent "programs"? *)
+    | [] -> compile_expression ~raise mod_env hole
 
 (*
 module_to_record mod_env ?(acc = []) lst
@@ -79,7 +82,7 @@ morph a module [lst] to a record assuming a module environment [mod_env]. All fi
 ```
 [acc] is used to propagate binder,labels and type up to the end when we generate the final record (here, `{ x = x ; AA = AA#1 }`)
 *)
-and module_to_record : Mod_env.t -> ?acc:(binder_repr * label * O.expression) list -> I.declaration_loc list -> O.expression =
+and module_to_record ~raise : Mod_env.t -> ?acc:(binder_repr * label * O.expression) list -> I.declaration_loc list -> O.expression =
   fun mod_env ?(acc = []) lst ->
     match lst with
     | hd::tl -> (
@@ -89,19 +92,19 @@ and module_to_record : Mod_env.t -> ?acc:(binder_repr * label * O.expression) li
           | None -> label_for_constant_decl binder
         in
         let acc = (binder,label,expr)::acc in
-        O.e_a_let_in binder expr (module_to_record ~acc new_env tl) attr
+        O.e_a_let_in binder expr (module_to_record ~raise ~acc new_env tl) attr
       in
-      let skip () = module_to_record ~acc mod_env tl in
+      let skip () = module_to_record ~raise ~acc mod_env tl in
       match hd.wrap_content with
       | I.Declaration_type _ -> skip ()
       | I.Declaration_constant { name ; binder ; expr ; attr } -> (
-        let expr = compile_expression mod_env expr in
+        let expr = compile_expression ~raise mod_env expr in
         aggregate ((binder,name), expr, attr)
       )
       | I.Declaration_module { module_binder ; module_ ; module_attr } -> (
         let mod_as_record =
           let (Module_Fully_Typed decls) = module_ in
-          module_to_record mod_env decls
+          module_to_record ~raise mod_env decls
         in
         let attr = known_attributes_for_modules (Some module_attr) in
         let mod_env,binder = Mod_env.add ~loc:hd.location mod_env (module_binder,mod_as_record.type_expression) in
@@ -116,9 +119,9 @@ and module_to_record : Mod_env.t -> ?acc:(binder_repr * label * O.expression) li
     )
     | [] -> record_of_binders acc
 
-and compile_type : Mod_env.t -> I.type_expression -> O.type_expression =
+and compile_type ~raise : Mod_env.t -> I.type_expression -> O.type_expression =
   fun mod_env ty ->
-    let self = compile_type mod_env in
+    let self = compile_type ~raise mod_env in
     let return type_content : O.type_expression = { type_content ; orig_var = ty.orig_var ; location = ty.location } in
     let map_rows : I.row_element label_map -> O.row_element label_map = fun rows ->
       let f : I.row_element -> O.row_element = fun row -> { row with associated_type = self row.associated_type} in
@@ -148,12 +151,12 @@ and compile_type : Mod_env.t -> I.type_expression -> O.type_expression =
       let type_ = self type_ in
       return (T_for_all { ty_binder ; kind ; type_ })
 
-and compile_expression : Mod_env.t -> I.expression -> O.expression =
+and compile_expression ~raise : Mod_env.t -> I.expression -> O.expression =
   fun mod_env expr ->
-    let self = compile_expression mod_env in
-    let self_cases = compile_cases mod_env in
+    let self = compile_expression ~raise mod_env in
+    let self_cases = compile_cases ~raise mod_env in
     let return expression_content : O.expression =
-      let type_expression = compile_type mod_env expr.type_expression in
+      let type_expression = compile_type ~raise mod_env expr.type_expression in
       { expression_content ; type_expression ; location = expr.location } in
     match expr.expression_content with
     | I.E_literal l ->
@@ -197,7 +200,7 @@ and compile_expression : Mod_env.t -> I.expression -> O.expression =
     )
     | I.E_type_in {type_binder; rhs; let_result} -> (
       let let_result = self let_result in
-      let rhs = compile_type mod_env rhs in
+      let rhs = compile_type ~raise mod_env rhs in
       return @@ O.E_type_in {type_binder; rhs; let_result}
     )
     | I.E_lambda { binder ; result } -> (
@@ -206,12 +209,12 @@ and compile_expression : Mod_env.t -> I.expression -> O.expression =
     )
     | I.E_type_inst { forall ; type_ } -> (
       let forall = self forall in
-      let type_ = compile_type mod_env type_ in
+      let type_ = compile_type ~raise mod_env type_ in
       return @@ O.E_type_inst { forall ; type_ }
     )
     | I.E_recursive { fun_name; fun_type; lambda = {binder;result}} -> (
       let result = self result in
-      let fun_type = compile_type mod_env fun_type in
+      let fun_type = compile_type ~raise mod_env fun_type in
       return @@ O.E_recursive { fun_name; fun_type; lambda = {binder;result}}
     )
     | I.E_constant { cons_name ; arguments } -> (
@@ -236,36 +239,36 @@ and compile_expression : Mod_env.t -> I.expression -> O.expression =
     | I.E_mod_in { module_binder ; rhs ; let_result } -> (
       let mod_as_record =
         let (Module_Fully_Typed decls) = rhs in
-        module_to_record mod_env decls
+        module_to_record ~raise mod_env decls
       in
       let env',binder = Mod_env.add ~loc:Location.generated mod_env (module_binder, mod_as_record.type_expression) in
-      let let_result = compile_expression env' let_result in
+      let let_result = compile_expression ~raise env' let_result in
       return @@ O.e_let_in binder mod_as_record let_result (known_attributes_for_modules None)
     )
     | I.E_mod_alias { alias ; binders ; result } -> (
       let access = module_access_to_record_access mod_env binders in
       let (env',alias) = Mod_env.add ~loc:Location.generated mod_env (alias, access.type_expression) in
-      let result = compile_expression env' result in
+      let result = compile_expression ~raise env' result in
       let attr = known_attributes_for_modules None in
       return @@ O.e_let_in alias access result attr
     )
 
-and compile_cases : Mod_env.t -> I.matching_expr -> O.matching_expr =
+and compile_cases ~raise : Mod_env.t -> I.matching_expr -> O.matching_expr =
   fun mod_env m ->
     match m with
     | Match_variant {cases;tv} -> (
         let aux { I.constructor ; pattern ; body } =
-          let body = compile_expression mod_env body in
+          let body = compile_expression  ~raise mod_env body in
           {O.constructor;pattern;body}
         in
         let cases = List.map ~f:aux cases in
-        let tv = compile_type mod_env tv in
+        let tv = compile_type ~raise mod_env tv in
         Match_variant {cases ; tv}
       )
     | Match_record {fields; body; tv} ->
-      let body = compile_expression mod_env body in
-      let tv = compile_type mod_env tv in
-      let fields = O.LMap.map (fun (v, t) -> (v, compile_type mod_env t)) fields in
+      let body = compile_expression ~raise mod_env body in
+      let tv = compile_type ~raise mod_env tv in
+      let fields = O.LMap.map (fun (v, t) -> (v, compile_type ~raise mod_env t)) fields in
       Match_record {fields; body; tv}
 
 (* morph a module access (A.B.C) to a record access (a.b.c) *)

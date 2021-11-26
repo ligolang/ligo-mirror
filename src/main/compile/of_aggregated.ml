@@ -1,24 +1,24 @@
 open Trace
-open Ast_typed
-open Aggregation
+open Ast_aggregated
+open Spilling
 open Main_errors
 
-module Checking = Int (* to remove... assert_type_expression_eq *)
 module SMap = Map.Make(String)
 
-let aggregate prg = Aggregation.compile_expression_in_context Ast_typed.e_a_unit prg
+let aggregate prg = Aggregation.compile prg
 
-let compile_with_modules ~raise : Ast_typed.module_fully_typed -> Ast_typed.expression Ast_aggregated.program = fun p ->
-  trace ~raise aggregation_tracer @@ Aggregation.compile_program p
+(* let compile_with_modules ~raise : Ast_typed.module_fully_typed -> Mini_c.program = fun p ->
+  trace ~raise spilling_tracer @@ compile_module p
 
-let compile ~raise : Ast_typed.module_fully_typed -> Ast_typed.expression Ast_aggregated.program = fun p ->
-  compile_with_modules ~raise p (* *)
+let compile ~raise : Ast_typed.module_fully_typed -> Mini_c.program = fun p ->
+  let mini_c = compile_with_modules ~raise p in
+  mini_c *)
 
-let compile_expression ~raise : Ast_typed.expression -> Ast_aggregated.expression = fun e ->
-  trace ~raise aggregation_tracer @@ compile_expression e
+let compile_expression ~raise : expression -> Mini_c.expression = fun e ->
+  trace ~raise spilling_tracer @@ compile_expression e
 
-let compile_type ~raise : Ast_typed.type_expression -> Ast_aggregated.type_expression = fun e ->
-  trace ~raise aggregation_tracer @@ compile_type e
+let compile_type ~raise : type_expression -> Mini_c.type_expression = fun e ->
+  trace ~raise spilling_tracer @@ compile_type e
 
 let assert_equal_contract_type ~raise : Simple_utils.Runned_result.check_type -> string -> Ast_typed.module_fully_typed -> Ast_typed.expression -> unit  =
     fun c entry contract param ->

@@ -1,0 +1,1 @@
+type aggregation_error = []

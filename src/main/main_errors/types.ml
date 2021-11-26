@@ -44,6 +44,7 @@ type all =
  | `Main_checking of Checking.Errors.typer_error
  | `Main_self_ast_typed of Self_ast_typed.Errors.self_ast_typed_error
  | `Main_spilling of Spilling.Errors.spilling_error
+ | `Main_aggregation of Aggregation.Errors.aggregation_error
  | `Main_self_mini_c of Self_mini_c.Errors.self_mini_c_error
  | `Main_stacking of Stacking.Errors.stacking_error
 
