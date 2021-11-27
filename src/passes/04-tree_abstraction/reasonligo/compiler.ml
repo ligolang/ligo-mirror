@@ -263,7 +263,7 @@ let rec compile_expression ~raise : CST.expr -> AST.expr  = fun e ->
       return @@ e_nat_z ~loc n
     | Mutez mtez ->
       let ((_,mtez), loc) = r_split mtez in
-      return @@ e_mutez_z ~loc mtez
+      return @@ e_mutez_z ~loc (Z.of_int64 mtez)
     )
   | ELogic logic -> (
     match logic with
