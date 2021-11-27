@@ -12,12 +12,9 @@ module SMap = Map.Make (String)
 module Wrap = Lexing_shared.Wrap
 module Attr = Lexing_shared.Attr
 
-type 'a wrap = 'a Wrap.t
-type 'a reg  = 'a Region.reg
+let sprintf = Printf.sprintf
 
 let wrap = Wrap.wrap
-
-(* TOKENS *)
 
 module T =
   struct
@@ -33,7 +30,7 @@ module T =
 
     include Menhir_reasonligo_tokens.MenhirToken
 
-    (* Tokens *)
+    (* TOKENS *)
 
     type t =
       (* Preprocessing directives *)
@@ -42,66 +39,66 @@ module T =
 
       (* Literals *)
 
-    | String   of lexeme wrap
-    | Verbatim of lexeme wrap
-    | Bytes    of (lexeme * Hex.t) wrap
-    | Int      of (lexeme * Z.t) wrap
-    | Nat      of (lexeme * Z.t) wrap
-    | Mutez    of (lexeme * Int64.t) wrap
-    | Ident    of lexeme wrap
-    | UIdent   of lexeme wrap
-    | Lang     of lexeme reg reg
-    | Attr     of Attr.t reg
+    | String   of lexeme Wrap.t
+    | Verbatim of lexeme Wrap.t
+    | Bytes    of (lexeme * Hex.t) Wrap.t
+    | Int      of (lexeme * Z.t) Wrap.t
+    | Nat      of (lexeme * Z.t) Wrap.t
+    | Mutez    of (lexeme * Int64.t) Wrap.t
+    | Ident    of lexeme Wrap.t
+    | UIdent   of lexeme Wrap.t
+    | Lang     of lexeme Region.reg Region.reg
+    | Attr     of Attr.t Region.reg
 
     (* Symbols *)
 
-    | PLUS2    of lexeme wrap (* ++  *)
-    | MINUS    of lexeme wrap (* -   *)
-    | PLUS     of lexeme wrap (* +   *)
-    | SLASH    of lexeme wrap (* /   *)
-    | TIMES    of lexeme wrap (* *   *)
-    | LPAR     of lexeme wrap (* (   *)
-    | RPAR     of lexeme wrap (* )   *)
-    | LBRACKET of lexeme wrap (* [   *)
-    | RBRACKET of lexeme wrap (* ]   *)
-    | LBRACE   of lexeme wrap (* {   *)
-    | RBRACE   of lexeme wrap (* }   *)
-    | COMMA    of lexeme wrap (* ,   *)
-    | SEMI     of lexeme wrap (* ;   *)
-    | VBAR     of lexeme wrap (* |   *)
-    | COLON    of lexeme wrap (* :   *)
-    | DOT      of lexeme wrap (* .   *)
-    | ELLIPSIS of lexeme wrap (* ... *)
-    | ARROW    of lexeme wrap (* =>  *)
-    | WILD     of lexeme wrap (* _   *)
-    | EQ       of lexeme wrap (* =   *)
-    | EQ2      of lexeme wrap (* ==  *)
-    | NE       of lexeme wrap (* !=  *)
-    | LT       of lexeme wrap (* <   *)
-    | GT       of lexeme wrap (* >   *)
-    | LE       of lexeme wrap (* <=  *)
-    | GE       of lexeme wrap (* >=  *)
-    | BOOL_OR  of lexeme wrap (* ||  *)
-    | BOOL_AND of lexeme wrap (* &&  *)
-    | NOT      of lexeme wrap (* !   *)
-    | QUOTE    of lexeme wrap (* '   *)
+    | PLUS2    of lexeme Wrap.t (* ++  *)
+    | MINUS    of lexeme Wrap.t (* -   *)
+    | PLUS     of lexeme Wrap.t (* +   *)
+    | SLASH    of lexeme Wrap.t (* /   *)
+    | TIMES    of lexeme Wrap.t (* *   *)
+    | LPAR     of lexeme Wrap.t (* (   *)
+    | RPAR     of lexeme Wrap.t (* )   *)
+    | LBRACKET of lexeme Wrap.t (* [   *)
+    | RBRACKET of lexeme Wrap.t (* ]   *)
+    | LBRACE   of lexeme Wrap.t (* {   *)
+    | RBRACE   of lexeme Wrap.t (* }   *)
+    | COMMA    of lexeme Wrap.t (* ,   *)
+    | SEMI     of lexeme Wrap.t (* ;   *)
+    | VBAR     of lexeme Wrap.t (* |   *)
+    | COLON    of lexeme Wrap.t (* :   *)
+    | DOT      of lexeme Wrap.t (* .   *)
+    | ELLIPSIS of lexeme Wrap.t (* ... *)
+    | ARROW    of lexeme Wrap.t (* =>  *)
+    | WILD     of lexeme Wrap.t (* _   *)
+    | EQ       of lexeme Wrap.t (* =   *)
+    | EQ2      of lexeme Wrap.t (* ==  *)
+    | NE       of lexeme Wrap.t (* !=  *)
+    | LT       of lexeme Wrap.t (* <   *)
+    | GT       of lexeme Wrap.t (* >   *)
+    | LE       of lexeme Wrap.t (* <=  *)
+    | GE       of lexeme Wrap.t (* >=  *)
+    | BOOL_OR  of lexeme Wrap.t (* ||  *)
+    | BOOL_AND of lexeme Wrap.t (* &&  *)
+    | NOT      of lexeme Wrap.t (* !   *)
+    | QUOTE    of lexeme Wrap.t (* '   *)
 
     (* Keywords *)
 
-    | Else   of lexeme wrap  (* else   *)
-    | If     of lexeme wrap  (* if     *)
-    | Let    of lexeme wrap  (* let    *)
-    | Mod    of lexeme wrap  (* mod    *)
-    | Land   of lexeme wrap  (* land   *)
-    | Lor    of lexeme wrap  (* lor    *)
-    | Lxor   of lexeme wrap  (* lxor   *)
-    | Lsl    of lexeme wrap  (* lsl    *)
-    | Lsr    of lexeme wrap  (* lsr    *)
-    | Or     of lexeme wrap  (* or     *)
-    | Rec    of lexeme wrap  (* rec    *)
-    | Switch of lexeme wrap  (* switch *)
-    | Type   of lexeme wrap  (* type   *)
-    | Module of lexeme wrap  (* module *)
+    | Else   of lexeme Wrap.t  (* else   *)
+    | If     of lexeme Wrap.t  (* if     *)
+    | Let    of lexeme Wrap.t  (* let    *)
+    | Mod    of lexeme Wrap.t  (* mod    *)
+    | Land   of lexeme Wrap.t  (* land   *)
+    | Lor    of lexeme Wrap.t  (* lor    *)
+    | Lxor   of lexeme Wrap.t  (* lxor   *)
+    | Lsl    of lexeme Wrap.t  (* lsl    *)
+    | Lsr    of lexeme Wrap.t  (* lsr    *)
+    | Or     of lexeme Wrap.t  (* or     *)
+    | Rec    of lexeme Wrap.t  (* rec    *)
+    | Switch of lexeme Wrap.t  (* switch *)
+    | Type   of lexeme Wrap.t  (* type   *)
+    | Module of lexeme Wrap.t  (* module *)
 
     (* Virtual tokens *)
 
@@ -109,96 +106,358 @@ module T =
 
     (* End-Of-File *)
 
-    | EOF of lexeme wrap
+    | EOF of lexeme Wrap.t
 
-    (* Unlexing the tokens *)
+    type token = t
 
-    let gen_sym prefix =
+
+    (* FROM TOKENS TO LEXEMES *)
+
+    let to_lexeme = function
+      (* Directives *)
+
+      Directive d -> Directive.to_lexeme d
+
+      (* Literals *)
+
+    | String t   -> sprintf "%S" t#payload (* Escaped *)
+    | Verbatim t -> String.escaped t#payload
+    | Bytes t    -> fst t#payload
+    | Int t
+    | Nat t      -> fst t#payload
+    | Mutez t    -> fst t#payload
+    | Ident t
+    | UIdent t   -> t#payload
+    | Attr t     -> Attr.to_lexeme t.Region.value
+    | Lang lang  -> Region.(lang.value.value)
+
+    (* Symbols *)
+
+    | PLUS2    t
+    | MINUS    t
+    | PLUS     t
+    | SLASH    t
+    | TIMES    t
+    | LPAR     t
+    | RPAR     t
+    | LBRACKET t
+    | RBRACKET t
+    | LBRACE   t
+    | RBRACE   t
+    | COMMA    t
+    | SEMI     t
+    | VBAR     t
+    | COLON    t
+    | DOT      t
+    | ELLIPSIS t
+    | WILD     t
+    | EQ       t
+    | EQ2      t
+    | NE       t
+    | LT       t
+    | GT       t
+    | LE       t
+    | GE       t
+    | ARROW    t
+    | BOOL_OR  t
+    | BOOL_AND t
+    | NOT      t
+    | QUOTE    t
+
+    (* Keywords *)
+
+    | Else    t
+    | If      t
+    | Let     t
+    | Mod     t
+    | Land    t
+    | Lor     t
+    | Lxor    t
+    | Lsl     t
+    | Lsr     t
+    | Or      t
+    | Rec     t
+    | Switch  t
+    | Type    t
+    | Module  t -> t#payload
+
+    (* Virtual tokens *)
+
+    | ES6FUN _ -> ""
+
+    (* End-Of-File *)
+
+    | EOF _ -> ""
+
+
+    (* KEYWORDS *)
+
+    let mk_Else   region = Else   (wrap "else"   region)
+    let mk_If     region = If     (wrap "if"     region)
+    let mk_Let    region = Let    (wrap "let"    region)
+    let mk_Rec    region = Rec    (wrap "rec"    region)
+    let mk_Switch region = Switch (wrap "switch" region)
+    let mk_Mod    region = Mod    (wrap "mod"    region)
+    let mk_Land   region = Land   (wrap "land"   region)
+    let mk_Lor    region = Lor    (wrap "lor"    region)
+    let mk_Lxor   region = Lxor   (wrap "lxor"   region)
+    let mk_Lsl    region = Lsl    (wrap "lsl"    region)
+    let mk_Lsr    region = Lsr    (wrap "lsr"    region)
+    let mk_Or     region = Or     (wrap "or"     region)
+    let mk_Type   region = Type   (wrap "type"   region)
+    let mk_Module region = Module (wrap "module" region)
+
+    let keywords = [
+      mk_Else;
+      mk_If;
+      mk_Let;
+      mk_Rec;
+      mk_Switch;
+      mk_Mod;
+      mk_Land;
+      mk_Lor;
+      mk_Lxor;
+      mk_Lsl;
+      mk_Lsr;
+      mk_Or;
+      mk_Type;
+      mk_Module
+    ]
+
+    let keywords =
+      let add map (key, value) = SMap.add key value map in
+      let apply map mk_kwd =
+        add map (to_lexeme (mk_kwd Region.ghost), mk_kwd)
+      in List.fold_left apply SMap.empty keywords
+
+
+    (* SYMBOLS *)
+
+    let mk_SEMI     region = SEMI     (wrap ";"  region)
+    let mk_COMMA    region = COMMA    (wrap ","  region)
+    let mk_LPAR     region = LPAR     (wrap "("  region)
+    let mk_RPAR     region = RPAR     (wrap ")"  region)
+    let mk_LBRACKET region = LBRACKET (wrap "["  region)
+    let mk_RBRACKET region = RBRACKET (wrap "]"  region)
+    let mk_LBRACE   region = LBRACE   (wrap "{"  region)
+    let mk_RBRACE   region = RBRACE   (wrap "}"  region)
+    let mk_EQ       region = EQ       (wrap "="  region)
+    let mk_COLON    region = COLON    (wrap ":"  region)
+    let mk_VBAR     region = VBAR     (wrap "|"  region)
+    let mk_DOT      region = DOT      (wrap "."  region)
+    let mk_WILD     region = WILD     (wrap "_"  region)
+    let mk_PLUS     region = PLUS     (wrap "+"  region)
+    let mk_MINUS    region = MINUS    (wrap "-"  region)
+    let mk_TIMES    region = TIMES    (wrap "*"  region)
+    let mk_SLASH    region = SLASH    (wrap "/"  region)
+    let mk_LT       region = LT       (wrap "<"  region)
+    let mk_LE       region = LE       (wrap "<=" region)
+    let mk_GT       region = GT       (wrap ">"  region)
+    let mk_GE       region = GE       (wrap ">=" region)
+
+    (* Symbols specific to ReasonLIGO *)
+
+    let mk_NE       region = NE       (wrap "!="  region)
+    let mk_BOOL_OR  region = BOOL_OR  (wrap "||"  region)
+    let mk_BOOL_AND region = BOOL_AND (wrap "&&"  region)
+    let mk_ELLIPSIS region = ELLIPSIS (wrap "..." region)
+    let mk_ARROW    region = ARROW    (wrap "=>"  region)
+    let mk_EQ2      region = EQ2      (wrap "=="  region)
+    let mk_NOT      region = NOT      (wrap "!"   region)
+    let mk_PLUS2    region = PLUS2    (wrap "++"  region)
+    let mk_QUOTE    region = QUOTE    (wrap "'"   region)
+
+    let symbols = [
+      mk_SEMI;
+      mk_COMMA;
+      mk_LPAR;
+      mk_RPAR;
+      mk_LBRACKET;
+      mk_RBRACKET;
+      mk_LBRACE;
+      mk_RBRACE;
+      mk_EQ;
+      mk_COLON;
+      mk_VBAR;
+      mk_DOT;
+      mk_WILD;
+      mk_PLUS;
+      mk_MINUS;
+      mk_TIMES;
+      mk_SLASH;
+      mk_LT;
+      mk_LE;
+      mk_GT;
+      mk_GE;
+
+      mk_NE;
+      mk_BOOL_OR;
+      mk_BOOL_AND;
+      mk_ELLIPSIS;
+      mk_ARROW;
+      mk_EQ2;
+      mk_NOT;
+      mk_PLUS2;
+      mk_QUOTE
+    ]
+
+    let symbols =
+      let add map (key, value) = SMap.add key value map in
+      let apply map mk_kwd =
+        add map (to_lexeme (mk_kwd Region.ghost), mk_kwd)
+      in List.fold_left apply SMap.empty symbols
+
+
+    (* GHOST TOKEN ARGUMENTS *)
+
+    (* IMPORTANT: These values cannot be exported in Token.mli *)
+
+    let ghost_String   = Wrap.ghost "\"a string\""
+    let ghost_Verbatim = Wrap.ghost "{|verbatim|}"
+    let ghost_Bytes    = Wrap.ghost ("0xAA", `Hex "AA")
+    let ghost_Int      = Wrap.ghost ("1", Z.one)
+    let ghost_Nat      = Wrap.ghost ("1n", Z.one)
+    let ghost_Mutez    = Wrap.ghost ("1mutez", Int64.one)
+    let ghost_Ident    = Wrap.ghost "id"
+    let ghost_UIdent   = Wrap.ghost "C"
+    let ghost_Lang     = Region.(wrap_ghost "Michelson")
+    let ghost_Attr     = Region.(wrap_ghost (wrap_ghost ("attr", None)))
+
+    let ghost_PLUS2    = mk_PLUS2    Region.ghost
+    let ghost_MINUS    = mk_MINUS    Region.ghost
+    let ghost_PLUS     = mk_PLUS     Region.ghost
+    let ghost_SLASH    = mk_SLASH    Region.ghost
+    let ghost_TIMES    = mk_TIMES    Region.ghost
+    let ghost_LPAR     = mk_LPAR     Region.ghost
+    let ghost_RPAR     = mk_RPAR     Region.ghost
+    let ghost_LBRACKET = mk_LBRACKET Region.ghost
+    let ghost_RBRACKET = mk_RBRACKET Region.ghost
+    let ghost_LBRACE   = mk_LBRACE   Region.ghost
+    let ghost_RBRACE   = mk_RBRACE   Region.ghost
+    let ghost_COMMA    = mk_COMMA    Region.ghost
+    let ghost_SEMI     = mk_SEMI     Region.ghost
+    let ghost_VBAR     = mk_VBAR     Region.ghost
+    let ghost_COLON    = mk_COLON    Region.ghost
+    let ghost_DOT      = mk_DOT      Region.ghost
+    let ghost_ELLIPSIS = mk_ELLIPSIS Region.ghost
+    let ghost_ARROW    = mk_ARROW    Region.ghost
+    let ghost_WILD     = mk_WILD     Region.ghost
+    let ghost_EQ       = mk_EQ       Region.ghost
+    let ghost_EQ2      = mk_EQ2      Region.ghost
+    let ghost_NE       = mk_NE       Region.ghost
+    let ghost_LT       = mk_LT       Region.ghost
+    let ghost_GT       = mk_GT       Region.ghost
+    let ghost_LE       = mk_LE       Region.ghost
+    let ghost_GE       = mk_GE       Region.ghost
+    let ghost_BOOL_OR  = mk_BOOL_OR  Region.ghost
+    let ghost_BOOL_AND = mk_BOOL_AND Region.ghost
+    let ghost_NOT      = mk_NOT      Region.ghost
+    let ghost_QUOTE    = mk_QUOTE    Region.ghost
+
+    let ghost_Else   = mk_Else   Region.ghost
+    let ghost_If     = mk_If     Region.ghost
+    let ghost_Let    = mk_Let    Region.ghost
+    let ghost_Mod    = mk_Mod    Region.ghost
+    let ghost_Land   = mk_Land   Region.ghost
+    let ghost_Lor    = mk_Lor    Region.ghost
+    let ghost_Lxor   = mk_Lxor   Region.ghost
+    let ghost_Lsl    = mk_Lsl    Region.ghost
+    let ghost_Lsr    = mk_Lsr    Region.ghost
+    let ghost_Or     = mk_Or     Region.ghost
+    let ghost_Rec    = mk_Rec    Region.ghost
+    let ghost_Switch = mk_Switch Region.ghost
+    let ghost_Type   = mk_Type   Region.ghost
+    let ghost_Module = mk_Module Region.ghost
+
+    let ghost_EOF = Wrap.ghost ""
+
+
+    (* FROM TOKEN STRINGS TO LEXEMES *)
+
+    (* TODO: Remove. We don't need fresh variables for syntax checking.
+
+`   let gen_sym prefix =
       let count = ref 0 in
       fun () -> incr count; prefix ^ string_of_int !count
 
     let id_sym   = gen_sym "id"
     and ctor_sym = gen_sym "C"
+     *)
 
     let concrete = function
       (* Literals *)
 
-      "Ident"    -> id_sym ()
-    | "UIdent"   -> ctor_sym ()
-    | "Int"      -> "1"
-    | "Nat"      -> "1n"
-    | "Mutez"    -> "1mutez"
-    | "String"   -> "\"a string\""
-    | "Verbatim" -> "{|verbatim|}"
-    | "Bytes"    -> "0xAA"
-    | "Attr"     -> "[@attr]"
-    | "Lang"     -> "[%Michelson"
+      "Ident"    -> ghost_Ident#payload (*id_sym ()*)
+    | "UIdent"   -> ghost_UIdent#payload (*ctor_sym ()*)
+    | "Int"      -> fst ghost_Int#payload
+    | "Nat"      -> fst ghost_Nat#payload
+    | "Mutez"    -> fst ghost_Mutez#payload
+    | "String"   -> ghost_String#payload
+    | "Verbatim" -> ghost_Verbatim#payload
+    | "Bytes"    -> fst ghost_Bytes#payload
+    | "Attr"     -> Attr.to_lexeme Region.(ghost_Attr.value.value)
+    | "Lang"     -> "[%" ^ ghost_Lang.Region.value
 
     (* Symbols *)
 
-    | "PLUS2"    -> "++"
-    | "MINUS"    -> "-"
-    | "PLUS"     -> "+"
-    | "SLASH"    -> "/"
-    | "TIMES"    -> "*"
-    | "LPAR"     -> "("
-    | "RPAR"     -> ")"
-    | "LBRACE"   -> "{"
-    | "RBRACE"   -> "}"
-    | "LBRACKET" -> "["
-    | "RBRACKET" -> "]"
-    | "COMMA"    -> ","
-    | "SEMI"     -> ";"
-    | "VBAR"     -> "|"
-    | "COLON"    -> ":"
-    | "DOT"      -> "."
-    | "ELLIPSIS" -> "..."
-    | "ARROW"    -> "=>"
-    | "WILD"     -> "_"
-    | "EQ"       -> "="
-    | "EQ2"      -> "=="
-    | "NE"       -> "!="
-    | "LT"       -> "<"
-    | "GT"       -> ">"
-    | "LE"       -> "<="
-    | "GE"       -> ">="
-    | "BOOL_OR"  -> "||"
-    | "BOOL_AND" -> "&&"
-    | "NOT"      -> "!"
+    | "PLUS2"    -> to_lexeme ghost_PLUS2
+    | "MINUS"    -> to_lexeme ghost_MINUS
+    | "PLUS"     -> to_lexeme ghost_PLUS
+    | "SLASH"    -> to_lexeme ghost_SLASH
+    | "TIMES"    -> to_lexeme ghost_TIMES
+    | "LPAR"     -> to_lexeme ghost_LPAR
+    | "RPAR"     -> to_lexeme ghost_RPAR
+    | "LBRACE"   -> to_lexeme ghost_LBRACE
+    | "RBRACE"   -> to_lexeme ghost_RBRACE
+    | "LBRACKET" -> to_lexeme ghost_LBRACKET
+    | "RBRACKET" -> to_lexeme ghost_RBRACKET
+    | "COMMA"    -> to_lexeme ghost_COMMA
+    | "SEMI"     -> to_lexeme ghost_SEMI
+    | "VBAR"     -> to_lexeme ghost_VBAR
+    | "COLON"    -> to_lexeme ghost_COLON
+    | "DOT"      -> to_lexeme ghost_DOT
+    | "ELLIPSIS" -> to_lexeme ghost_ELLIPSIS
+    | "ARROW"    -> to_lexeme ghost_ARROW
+    | "WILD"     -> to_lexeme ghost_WILD
+    | "EQ"       -> to_lexeme ghost_EQ
+    | "EQ2"      -> to_lexeme ghost_EQ2
+    | "NE"       -> to_lexeme ghost_NE
+    | "LT"       -> to_lexeme ghost_LT
+    | "GT"       -> to_lexeme ghost_GT
+    | "LE"       -> to_lexeme ghost_LE
+    | "GE"       -> to_lexeme ghost_GE
+    | "BOOL_OR"  -> to_lexeme ghost_BOOL_OR
+    | "BOOL_AND" -> to_lexeme ghost_BOOL_AND
+    | "NOT"      -> to_lexeme ghost_NOT
+    | "QUOTE"    -> to_lexeme ghost_QUOTE
 
     (* Keywords *)
 
-    | "Else"   -> "else"
-    | "If"     -> "if"
-    | "Let"    -> "let"
-    | "Mod"    -> "mod"
-    | "Land"   -> "land"
-    | "Lor"    -> "lor"
-    | "Lxor"   -> "lxor"
-    | "Lsl"    -> "lsl"
-    | "Lsr"    -> "lsr"
-    | "Or"     -> "or"
-    | "Rec"    -> "rec"
-    | "Switch" -> "switch"
-    | "Type"   -> "type"
-    | "Module" -> "module"
-
-    | "QUOTE"  -> "'"
+    | "Else"   -> to_lexeme ghost_Else
+    | "If"     -> to_lexeme ghost_If
+    | "Let"    -> to_lexeme ghost_Let
+    | "Mod"    -> to_lexeme ghost_Mod
+    | "Land"   -> to_lexeme ghost_Land
+    | "Lor"    -> to_lexeme ghost_Lor
+    | "Lxor"   -> to_lexeme ghost_Lxor
+    | "Lsl"    -> to_lexeme ghost_Lsl
+    | "Lsr"    -> to_lexeme ghost_Lsr
+    | "Or"     -> to_lexeme ghost_Or
+    | "Rec"    -> to_lexeme ghost_Rec
+    | "Switch" -> to_lexeme ghost_Switch
+    | "Type"   -> to_lexeme ghost_Type
+    | "Module" -> to_lexeme ghost_Module
 
     (* End-Of-File *)
 
-    | "EOF" -> ""
+    | "EOF" -> ghost_EOF#payload
 
     (* This case should not happen! *)
 
     | _  -> "\\Unknown" (* Backslash meant to trigger an error *)
 
 
-    (* Projections *)
-
-    let sprintf = Printf.sprintf
-
-    type token = t
+    (* FROM TOKENS TO TOKEN STRINGS AND REGIONS *)
 
     let proj_token = function
       (* Preprocessing directives *)
@@ -289,85 +548,6 @@ module T =
     | EOF t -> t#region, "EOF"
 
 
-    (* From tokens to lexemes *)
-
-    let to_lexeme = function
-      (* Directives *)
-
-      Directive d -> Directive.to_lexeme d
-
-      (* Literals *)
-
-    | String t   -> sprintf "%S" t#payload (* Escaped *)
-    | Verbatim t -> String.escaped t#payload
-    | Bytes t    -> fst t#payload
-    | Int t
-    | Nat t      -> fst t#payload
-    | Mutez t    -> fst t#payload
-    | Ident t
-    | UIdent t   -> t#payload
-    | Attr t     -> Attr.to_lexeme t.Region.value
-    | Lang lang  -> Region.(lang.value.value)
-
-    (* Symbols *)
-
-    | PLUS2    t
-    | MINUS    t
-    | PLUS     t
-    | SLASH    t
-    | TIMES    t
-    | LPAR     t
-    | RPAR     t
-    | LBRACKET t
-    | RBRACKET t
-    | LBRACE   t
-    | RBRACE   t
-    | COMMA    t
-    | SEMI     t
-    | VBAR     t
-    | COLON    t
-    | DOT      t
-    | ELLIPSIS t
-    | WILD     t
-    | EQ       t
-    | EQ2      t
-    | NE       t
-    | LT       t
-    | GT       t
-    | LE       t
-    | GE       t
-    | ARROW    t
-    | BOOL_OR  t
-    | BOOL_AND t
-    | NOT      t
-    | QUOTE    t
-
-    (* Keywords *)
-
-    | Else    t
-    | If      t
-    | Let     t
-    | Mod     t
-    | Land    t
-    | Lor     t
-    | Lxor    t
-    | Lsl     t
-    | Lsr     t
-    | Or      t
-    | Rec     t
-    | Switch  t
-    | Type    t
-    | Module  t -> t#payload
-
-    (* Virtual tokens *)
-
-    | ES6FUN _ -> ""
-
-    (* End-Of-File *)
-
-    | EOF _ -> ""
-
-
     (* CONVERSIONS *)
 
     let to_string ~offsets mode token =
@@ -377,32 +557,10 @@ module T =
 
     let to_region token = proj_token token |> fst
 
+
     (* SMART CONSTRUCTORS *)
 
     (* Keywords *)
-
-    let keywords = [
-      (fun reg -> Else   (wrap "else"   reg));
-      (fun reg -> If     (wrap "if"     reg));
-      (fun reg -> Let    (wrap "let"    reg));
-      (fun reg -> Rec    (wrap "rec"    reg));
-      (fun reg -> Switch (wrap "switch" reg));
-      (fun reg -> Mod    (wrap "mod"    reg));
-      (fun reg -> Land   (wrap "land"   reg));
-      (fun reg -> Lor    (wrap "lor"    reg));
-      (fun reg -> Lxor   (wrap "lxor"   reg));
-      (fun reg -> Lsl    (wrap "lsl"    reg));
-      (fun reg -> Lsr    (wrap "lsr"    reg));
-      (fun reg -> Or     (wrap "or"     reg));
-      (fun reg -> Type   (wrap "type"   reg));
-      (fun reg -> Module (wrap "module" reg))
-    ]
-
-    let keywords =
-      let add map (key, value) = SMap.add key value map in
-      let apply map mk_kwd =
-        add map (to_lexeme (mk_kwd Region.ghost), mk_kwd)
-      in List.fold_left apply SMap.empty keywords
 
     type kwd_err = Invalid_keyword
 
@@ -426,8 +584,7 @@ module T =
     (* Bytes *)
 
     let mk_bytes lexeme bytes region =
-      let value = lexeme, `Hex bytes
-      in Bytes (wrap value region)
+      Bytes (wrap (lexeme, `Hex bytes) region)
 
     (* Integers *)
 
@@ -455,47 +612,9 @@ module T =
     type sym_err = Invalid_symbol of string
 
     let mk_sym lexeme region =
-      match lexeme with
-        (* Lexemes in common with all concrete syntaxes *)
-
-        ";"   -> Ok (SEMI     (wrap lexeme region))
-      | ","   -> Ok (COMMA    (wrap lexeme region))
-      | "("   -> Ok (LPAR     (wrap lexeme region))
-      | ")"   -> Ok (RPAR     (wrap lexeme region))
-      | "["   -> Ok (LBRACKET (wrap lexeme region))
-      | "]"   -> Ok (RBRACKET (wrap lexeme region))
-      | "{"   -> Ok (LBRACE   (wrap lexeme region))
-      | "}"   -> Ok (RBRACE   (wrap lexeme region))
-      | "="   -> Ok (EQ       (wrap lexeme region))
-      | ":"   -> Ok (COLON    (wrap lexeme region))
-      | "|"   -> Ok (VBAR     (wrap lexeme region))
-      | "."   -> Ok (DOT      (wrap lexeme region))
-      | "_"   -> Ok (WILD     (wrap lexeme region))
-      | "+"   -> Ok (PLUS     (wrap lexeme region))
-      | "-"   -> Ok (MINUS    (wrap lexeme region))
-      | "*"   -> Ok (TIMES    (wrap lexeme region))
-      | "/"   -> Ok (SLASH    (wrap lexeme region))
-      | "<"   -> Ok (LT       (wrap lexeme region))
-      | "<="  -> Ok (LE       (wrap lexeme region))
-      | ">"   -> Ok (GT       (wrap lexeme region))
-      | ">="  -> Ok (GE       (wrap lexeme region))
-
-      (* Symbols specific to ReasonLIGO *)
-
-      | "!="  -> Ok (NE       (wrap lexeme region))
-      | "||"  -> Ok (BOOL_OR  (wrap lexeme region))
-      | "&&"  -> Ok (BOOL_AND (wrap lexeme region))
-      | "..." -> Ok (ELLIPSIS (wrap lexeme region))
-      | "=>"  -> Ok (ARROW    (wrap lexeme region))
-      | "=="  -> Ok (EQ2      (wrap lexeme region))
-      | "!"   -> Ok (NOT      (wrap lexeme region))
-      | "++"  -> Ok (PLUS2    (wrap lexeme region))
-      | "'"   -> Ok (QUOTE    (wrap lexeme region))
-
-      (* Invalid symbols *)
-
-      | s ->  Error (Invalid_symbol s)
-
+      match SMap.find_opt lexeme symbols with
+        Some mk_sym -> Ok (mk_sym region)
+      |        None -> Error (Invalid_symbol lexeme)
 
     (* Identifiers *)
 

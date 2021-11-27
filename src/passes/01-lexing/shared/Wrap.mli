@@ -16,14 +16,6 @@ type 'payload wrap = <
 
 type 'a t = 'a wrap
 
-let wrap ?(attributes=[]) payload region =
-  object
-    method payload    = payload
-    val attributes    = attributes
-    method attributes = attributes
-    method region     = region
+val wrap : ?attributes:Attr.attributes -> 'a -> Region.t -> 'a wrap
 
-    method set_attributes attr = {< attributes = attr >}
-  end
-
-let ghost payload = wrap ~attributes:[] payload Region.ghost
+val ghost : 'a -> 'a wrap
