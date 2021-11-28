@@ -3,6 +3,7 @@
 module AST  = Ast_imperative
 module CST  = Cst.Pascaligo
 module Wrap = Lexing_shared.Wrap
+module Token = Lexing_pascaligo.Token
 module Predefined = Predefined.Tree_abstraction.Pascaligo
 
 open Function
@@ -11,23 +12,24 @@ open Function
 
 let decompile_attributes = List.map ~f:Region.wrap_ghost
 
-let list_to_sepseq lst =
+let list_to_sepseq sep lst =
   match lst with
     [] -> None
-  |  hd :: lst ->
-      let aux e = (Wrap.ghost "", e) in
-      Some (hd, List.map ~f:aux lst)
+  | hd::tl ->
+      let aux e = Wrap.ghost sep, e in
+      Some (hd, List.map ~f:aux tl)
 
-let list_to_nsepseq lst =
-  match list_to_sepseq lst with
+let list_to_nsepseq sep lst =
+  match list_to_sepseq sep lst with
     Some s -> s
-  | None   -> failwith "List is not a non_empty list"
-let nelist_to_npseq (hd, lst) =
-  (hd, List.map ~f:(fun e -> (Wrap.ghost "", e)) lst)
+  | None   -> failwith "List is not a non_empty list" (* TODO: NO failwith! *)
 
-let npseq_cons hd lst = hd,(Wrap.ghost "", fst lst)::(snd lst)
+let nelist_to_npseq (hd, tl) =
+  hd, List.map ~f:(fun e -> (Wrap.ghost "", e)) tl
 
-let par a = CST.{lpar=Wrap.ghost "";inside=a;rpar=Wrap.ghost ""}
+let npseq_cons hd tl = hd, ((Wrap.ghost "", fst tl) :: snd tl)
+
+let par a = CST.{lpar=Token.ghost_lpar; inside=a; rpar=Token.ghost_rpar}
 
 let type_vars_of_list : string Region.reg list -> CST.type_vars =
   fun lst ->
