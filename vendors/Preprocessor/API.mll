@@ -246,7 +246,9 @@ let find dir file dirs external_dirs =
       let base = Filename.basename file in
       if base = file 
       then find file dirs 
-      else ModuleResolutions.find_external_file file external_dirs 
+      else 
+        let file_opt = ModuleResolutions.find_external_file file external_dirs in
+        Option.map (fun file -> (file, open_in file)) file_opt
 
 (* PRINTING *)
 

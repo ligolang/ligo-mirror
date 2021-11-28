@@ -137,7 +137,7 @@ let find_external_file file dirs =
     ) dirs in
     Option.map (fun dir -> 
       let path = dir ^ Filename.dir_sep ^ file_name in
-      (path, open_in path)
+      path
     ) dir
   else None
 
