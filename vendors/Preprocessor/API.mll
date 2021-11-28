@@ -70,15 +70,13 @@ type block_comment = <opening : string; closing : string>
 type file_path = string
 type module_name = string
 
-type module_resolutions = (string * string list) list
-
 type config = <
   block              : block_comment option;
   line               : line_comment option;
   input              : file_path option;
   offsets            : bool;
   dirs               : file_path list; (* Directories to search for #include files *)
-  module_resolutions : module_resolutions option
+  module_resolutions : ModuleResolutions.t option
 >
 
 type state = {
@@ -230,52 +228,6 @@ let rec last_mode = function
 
 (* Finding a file to #include *)
 
-(* the function [find_external_file] specifically resolves files
-   for ligo packages downloaded via esy.
-
-   the [dirs] contains a list of paths. 
-   esy package path/dir is of the form {package-name}__{version}__{hash}
-   e.g. /path/to/esy/cache/ligo_list_helpers__1.0.0__bf074147
-
-   a ligo package will be used in #import or #include,
-   e.g. #import "ligo-list-helpers/list.mligo" "ListHelpers"
-
-   To correctly resolve the path for #import or #include we split the 
-   path into 2 parts i.e. the package name & rest of the path
-   e.g. "ligo-list-helpers/list.mligo" - 
-    package name = ligo-list-helpers
-    rest of path = list.mligo
-
-   We find the path with the longest prefix, once the package path is
-   identified, the file path is package path / rest of path
-*)
-let find_external_file file dirs = 
-  let starts_with ~prefix s =
-    let s1 = String.length prefix in
-    let s2 = String.length s in
-    let rec aux i =
-      if i >= s1 || i >= s2 then true
-      else if prefix.[i] = s.[i] then aux (i + 1)
-      else false
-    in
-    s2 >= s1 && aux 0
-  in
-  let segs = Fpath.segs @@ Fpath.v file in
-  if List.length segs > 1 then
-    let file_name = String.concat Filename.dir_sep (List.tl segs) in
-    let pkg_name = (List.hd @@ segs) 
-      |> String.split_on_char '-' 
-      |> String.concat "_" in
-    let dir = List.find_opt (fun dir ->
-      let basename = (Fpath.basename @@ Fpath.v dir) in
-      starts_with ~prefix:pkg_name basename 
-    ) dirs in
-    Option.map (fun dir -> 
-      let path = dir ^ Filename.dir_sep ^ file_name in
-      (path, open_in path)
-    ) dir
-  else None
-
 let rec find file_path = function
          [] -> None
 | dir::dirs ->
@@ -292,7 +244,9 @@ let find dir file dirs external_dirs =
   try Some (path, open_in path) with
     Sys_error _ ->
       let base = Filename.basename file in
-      if base = file then find file dirs else find_external_file file external_dirs 
+      if base = file 
+      then find file dirs 
+      else ModuleResolutions.find_external_file file external_dirs 
 
 (* PRINTING *)
 
@@ -546,6 +500,7 @@ rule scan state = parse
           let () =
             let open Lexing in
             incl_buf.lex_curr_p <-
+              (* TODO: check if this is okay ??? *)
               {incl_buf.lex_curr_p with pos_fname = incl_path} in
           let state  = {state with chans = incl_chan::state.chans} in
           let state' = {state with mode=Copy; trace=[]} in

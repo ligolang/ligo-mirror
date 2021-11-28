@@ -132,7 +132,17 @@ let try_contract ~raise state s =
 let import_file ~raise state file_name module_name =
   let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol ?esy_project_path:state.esy_project_path () in
   let options = {options with init_env = state.env } in
-  let module_,env = Build.combined_contract ~raise ~add_warning ~options (variant_to_syntax state.syntax) file_name in
+  let module_,env = try 
+    Build.combined_contract ~raise ~add_warning ~options (variant_to_syntax state.syntax) file_name
+  with
+    e ->
+      let root_inclusion_list = Preprocessor.ModuleResolutions.get_root_inclusion_list state.esy_project_path in
+      let file_name = Preprocessor.ModuleResolutions.find_external_file file_name root_inclusion_list in
+      match file_name with
+        Some (file_name,_) -> 
+          Build.combined_contract ~raise ~add_warning ~options (variant_to_syntax state.syntax) file_name
+      | None -> failwith "Bubble up the exception"
+  in
   let env = Ast_typed.Environment.add_module ~public:true module_name env state.env in
   let module_ = Ast_typed.(Module_Fully_Typed [Location.wrap @@ Declaration_module {module_binder=module_name;module_;module_attr={public=true}}]) in
   let env,contract = trace ~raise Main_errors.self_ast_typed_tracer @@ Self_ast_typed.morph_module env module_ in
@@ -144,7 +154,17 @@ let use_file ~raise state s =
   let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol ?esy_project_path:state.esy_project_path () in
   let options = {options with init_env = state.env } in
   (* Missing typer environment? *)
-  let mini_c,(Ast_typed.Module_Fully_Typed module'),env = Build.build_contract_use ~raise ~add_warning ~options (variant_to_syntax state.syntax) s in
+  let mini_c,(Ast_typed.Module_Fully_Typed module'),env = try
+    Build.build_contract_use ~raise ~add_warning ~options (variant_to_syntax state.syntax) s 
+  with
+    e -> 
+      let root_inclusion_list = Preprocessor.ModuleResolutions.get_root_inclusion_list state.esy_project_path in
+      let file_name = Preprocessor.ModuleResolutions.find_external_file s root_inclusion_list in
+      match file_name with
+        Some (file_name,_) -> 
+          Build.build_contract_use ~raise ~add_warning ~options (variant_to_syntax state.syntax) file_name
+      | None -> failwith "Bubble up the exception"
+  in
   let state = { state with env = env;
                            decl_list = state.decl_list @ mini_c;
                           } in
