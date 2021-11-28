@@ -139,7 +139,7 @@ let inject_zwsp lex_units =
   let rec aux acc = function
     [] -> List.rev acc
   | (Core.Token GT _ as gt1) :: (Core.Token GT reg :: _ as units) ->
-      aux (Core.Token (ZWSP reg) :: gt1 :: acc) units
+      aux (Core.Token (ZWSP reg#region) :: gt1 :: acc) units
   | unit::units -> aux (unit::acc) units
   in aux [] lex_units
 

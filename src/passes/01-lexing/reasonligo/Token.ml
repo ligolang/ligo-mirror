@@ -484,6 +484,10 @@ module T =
     let ghost_Lang     = Lang     ghost_lang
     let ghost_Attr     = Attr     ghost_attr
 
+    (* VIRTUAL TOKENS *)
+
+    let ghost_es6fun = Region.ghost
+    let ghost_ES6FUN = ES6FUN ghost_es6fun
 
     (* END-OF-FILE TOKEN *)
 

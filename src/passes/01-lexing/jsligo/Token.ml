@@ -133,7 +133,7 @@ module T =
 
     (* Virtual tokens *)
 
-    | ZWSP of lexeme Wrap.t  (* Zero-Width SPace *)
+    | ZWSP of Region.t  (* Zero-Width SPace *)
 
     (* End-Of-File *)
 
@@ -665,6 +665,17 @@ module T =
     let ghost_UIdent   = UIdent   ghost_uident
     let ghost_Attr     = Attr     ghost_attr
 
+    (* COMMENTS *)
+
+    let ghost_block_com = Wrap.ghost "(* A block comment *)"
+    let ghost_BlockCom  = BlockCom ghost_block_com
+    let ghost_line_com  = Wrap.ghost "// A line comment"
+    let ghost_LineCom   = LineCom ghost_line_com
+
+    (* VIRTUAL TOKENS *)
+
+    let ghost_zwsp = Region.ghost
+    let ghost_ZWSP = ZWSP ghost_zwsp
 
     (* END-OF-FILE TOKEN *)
 
@@ -908,7 +919,7 @@ module T =
 
     (* Virtual tokens *)
 
-    | ZWSP t -> t#region, "ZWSP"
+    | ZWSP region -> region, "ZWSP"
 
     (* End-Of-File *)
 
