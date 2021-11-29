@@ -132,24 +132,21 @@ let lock_file_path path =
   path ^ Fpath.dir_sep ^ "esy.lock/index.json"
 
 let make project_path =
-  match project_path with
-  | Some project_path  ->
-    let installation_json = installation_json_path project_path 
-      |> Yojson.Basic.from_file
-      |> clean_installation_json
-    in
-    let lock_file_json = lock_file_path project_path 
-      |> Yojson.Basic.from_file
-      |> clean_lock_file_json
-    in
-    (match installation_json,lock_file_json with
-      Some installation_json, Some lock_file_json ->
-        let dependencies = find_dependencies lock_file_json in
-        Option.bind dependencies (fun dependencies ->
-          resolve_paths installation_json dependencies
-        )
-    | _ -> None)
-  | None -> None
+  let installation_json = installation_json_path project_path 
+    |> Yojson.Basic.from_file
+    |> clean_installation_json
+  in
+  let lock_file_json = lock_file_path project_path 
+    |> Yojson.Basic.from_file
+    |> clean_lock_file_json
+  in
+  (match installation_json,lock_file_json with
+    Some installation_json, Some lock_file_json ->
+      let dependencies = find_dependencies lock_file_json in
+      Option.bind dependencies (fun dependencies ->
+        resolve_paths installation_json dependencies
+      )
+  | _ -> None)
 
 let get_absolute_path path = 
   let path' = Fpath.v path in

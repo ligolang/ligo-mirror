@@ -1,8 +1,8 @@
-(* TODO: write description *)
+(* Module for resolving paths to external libraies *)
 
 type t
 
-val make : string option -> t option
+val make : string -> t option
 
 val get_root_inclusion_list : string option -> string list
 

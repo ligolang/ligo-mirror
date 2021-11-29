@@ -61,7 +61,7 @@ module Config (File : FILE) (Comments : Comments.S) =
         method input              = Preprocessor_CLI.input
         method offsets            = Preprocessor_CLI.offsets
         method dirs               = Preprocessor_CLI.dirs
-        method module_resolutions = module_resolutions Preprocessor_CLI.esy_project_path
+        method module_resolutions = Option.bind Preprocessor_CLI.esy_project_path module_resolutions
       end
   end
 

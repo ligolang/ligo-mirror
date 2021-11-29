@@ -162,10 +162,10 @@ module MakeParser
     let from_string ~raise buffer : CST.tree =
       let module File =
         struct
-          let input     = None
-          let extension = File.extension
-          let dirs      = []
-          let esy_project_path = None (* ??? *)
+          let input            = None
+          let extension        = File.extension
+          let dirs             = []
+          let esy_project_path = None
         end in
       let module CLI = CLI (File) (Comments) in
       let module MainLexer =

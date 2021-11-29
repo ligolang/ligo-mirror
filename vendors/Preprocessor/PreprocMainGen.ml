@@ -43,7 +43,7 @@ module Make (CLI : CLI.S) =
         method input              = CLI.input
         method offsets            = CLI.offsets
         method dirs               = CLI.dirs
-        method module_resolutions = ModuleResolutions.make CLI.esy_project_path
+        method module_resolutions = Option.bind CLI.esy_project_path ModuleResolutions.make 
       end
 
     let preprocess () : API.result =
