@@ -8,4 +8,4 @@ val get_root_inclusion_list : string option -> string list
 
 val find_external_file : string -> string list -> string option
 
-val get_includes : string -> t option -> string list
+val get_inclusion_list : string -> t option -> string list

@@ -29,6 +29,8 @@ module JsonHelpers = struct
         traverse strings
     | None -> None
 
+  let from_file_opt file =
+    try Some (Yojson.Basic.from_file file) with _ -> None
 end
 
 module SMap = Map.String
@@ -39,38 +41,41 @@ type lock_file = {
 }
 
 let clean_installation_json installation_json =
-  let open Yojson.Basic in
-  let keys = Util.keys installation_json in
-  let values = Util.values installation_json in
-  Stdlib.List.fold_left2 
-    (fun m key value -> 
-      Option.bind m (fun m -> 
-        let value = JsonHelpers.string value in
-        Option.map (fun value -> SMap.add key value m) value
-      )) 
-    (Some SMap.empty) 
-    keys values
+  match installation_json with
+    None -> None
+  | Some installation_json -> let open Yojson.Basic in
+    let keys = Util.keys installation_json in
+    let values = Util.values installation_json in
+    Stdlib.List.fold_left2 
+      (fun m key value -> 
+        Option.bind m (fun m -> 
+          let value = JsonHelpers.string value in
+          Option.map (fun value -> SMap.add key value m) value
+        )) 
+      (Some SMap.empty) 
+      keys values
 
 let clean_lock_file_json lock_json =
-  let open Yojson.Basic in
-  let root = Util.member "root" lock_json |> JsonHelpers.string in
-  let node = Util.member "node" lock_json in
-  let keys = Util.keys node in
-  let values = Util.values node in
-  let node = Stdlib.List.fold_left2
-    (fun m key value ->
-      let dependencies = Util.member "dependencies" value in  
-      let dependencies = JsonHelpers.string_list dependencies in
-      Option.bind m (fun m -> 
-        Option.map (fun dependencies -> SMap.add key dependencies m) dependencies
+  match lock_json with
+    None -> None
+  | Some lock_json -> let open Yojson.Basic in
+    let root = Util.member "root" lock_json |> JsonHelpers.string in
+    let node = Util.member "node" lock_json in
+    let keys = Util.keys node in
+    let values = Util.values node in
+    let node = Stdlib.List.fold_left2
+      (fun m key value ->
+        let dependencies = Util.member "dependencies" value in  
+        let dependencies = JsonHelpers.string_list dependencies in
+        Option.bind m (fun m -> 
+          Option.map (fun dependencies -> SMap.add key dependencies m) dependencies
+        )
       )
-    )
-    (Some SMap.empty)
-    keys values in
-  match (root,node) with
-    Some root, Some node -> Some ({ root ; node })
-  | _ -> None
-
+      (Some SMap.empty)
+      keys values in
+    match (root,node) with
+      Some root, Some node -> Some ({ root ; node })
+    | _ -> None
 
 let resolve_paths installation graph =
   let resolve p = SMap.find_opt p installation
@@ -133,11 +138,11 @@ let lock_file_path path =
 
 let make project_path =
   let installation_json = installation_json_path project_path 
-    |> Yojson.Basic.from_file
+    |> JsonHelpers.from_file_opt
     |> clean_installation_json
   in
   let lock_file_json = lock_file_path project_path 
-    |> Yojson.Basic.from_file
+    |> JsonHelpers.from_file_opt
     |> clean_lock_file_json
   in
   (match installation_json,lock_file_json with
@@ -153,7 +158,7 @@ let get_absolute_path path =
   if Fpath.is_abs path' then path
   else Fpath.v ((Sys.getcwd ()) ^ Fpath.dir_sep ^ path) |> Fpath.normalize |> Fpath.to_string
 
-let get_includes path module_resolutions =
+let get_inclusion_list path module_resolutions =
   match module_resolutions with
     Some module_resolutions ->
       let path = get_absolute_path path in
@@ -227,11 +232,11 @@ let get_root_inclusion_list project_path =
   match project_path with
   | Some project_path  ->
     let installation_json = installation_json_path project_path 
-      |> Yojson.Basic.from_file
+      |> JsonHelpers.from_file_opt
       |> clean_installation_json
     in
     let lock_file_json = lock_file_path project_path 
-      |> Yojson.Basic.from_file
+      |> JsonHelpers.from_file_opt
       |> clean_lock_file_json
     in
     (match installation_json,lock_file_json with

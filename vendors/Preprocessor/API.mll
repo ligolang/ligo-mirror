@@ -492,7 +492,7 @@ rule scan state = parse
         if state.mode = Copy then
           let incl_dir = Filename.dirname incl_file in
           let path = mk_path state in
-          let external_dirs = ModuleResolutions.get_includes file state.config#module_resolutions in
+          let external_dirs = ModuleResolutions.get_inclusion_list file state.config#module_resolutions in
           let incl_path, incl_chan =
             match find path incl_file state.config#dirs external_dirs with
               Some p -> p
@@ -518,7 +518,7 @@ rule scan state = parse
         let file = Lexing.(lexbuf.lex_curr_p.pos_fname) in
         if state.mode = Copy then
           let path = mk_path state in
-          let external_dirs = ModuleResolutions.get_includes file state.config#module_resolutions in
+          let external_dirs = ModuleResolutions.get_inclusion_list file state.config#module_resolutions in
           let import_path =
             match find path import_file state.config#dirs external_dirs with
               Some p -> fst p
