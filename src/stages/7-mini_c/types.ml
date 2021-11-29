@@ -123,13 +123,7 @@ and constant = {
   arguments : expression list;
 }
 
-and assignment = var_name * inline * expression
-
-and toplevel_statement = assignment * environment_wrap
-
 and anon_function = {
   binder : expression_variable ;
   body : expression ;
 }
-
-and program = toplevel_statement list

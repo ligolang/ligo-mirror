@@ -5,8 +5,6 @@ open Trace
 
 let get_t_function ~raise e = trace_option ~raise not_a_function @@ Mini_c.get_t_function e
 let get_function ~raise e = trace_option ~raise not_a_function @@ Mini_c.get_function e
-let aggregate_entry ~raise p f = trace_option ~raise could_not_aggregate_entry @@ Mini_c.aggregate_entry p f
-let get_entry ~raise l n = trace_option ~raise could_not_aggregate_entry @@ Mini_c.get_entry l n
 
 (* TODO hack to specialize map_expression to identity monad *)
 let map_expression = Helpers.map_expression
@@ -357,11 +355,6 @@ let eta ~raise:_ : bool ref -> expression -> expression =
 let etas ~raise : bool ref -> expression -> expression =
   fun changed ->
   map_expression ~raise (eta changed)
-
-let contract_check ~raise init =
-  let all = [Michelson_restrictions.self_in_lambdas] in
-  let all_e = List.map ~f:(Helpers.map_sub_level_expression ~raise) all in
-  List.fold ~f:(|>) all_e ~init
 
 let rec all_expression ~raise : expression -> expression =
   fun e ->

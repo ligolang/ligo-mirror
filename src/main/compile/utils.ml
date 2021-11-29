@@ -27,13 +27,14 @@ let type_file ~raise ~add_warning ~options f stx form : Ast_typed.module_fully_t
 
 let to_mini_c ~raise ~add_warning ~options f stx env =
   let typed,_  = type_file ~raise ~add_warning ~options f stx env in
-  let mini_c     = Of_typed.compile ~raise typed in
+  let mini_c     = Of_typed.compile_program ~raise typed in
   mini_c
 
 let compile_file ~raise ~add_warning ~options f stx ep =
-  let typed,_    = type_file ~raise ~add_warning ~options f stx @@ Contract ep in
-  let mini_c     = Of_typed.compile ~raise typed in
-  let michelson  = Of_mini_c.aggregate_and_compile_contract ~raise ~options mini_c ep in
+  let typed,env    = type_file ~raise ~add_warning ~options f stx @@ Contract ep in
+  let aggregated = Of_typed.apply_to_entrypoint ~raise (typed,env) ep in
+  let mini_c     = Of_aggregated.compile_expression ~raise aggregated in
+  let michelson  = Of_mini_c.compile_contract ~raise ~options mini_c in
   let contract   = Of_michelson.build_contract ~raise michelson in
   contract
 
@@ -65,9 +66,13 @@ let type_expression ~raise ~options source_file syntax expression env =
   let typed_exp,e       = Of_core.compile_expression ~raise ~options ~env core_exp in
   (typed_exp,e)
 
-let expression_to_mini_c ~raise ~options source_file syntax expression env =
+let expression_to_aggregated ~raise ~options source_file syntax expression env =
   let (typed_exp,_)  = type_expression ~raise ~options source_file syntax expression env in
-  let mini_c_exp     = Of_typed.compile_expression ~raise typed_exp in
+  Of_typed.compile_expression ~raise typed_exp
+
+let expression_to_mini_c ~raise ~options source_file syntax expression env =
+  let aggregated  = expression_to_aggregated ~raise ~options source_file syntax expression env in
+  let mini_c_exp  = Of_aggregated.compile_expression ~raise aggregated in
   mini_c_exp
 
 let compile_expression ~raise ~options source_file syntax expression env =
@@ -75,20 +80,17 @@ let compile_expression ~raise ~options source_file syntax expression env =
   let compiled   = Of_mini_c.compile_expression ~options mini_c_exp in
   compiled
 
-let compile_and_aggregate_expression ~raise ~options source_file syntax expression env mini_c_prg =
-  let mini_c_exp = expression_to_mini_c ~raise ~options source_file syntax expression env in
-  let compiled   = Of_mini_c.aggregate_and_compile_expression ~raise ~options mini_c_prg mini_c_exp in
-  compiled
 
-let compile_storage ~raise ~options storage input source_file syntax env mini_c_prg =
+let compile_contract_input ~raise ~options storage input source_file syntax env =
   let meta       = Of_source.extract_meta ~raise syntax source_file in
   let (storage,_),(input,_) = Of_source.compile_contract_input ~raise ~options ~meta storage input in
   let imperative = Of_c_unit.compile_contract_input ~raise ~meta storage input in
   let sugar      = Of_imperative.compile_expression ~raise imperative in
   let core       = Of_sugar.compile_expression sugar in
   let typed,_    = Of_core.compile_expression ~raise ~options ~env core in
-  let mini_c     = Of_typed.compile_expression ~raise typed in
-  let compiled   = Of_mini_c.aggregate_and_compile_expression ~raise ~options mini_c_prg mini_c in
+  let aggregated = Of_typed.compile_expression ~raise typed in
+  let mini_c     = Of_aggregated.compile_expression ~raise aggregated in
+  let compiled   = Of_mini_c.compile_expression ~raise ~options mini_c in
   compiled
 
 let pretty_print ~raise ~options ~meta file_path =

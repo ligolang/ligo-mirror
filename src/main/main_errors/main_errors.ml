@@ -32,6 +32,7 @@ let spilling_tracer (e:Spilling.Errors.spilling_error) : all = `Main_spilling e
 let aggregation_tracer (e:Aggregation.Errors.aggregation_error) : all = `Main_aggregation e
 let stacking_tracer (e:Stacking.Errors.stacking_error) : all = `Main_stacking e
 let decompile_mini_c : Spilling.Errors.spilling_error -> all = fun e -> `Main_decompile_mini_c e
+let decompile_aggregated : Aggregation.Errors.aggregation_error -> all = fun e -> `Main_decompile_aggregated e
 let decompile_typed : Checking.Errors.typer_error -> all = fun e -> `Main_decompile_typed e
 let decompile_inferred : Inference.Errors.typer_error -> all = fun e -> `Main_decompile_inferred e
 let decompile_michelson : Stacking.Errors.stacking_error -> all = fun e -> `Main_decompile_michelson e

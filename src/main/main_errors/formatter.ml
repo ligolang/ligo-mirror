@@ -233,6 +233,7 @@ let rec error_ppformat : display_format:string display_format ->
 
     | `Main_decompile_michelson e -> Stacking.Errors.error_ppformat ~display_format f  e
     | `Main_decompile_mini_c e -> Spilling.Errors.error_ppformat ~display_format f  e
+    | `Main_decompile_aggregated e -> Aggregation.Errors.error_ppformat ~display_format f  e
     | `Main_decompile_typed e -> Checking.Errors.error_ppformat ~display_format f  e
     | `Main_decompile_inferred e -> Inference.Errors.error_ppformat ~display_format f  e
 
@@ -410,6 +411,7 @@ let rec error_jsonformat : Types.all -> Yojson.Safe.t = fun a ->
 
   | `Main_decompile_michelson e -> Stacking.Errors.error_jsonformat e
   | `Main_decompile_mini_c e -> Spilling.Errors.error_jsonformat e
+  | `Main_decompile_aggregated e -> Aggregation.Errors.error_jsonformat e
   | `Main_decompile_typed e -> Checking.Errors.error_jsonformat e
   | `Main_decompile_inferred e -> Inference.Errors.error_jsonformat e
 

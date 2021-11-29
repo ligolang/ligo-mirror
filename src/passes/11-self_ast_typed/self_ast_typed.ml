@@ -20,6 +20,7 @@ let all_expression_passes ~raise = [
 ]
 
 let contract_passes ~raise = [
+  (* REMITODO: Move old self_mini_c.ml "self in lambda" check *)
   Contract_passes.self_typing ~raise ;
   No_nested_big_map.self_typing ~raise ;
   Contract_passes.entrypoint_typing ~raise ;
@@ -58,10 +59,3 @@ let map_expression = Helpers.map_expression
 let fold_expression = Helpers.fold_expression
 
 let fold_map_expression = Helpers.fold_map_expression
-
-let monomorphise_module m = Monomorphisation.mono_polymorphic_mod m
-let monomorphise_module_data data m = Monomorphisation.mono_polymorphic_module [] data m
-let monomorphise_expression e = Monomorphisation.mono_polymorphic_expression [] Monomorphisation.empty_data e
-
-let morph_module ~raise = Morph_module_in_record.peephole_module ~raise
-let morph_expression ~raise = Morph_module_in_record.(fold_map_expression (peephole_expression ~raise))

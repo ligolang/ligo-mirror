@@ -149,15 +149,15 @@ let run_expression_unwrap ~raise ?ctxt ?(loc = Location.generated) (c_expr : Sta
 let compile_value ~raise typed_exp =
   let open Ligo_compile in
   let options = Compiler_options.make () in
-  let mini_c_exp     = Of_typed.compile_expression ~raise typed_exp in
-  let compiled_exp   = Of_mini_c.aggregate_and_compile_expression ~raise ~options [] mini_c_exp in
-  compiled_exp
+  let aggregated_exp = Of_typed.compile_expression ~raise typed_exp in
+  let mini_c_exp = Of_aggregated.compile_expression ~raise aggregated_exp in
+  Of_mini_c.compile_expression ~raise ~options mini_c_exp
 
 let compile_type ~raise type_exp =
   let open Ligo_compile in
-  let mini_c_exp     = Of_typed.compile_type ~raise type_exp in
-  let compiled_exp   = Of_mini_c.compile_type mini_c_exp in
-  compiled_exp
+  let ty = Of_typed.compile_type ~raise type_exp in
+  let ty = Of_aggregated.compile_type ~raise ty in
+  Of_mini_c.compile_type ty
 
 let compile_contract_ ~raise ~protocol_version subst_lst arg_binder rec_name in_ty out_ty typed_exp =
   let open Ligo_compile in
@@ -166,9 +166,9 @@ let compile_contract_ ~raise ~protocol_version subst_lst arg_binder rec_name in_
   let typed_exp = match rec_name with
     | None -> Ast_typed.e_a_lambda { result = typed_exp'; binder = arg_binder } in_ty out_ty
     | Some fun_name -> Ast_typed.e_a_recursive { fun_name ; fun_type  = (Ast_typed.t_function in_ty out_ty ()) ; lambda = { result = typed_exp';binder = arg_binder } } in
-  let mini_c_exp     = Of_typed.compile_expression ~raise typed_exp in
-  let compiled_exp   = Of_mini_c.aggregate_and_compile ~raise ~options [] (ContractForm mini_c_exp) in
-  compiled_exp
+  let aggregated_exp = Of_typed.compile_expression ~raise typed_exp in
+  let mini_c = Of_aggregated.compile_expression ~raise aggregated_exp in
+  Of_mini_c.compile_expression ~raise ~options mini_c
 
 let make_function ~raise in_ty out_ty arg_binder body subst_lst =
   let typed_exp' = add_ast_env ~raise subst_lst arg_binder body in
@@ -265,8 +265,10 @@ let rec val_to_ast ~raise ~loc : Ligo_interpreter.Types.value ->
   | V_Func_val v ->
      make_ast_func ~raise ?name:v.rec_name v.env v.arg_binder v.body v.orig_lambda
   | V_Michelson (Ty_code (expr, expr_ty, ty_exp)) ->
-     let mini_c = trace ~raise Main_errors.decompile_michelson @@ Stacking.Decompiler.decompile_value expr_ty expr in
-     trace ~raise Main_errors.decompile_mini_c @@ Spilling.decompile mini_c ty_exp
+    let ty = trace ~raise Main_errors.aggregation_tracer @@ Aggregation.compile_type ty_exp in
+    let mini_c = trace ~raise Main_errors.decompile_michelson @@ Stacking.Decompiler.decompile_value expr_ty expr in
+    let aggregated = trace ~raise Main_errors.decompile_mini_c @@ Spilling.decompile mini_c ty in
+    Aggregation.decompile ~raise aggregated
   | V_Record map when is_t_record ty ->
      let map_ty = trace_option ~raise (Errors.generic_error loc "Expected record") @@  get_t_record ty in
      make_ast_record ~raise ~loc map_ty map

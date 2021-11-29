@@ -177,13 +177,6 @@ and option_inline ppf inline =
   else
     fprintf ppf ""
 
-and declaration ppf ((n,i, e):assignment) = fprintf ppf "@[let %a =@;<1 2>%a%a@]" Var.pp n.wrap_content expression e option_inline i
-
-and tl_statement ppf (ass, _) = declaration ppf ass
-
-and program ppf (p:program) =
-  fprintf ppf "@[<v>%a@]" (pp_print_list ~pp_sep:(tag "@ ") tl_statement) p
-
 and constant ppf : constant' -> unit = Stage_common.PP_enums.constant' ppf
 
 let%expect_test _ =

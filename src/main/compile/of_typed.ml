@@ -3,22 +3,33 @@ open Ast_typed
 open Aggregation
 open Main_errors
 
-module Checking = Int (* to remove... assert_type_expression_eq *)
 module SMap = Map.Make(String)
 
 let aggregate prg = Aggregation.compile_expression_in_context Ast_typed.e_a_unit prg
 
-let compile_with_modules ~raise : Ast_typed.module_fully_typed -> Ast_typed.expression Ast_aggregated.program = fun p ->
+let compile_program ~raise : Ast_typed.module_fully_typed -> Ast_typed.expression Ast_aggregated.program = fun p ->
   trace ~raise aggregation_tracer @@ Aggregation.compile_program p
 
-let compile ~raise : Ast_typed.module_fully_typed -> Ast_typed.expression Ast_aggregated.program = fun p ->
-  compile_with_modules ~raise p (* *)
-
+let compile_expression_in_context : Ast_typed.expression -> Ast_typed.expression Ast_aggregated.program -> Ast_aggregated.expression =
+  fun exp prg ->
+    Aggregation.compile_expression_in_context exp prg
 let compile_expression ~raise : Ast_typed.expression -> Ast_aggregated.expression = fun e ->
   trace ~raise aggregation_tracer @@ compile_expression e
 
 let compile_type ~raise : Ast_typed.type_expression -> Ast_aggregated.type_expression = fun e ->
   trace ~raise aggregation_tracer @@ compile_type e
+
+let apply_to_entrypoint ~raise : (Ast_typed.module_fully_typed * Ast_typed.environment) -> string -> Ast_aggregated.expression =
+    fun (prg,env) entrypoint ->
+  let aggregated_prg = compile_program ~raise prg in
+  let v = Location.wrap (Var.of_name entrypoint) in
+  let ty =
+    match Ast_typed.Environment.get_opt v env with
+    | Some ty -> ty.type_value
+    | None -> failwith "TODO: find error ?"
+  in
+  let var_ep = Ast_typed.(e_a_variable v ty) in
+  compile_expression_in_context var_ep aggregated_prg
 
 let assert_equal_contract_type ~raise : Simple_utils.Runned_result.check_type -> string -> Ast_typed.module_fully_typed -> Ast_typed.expression -> unit  =
     fun c entry contract param ->

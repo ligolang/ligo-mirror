@@ -1,5 +1,4 @@
 open Types
-open Combinators
 
 module Free_variables = struct
 
@@ -79,54 +78,3 @@ module Free_variables = struct
     expression b l.body
 
 end
-
-let get_entry (lst : program) (name : string) : (expression * int) option =
-  let entry_expression =
-    let aux x =
-      let ((((decl_name:expression_variable) , _, decl_expr) , _)) = x in
-      if (Var.equal decl_name.wrap_content (Var.of_name name))
-      then Some decl_expr
-      else None
-    in
-    List.find_map ~f:aux (List.rev lst)
-  in
-  match entry_expression with
-    | Some exp ->
-      let entry_index =
-        let aux i x =
-          let ((((decl_name:expression_variable) , _, _) , _)) = x in
-          if Var.equal decl_name.wrap_content (Var.of_name name)
-            then Some (i) else None
-        in
-        (List.length lst) - (List.find_mapi_exn ~f:aux (List.rev lst)) - 1
-      in
-      Some (exp, entry_index)
-    | None -> None
-
-type form_t =
-  | ContractForm of expression
-  | ExpressionForm of expression
-
-let aggregate_entry (lst : program) (form : form_t) : expression option =
-  let wrapper =
-    let aux cur prec =
-      let (((name , inline, expr) , _)) = cur in
-      e_let_in name expr.type_expression inline expr prec
-    in
-    fun expr -> List.fold_right ~f:aux ~init:expr lst
-  in
-  match form with
-  | ContractForm entry_expression -> (
-    match (entry_expression.content) with
-    | (E_closure l) -> (
-        let l' = { l with body = wrapper l.body } in
-        let e' = {
-          content = E_closure l' ;
-          type_expression = entry_expression.type_expression ;
-          location = entry_expression.location;
-        } in
-        Some e'
-      )
-    | _ -> None )
-  | ExpressionForm entry_expression ->
-    Some (wrapper entry_expression)
