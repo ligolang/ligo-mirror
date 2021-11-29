@@ -1,7 +1,7 @@
 module List = Simple_utils.List
 module Map = Simple_utils.Map
 
-(* TODO: review one last time & try to get rid of failwith's *)
+(* TODO: review one last time *)
   
 type t = (string * string list) list
 
@@ -51,7 +51,7 @@ let clean_installation_json installation_json =
     (Some SMap.empty) 
     keys values
 
-let clean_lock_file lock_json =
+let clean_lock_file_json lock_json =
   let open Yojson.Basic in
   let root = Util.member "root" lock_json |> JsonHelpers.string in
   let node = Util.member "node" lock_json in
@@ -116,7 +116,6 @@ let find_dependencies lock_file =
   let root = lock_file.root in
   let node = lock_file.node in
   let rec dfs dep graph =
-    (* Fix this *)
     let deps = SMap.find_opt dep node in
     match deps,graph with
       Some deps,Some graph -> 
@@ -126,17 +125,23 @@ let find_dependencies lock_file =
   in
   dfs root (Some SMap.empty)
   
+let installation_json_path path = 
+  path ^ Fpath.dir_sep ^ "_esy/default/installation.json"
+
+let lock_file_path path =
+  path ^ Fpath.dir_sep ^ "esy.lock/index.json"
+
 let make project_path =
   match project_path with
   | Some project_path  ->
-    let open Fpath in 
-    let project_path = Fpath.v project_path in
-    let installation_json = Yojson.Basic.from_file 
-      (Fpath.to_string @@ (project_path // (Fpath.v "_esy/default/installation.json"))) in
-    let installation_json = clean_installation_json installation_json in
-    let lock_file_json = Yojson.Basic.from_file 
-      (Fpath.to_string @@ (project_path // (Fpath.v "esy.lock/index.json"))) in
-    let lock_file_json = clean_lock_file lock_file_json in
+    let installation_json = installation_json_path project_path 
+      |> Yojson.Basic.from_file
+      |> clean_installation_json
+    in
+    let lock_file_json = lock_file_path project_path 
+      |> Yojson.Basic.from_file
+      |> clean_lock_file_json
+    in
     (match installation_json,lock_file_json with
       Some installation_json, Some lock_file_json ->
         let dependencies = find_dependencies lock_file_json in
@@ -224,14 +229,14 @@ let find_root_dependencies lock_file =
 let get_root_inclusion_list project_path = 
   match project_path with
   | Some project_path  ->
-    let open Fpath in 
-    let project_path = Fpath.v project_path in
-    let installation_json = Yojson.Basic.from_file 
-      (Fpath.to_string @@ (project_path // (Fpath.v "_esy/default/installation.json"))) in
-    let installation_json = clean_installation_json installation_json in
-    let lock_file_json = Yojson.Basic.from_file 
-      (Fpath.to_string @@ (project_path // (Fpath.v "esy.lock/index.json"))) in
-    let lock_file_json = clean_lock_file lock_file_json in
+    let installation_json = installation_json_path project_path 
+      |> Yojson.Basic.from_file
+      |> clean_installation_json
+    in
+    let lock_file_json = lock_file_path project_path 
+      |> Yojson.Basic.from_file
+      |> clean_lock_file_json
+    in
     (match installation_json,lock_file_json with
       Some installation_json, Some lock_file_json -> 
         let root_dependencies = find_root_dependencies lock_file_json in
