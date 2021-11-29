@@ -1,81 +1,101 @@
 open Cst.Pascaligo
 
+(* Utility functions *)
+
 let nseq_to_list (hd, tl) = hd :: tl
 
-let npseq_to_list (hd, tl) = hd :: (List.map ~f:snd tl)
+let npseq_to_list (hd, tl) = hd :: List.map ~f:snd tl
 
-let npseq_to_ne_list (hd, tl) = hd, (List.map ~f:snd tl)
-let map_npseq f (hd,tl) =
-  let hd = f hd in
-  let tl = List.map ~f:(fun (a,b) -> let b = f b in (a,b)) tl
-  in (hd,tl)
+let npseq_to_ne_list (hd, tl) = hd, List.map ~f:snd tl
+
+let map_npseq f (hd, tl) = f hd, List.map ~f:(fun (a,b) -> (a, f b)) tl
 
 let fold_npseq f init (hd,tl) =
-  let res = f init hd in
-  let res = List.fold ~f:(fun init (_,b) -> f init b) ~init:res tl in
-  res
+  let init = f init hd in
+  List.fold ~f:(fun acc (_,b) -> f acc b) ~init tl
 
 let pseq_to_list = function
-  | None -> []
-  | Some lst -> npseq_to_list lst
+  None -> []
+| Some lst -> npseq_to_list lst
+
 let map_pseq f = Option.map ~f:(map_npseq f)
+
 let bind_fold_pseq f init seq =
-  let res = Option.map ~f:(fold_npseq f init) seq in
-  Option.value ~default:(init) res
+   Option.(map ~f:(fold_npseq f init) seq |> value ~default:init)
 
+(* FOLDING OVER THE CST *)
 
-type ('a, 'err) folder = {
-  e : 'a -> expr -> 'a ;
-  s : 'a -> statement -> 'a ;
-  t : 'a -> type_expr -> 'a ;
-  d : 'a -> declaration -> 'a ;
+(* The type [folded] contains the folded functions, depending on the
+   construct at hand: expressions, statements, type expressions and
+   declarations. *)
+
+type ('a, 'err) folded = {
+  expr        : 'a -> expr        -> 'a;
+  statement   : 'a -> statement   -> 'a;
+  type_expr   : 'a -> type_expr   -> 'a;
+  declaration : 'a -> declaration -> 'a
 }
 
-let rec fold_type_expression : ('a, 'err) folder -> 'a -> type_expr -> 'a = fun f init t ->
-  let self = fold_type_expression f in
-  let init = f.t init t in
-  match t with
-    T_Cart   {value;region=_} ->
-    List.Ne.fold_left self init @@ npseq_to_ne_list value
-  | T_Sum    {value;region=_} ->
-    let {lead_vbar=_;variants;attributes=_} = value in
-    let aux init ({value;region=_} : _ reg) =
-      let {constr=_;arg;attributes=_} = value in
-      match arg with
-        Some (_,t) -> self init t
-      | None -> init
-    in
-    List.Ne.fold_left aux init @@ npseq_to_ne_list variants
-  | T_Record {value;region=_} ->
-     let aux init ({value;region=_} : _ reg) =
-       let {field_name=_;colon=_;field_type;attributes=_} = value in
-       self init field_type
-     in
-     List.Ne.fold_left aux init @@ npseq_to_ne_list value.ne_elements
-  | T_App {value;region=_} ->
-     let _, tuple = value in
-     List.Ne.fold_left self init @@ npseq_to_ne_list tuple.value.inside
-  | T_Fun    {value;region=_} ->
-    let (ty1, _, ty2) = value in
-    let res = self init ty1 in
-    let res = self res  ty2 in
-    res
-  | T_Par    {value;region=_} ->
-    self init value.inside
-  | T_ModPath {value;region=_} ->
-    self init value.field
+(* Folding over type expressions *)
+
+let rec fold_type_expr : ('a, 'err) folded -> 'a -> type_expr -> 'a =
+  fun folded init type_expr ->
+  let self = fold_type_expr folded
+  (* Applying the folded function to the root of the type expression *)
+  and init = folded.type_expr init type_expr in
+  (* Folding over the type sub-expressions *)
+  match type_expr with
+    T_Cart {value; region=_} ->
+      let head, _, tail = value in
+      let list = head :: npseq_to_list tail
+      in List.fold_left ~f:self ~init list
+
+  | T_Sum {value; region=_} ->
+      let {lead_vbar=_; variants; attributes=_} = value in
+      let variants = npseq_to_ne_list variants
+      and aux init ({value; region=_} : _ reg) =
+        let {ctor=_; args; attributes=_} = value in
+        match args with
+          Some (_,t) -> self init t
+        | None -> init
+      in List.Ne.fold_left aux init variants
+
+  | T_Record {value; region=_} ->
+      let aux init ({value; region=_} : _ reg) =
+        let {field_name; field_type; attributes=_} = value
+        in match field_type with
+             Some (_, field_type) -> self init field_type
+           | None -> self init (T_Var field_name) (* Punning *)
+      in List.fold_left ~f:aux ~init @@ pseq_to_list value.elements
+
+  | T_App {value; region=_} ->
+      let _, tuple = value in
+      let components = npseq_to_list tuple.value.inside
+      in List.fold_left ~f:self ~init components
+
+  | T_Fun {value; region=_} ->
+      let ty1, _, ty2 = value in
+      let res = self init ty1 in
+      let res = self res  ty2 in
+      res
+
+  | T_Par {value; region=_} -> self init value.inside
+
+  | T_ModPath {value; region=_} -> self init value.field
+
   | T_Var    _
   | T_Int    _
   | T_String _ -> init
 
-let rec fold_expression : ('a, 'err) folder -> 'a -> expr -> 'a = fun f init e  ->
-  let self = fold_expression f in
-  let self_type = fold_type_expression f in
-  let init = f.e init e in
+let rec fold_expr : ('a, 'err) folded -> 'a -> expr -> 'a =
+  fun f init e  ->
+  let self = fold_expr f in
+  let self_type = fold_type_expr f in
+  let init = f.expr init e in
   let bin_op value =
     let {op=_;arg1;arg2} = value in
-    let res = fold_expression f init arg1 in
-    let res = fold_expression f res  arg2 in
+    let res = fold_expr f init arg1 in
+    let res = fold_expr f res  arg2 in
     res
   in
   match e with
@@ -105,7 +125,7 @@ let rec fold_expression : ('a, 'err) folder -> 'a -> expr -> 'a = fun f init e  
   | E_And {value;region=_} -> bin_op value
   | E_Not {value;region=_} ->
      let {op=_;arg} = value in
-     let res = fold_expression f init arg
+     let res = fold_expr f init arg
      in res
 
   | E_Lt    {value;region=_}
@@ -125,7 +145,7 @@ let rec fold_expression : ('a, 'err) folder -> 'a -> expr -> 'a = fun f init e  
 
   | E_Neg   {value;region=_} ->
      let {op=_;arg} = value in
-     let res = fold_expression f init arg
+     let res = fold_expr f init arg
      in res
 
   | E_Int   _
@@ -228,12 +248,12 @@ and fold_block f init ({value; region=_}: block reg) =
     @@ npseq_to_ne_list statements
   in res
 
-and fold_statement : ('a, 'err) folder -> 'a -> statement -> 'a = fun f init s  ->
+and fold_statement : ('a, 'err) folded -> 'a -> statement -> 'a = fun f init s  ->
   let self = fold_statement f in
-  let self_expr = fold_expression f in
-  let self_type = fold_type_expression f in
+  let self_expr = fold_expr f in
+  let self_type = fold_type_expr f in
   let self_module = fold_module f in
-  let init = f.s init s in
+  let init = f.statement init s in
   let if_clause res = function
     ClauseInstr inst -> self res @@ S_Instr inst
   | ClauseBlock block -> fold_block f res block
@@ -408,12 +428,12 @@ and matching_cases : type b.('a -> b -> _) -> 'a -> (b case_clause reg, _) Utils
   in List.Ne.fold_left(case_clause self) init
      @@ npseq_to_ne_list value
 
-and fold_declaration : ('a, 'err) folder -> 'a -> declaration -> 'a =
+and fold_declaration : ('a, 'err) folded -> 'a -> declaration -> 'a =
   fun f init d ->
-  let self_expr = fold_expression f in
-  let self_type = fold_type_expression f in
+  let self_expr = fold_expr f in
+  let self_type = fold_type_expr f in
   let self_module = fold_module f in
-  let init = f.d init d in
+  let init = f.declaration init d in
   match d with
     D_Const {value;region=_} ->
     let {kwd_const=_;pattern=_;const_type;equal=_;init=expr;terminator=_;attributes=_} = value in
@@ -442,21 +462,22 @@ and fold_declaration : ('a, 'err) folder -> 'a -> declaration -> 'a =
     init
   | D_Directive _ -> init
 
-and fold_module : ('a, 'err) folder -> 'a -> t -> 'a =
+and fold_module : ('a, 'err) folded -> 'a -> t -> 'a =
   fun f init {decl;eof=_} ->
   let self = fold_declaration f in
   List.Ne.fold_left self init @@ decl
 
-type ('err) mapper = {
-  e : expr -> expr ;
-  t : type_expr -> type_expr ;
-  s : statement -> statement ;
-  d : declaration -> declaration ;
+type 'err mapped = {
+  expr        : expr -> expr;
+  type_expr   : type_expr -> type_expr;
+  statement   : statement -> statement;
+  declaration : declaration -> declaration
 }
 
-let rec map_type_expression : ('err) mapper -> type_expr -> 'b = fun f t ->
+let rec map_type_expression : 'err mapped -> type_expr -> 'b =
+  fun f t ->
   let self = map_type_expression f in
-  let t = f.t t in
+  let t = f.type_expr t in
   let return a = a in
   match t with
     T_Cart {value;region} ->
@@ -502,12 +523,12 @@ let rec map_type_expression : ('err) mapper -> type_expr -> 'b = fun f t ->
   | T_Int    _
   | T_String _ as e -> e
 
-let rec map_expression : ('err) mapper -> expr -> expr =
+let rec map_expression : 'err mapped -> expr -> expr =
   fun f e  ->
   let self = map_expression f in
   let self_type = map_type_expression f in
   let return a = a in
-  let e = f.e e in
+  let e = f.expr e in
   let bin_op value =
     let {op;arg1;arg2} = value in
     let arg1 = self arg1 in
@@ -719,12 +740,12 @@ and map_block f (block: block reg) =
   let value = {block.value with statements}
   in {block with value}
 
-and map_statement : 'err mapper -> statement -> statement = fun f s  ->
+and map_statement : 'err mapped -> statement -> statement = fun f s  ->
   let self_expr = map_expression f in
   let self_inst = map_instruction f in
   let self_type = map_type_expression f in
   let self_module = map_module f in
-  let s = f.s s in
+  let s = f.statement s in
   match s with
   | S_Instr inst ->
       let inst = self_inst inst in S_Instr inst
@@ -940,13 +961,13 @@ type b. (b-> b) -> (b case_clause reg,_) Utils.nsepseq reg -> (b case_clause reg
     {case_clause with value}
   in map_npseq (case_clause self) cases.value
 
- and map_declaration : 'err mapper -> declaration -> declaration =
+ and map_declaration : 'err mapped -> declaration -> declaration =
   fun f d ->
   let self_expr = map_expression f in
   let self_type = map_type_expression f in
   let self_module = map_module f in
   let return a = a in
-  let d = f.d d in
+  let d = f.declaration d in
   match d with
     D_Const {value; region} ->
       let {kwd_const=_; pattern=_; const_type; equal=_;
@@ -981,25 +1002,19 @@ type b. (b-> b) -> (b case_clause reg,_) Utils.nsepseq reg -> (b case_clause reg
      return @@ D_ModAlias {value;region}
   | D_Directive _ as d -> return d
 
-and map_module : ('err) mapper -> t -> t =
+and map_module : 'err mapped -> t -> t =
   fun f {decl;eof} ->
   let self = map_declaration f in
   (fun decl -> {decl; eof}) @@
   List.Ne.map self @@ decl
 
 (* TODO this is stupid *)
-let fold_to_map : unit -> (unit, 'err) folder -> ('err) mapper =
-  fun init {e;t;s;d} ->
-  let e expr =
-    let () = e init expr in expr
-  in
-  let t ty =
-    let () = t init ty in ty
-  in
-  let s stat =
-    let () = s init stat in stat
-  in
-  let d decl =
-    let () = d init decl in decl
-  in
-  {e;t;s;d}
+(*
+let fold_to_map : unit -> (unit, 'err) folded -> 'err mapped =
+  fun init {expr; type_expr; statement; declaration} ->
+  let expr        e = expr        init e; e
+  and type_expr   t = type_expr   init t; t
+  and statement   s = statement   init s; s
+  and declaration d = declaration init d; d
+  in {expr; type_expr; statement; declaration}
+ *)

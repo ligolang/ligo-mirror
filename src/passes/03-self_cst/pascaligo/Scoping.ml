@@ -12,9 +12,10 @@ open Errors
 open Trace
 
 (* TODO don't *)
-let ignore x =
+(*let ignore x =
   let _ = x in
   ()
+ *)
 
 (* Useful modules *)
 
@@ -126,7 +127,7 @@ let check_linearity_type_vars ~raise : CST.type_vars -> unit =
         raise.raise @@ non_linear_type_decl var
       else VarSet.add var varset
     in
-    let varset = List.fold_left lst ~f:aux ~init:VarSet.empty in 
+    let varset = List.fold_left lst ~f:aux ~init:VarSet.empty in
     ignore varset ; ()
 
 (* Checking the linearity of patterns *)
@@ -151,7 +152,7 @@ let rec vars_of_pattern ~raise env = function
 
 and vars_of_fields ~raise env fields =
   Helpers.bind_fold_pseq (vars_of_field_pattern ~raise) env fields
-  
+
 and vars_of_field_pattern ~raise env field =
 
   (* TODO: Hmm, not really sure
@@ -362,9 +363,9 @@ let peephole_declaration ~raise : unit -> declaration -> unit = fun _ d ->
   | Directive _ -> ()
 
 
-let peephole ~raise : (unit,'err) Helpers.folder = {
-  t = peephole_type ~raise;
-  e = peephole_expression ~raise;
-  s = peephole_statement ~raise;
-  d = peephole_declaration ~raise;
+let peephole ~raise : (unit, 'err) Helpers.folded = {
+  type_expr   = peephole_type ~raise;
+  expr        = peephole_expression ~raise;
+  statement   = peephole_statement ~raise;
+  declaration = peephole_declaration ~raise;
 }
