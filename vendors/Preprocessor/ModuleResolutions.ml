@@ -5,26 +5,87 @@ module Map = Simple_utils.Map
   
 type t = (string * string list) list
 
+let traverse xs =
+  List.fold_left xs
+    ~init:(Some [])
+    ~f:(fun acc x -> 
+      Option.bind acc 
+        (fun acc -> Option.map (fun x -> x :: acc) x))
+
 module JsonHelpers = struct
   let string json = 
     match json with
-      `String s -> s
-    | _ -> failwith "invalid json: not a string" 
+      `String s -> Some s
+    | _ -> None 
   let list json = 
     match json with
-      `List l -> l
-    | _ -> failwith "invalid json: not a list"
-  let string_list json = List.map ~f:string (list json)
+      `List l -> Some l
+    | _ -> None
+  let string_list json = 
+    let l = list json in
+    match l with
+      Some l ->
+        let strings = List.map ~f:string l in
+        traverse strings
+    | None -> None
+
 end
 
+module SMap = Map.String
+
+type lock_file = {
+  root : string ;
+  node : (string list) SMap.t
+}
+
+let clean_installation_json installation_json =
+  let open Yojson.Basic in
+  let keys = Util.keys installation_json in
+  let values = Util.values installation_json in
+  Stdlib.List.fold_left2 
+    (fun m key value -> 
+      Option.bind m (fun m -> 
+        let value = JsonHelpers.string value in
+        Option.map (fun value -> SMap.add key value m) value
+      )) 
+    (Some SMap.empty) 
+    keys values
+
+let clean_lock_file lock_json =
+  let open Yojson.Basic in
+  let root = Util.member "root" lock_json |> JsonHelpers.string in
+  let node = Util.member "node" lock_json in
+  let keys = Util.keys node in
+  let values = Util.values node in
+  let node = Stdlib.List.fold_left2
+    (fun m key value ->
+      let dependencies = Util.member "dependencies" value in  
+      let dependencies = JsonHelpers.string_list dependencies in
+      Option.bind m (fun m -> 
+        Option.map (fun dependencies -> SMap.add key dependencies m) dependencies
+      )
+    )
+    (Some SMap.empty)
+    keys values in
+  match (root,node) with
+    Some root, Some node -> Some ({ root ; node })
+  | _ -> None
+
+
 let resolve_paths installation graph =
-  let resolve p =
-    Yojson.Basic.Util.member p installation |> JsonHelpers.string
+  let resolve p = SMap.find_opt p installation
   in
-  Map.String.fold (fun k v xs ->
-    let paths = List.sort ~compare:String.compare @@ (List.map ~f:resolve v) in 
-    ((resolve k), paths) :: xs
-  ) graph []
+  SMap.fold (fun k v xs ->
+    Option.bind xs (fun xs -> 
+      let resolved = traverse (List.map ~f:resolve v) in
+      let k = resolve k in
+      (match k,resolved with
+        Some k, Some resolved ->
+          let paths = List.sort ~compare:String.compare resolved in 
+          Some ((k, paths) :: xs)
+      | _ -> None) 
+    )
+  ) graph (Some [])
 
 
 (* string -> string list *)
@@ -52,16 +113,18 @@ let resolve_paths installation graph =
 
 
 let find_dependencies lock_file = 
-  let open Yojson.Basic.Util in
-  let root = member "root" lock_file |> JsonHelpers.string in
-  let node = member "node" lock_file in
-  let dep_graph = Map.String.empty in
+  let root = lock_file.root in
+  let node = lock_file.node in
   let rec dfs dep graph =
-    let deps = member dep node |> member "dependencies" |> JsonHelpers.string_list in
-    let graph = Map.String.add dep deps graph in
-    List.fold_left ~f:(fun graph dep -> dfs dep graph) ~init:graph deps
+    (* Fix this *)
+    let deps = SMap.find_opt dep node in
+    match deps,graph with
+      Some deps,Some graph -> 
+        let graph = SMap.add dep deps graph in
+        List.fold_left ~f:(fun graph dep -> dfs dep graph) ~init:(Some graph) deps
+    | _ -> None
   in
-  dfs root dep_graph
+  dfs root (Some SMap.empty)
   
 let make project_path =
   match project_path with
@@ -70,10 +133,17 @@ let make project_path =
     let project_path = Fpath.v project_path in
     let installation_json = Yojson.Basic.from_file 
       (Fpath.to_string @@ (project_path // (Fpath.v "_esy/default/installation.json"))) in
+    let installation_json = clean_installation_json installation_json in
     let lock_file_json = Yojson.Basic.from_file 
       (Fpath.to_string @@ (project_path // (Fpath.v "esy.lock/index.json"))) in
-    let dependencies = find_dependencies lock_file_json in
-    Some (resolve_paths installation_json dependencies)
+    let lock_file_json = clean_lock_file lock_file_json in
+    (match installation_json,lock_file_json with
+      Some installation_json, Some lock_file_json ->
+        let dependencies = find_dependencies lock_file_json in
+        Option.bind dependencies (fun dependencies ->
+          resolve_paths installation_json dependencies
+        )
+    | _ -> None)
   | None -> None
 
 let get_absolute_path path = 
@@ -144,10 +214,12 @@ let find_external_file file dirs =
   else None
 
 let find_root_dependencies lock_file = 
-  let open Yojson.Basic.Util in
-  let root = member "root" lock_file |> JsonHelpers.string in
-  let node = member "node" lock_file in
-  JsonHelpers.string_list @@ member "dependencies" @@ member root node
+  let root = lock_file.root in
+  let node = lock_file.node in
+  let dependencies = SMap.find_opt root node in
+  match dependencies with
+    Some dependencies -> dependencies
+  | None -> []
 
 let get_root_inclusion_list project_path = 
   match project_path with
@@ -156,11 +228,22 @@ let get_root_inclusion_list project_path =
     let project_path = Fpath.v project_path in
     let installation_json = Yojson.Basic.from_file 
       (Fpath.to_string @@ (project_path // (Fpath.v "_esy/default/installation.json"))) in
+    let installation_json = clean_installation_json installation_json in
     let lock_file_json = Yojson.Basic.from_file 
       (Fpath.to_string @@ (project_path // (Fpath.v "esy.lock/index.json"))) in
-    let root_dependencies = find_root_dependencies lock_file_json in
-    let resolve p =
-      Yojson.Basic.Util.member p installation_json |> JsonHelpers.string
-    in
-    List.map ~f:resolve root_dependencies
+    let lock_file_json = clean_lock_file lock_file_json in
+    (match installation_json,lock_file_json with
+      Some installation_json, Some lock_file_json -> 
+        let root_dependencies = find_root_dependencies lock_file_json in
+        let resolve p =
+          SMap.find_opt p installation_json
+        in
+        let dependencies_paths = List.map ~f:resolve root_dependencies in
+        let dependencies_paths = List.fold_left 
+          ~f:(fun acc path -> Option.bind acc (fun paths -> Option.map (fun path -> path :: paths) path)) 
+          ~init:(Some []) dependencies_paths in
+        (match dependencies_paths with
+          Some dependencies_paths -> dependencies_paths
+        | None -> [])
+    | _ -> [])
   | None -> []
