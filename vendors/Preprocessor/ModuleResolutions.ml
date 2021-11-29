@@ -129,6 +129,8 @@ let find_external_file file dirs =
   if List.length segs > 1 then
     let file_name = String.concat Filename.dir_sep (List.tl_exn segs) in
     let pkg_name = (List.hd_exn @@ segs) 
+      |> String.split_on_char '_'
+      |> String.concat "__"
       |> String.split_on_char '-' 
       |> String.concat "_" in
     let dir = List.find ~f:(fun dir ->
