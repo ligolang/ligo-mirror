@@ -10,78 +10,61 @@ open Function
 
 (* Utils *)
 
-let decompile_attributes = List.map ~f:Region.wrap_ghost
-
-let list_to_sepseq sep lst =
+let decompile_attributes : 'a -> CST.attributes = fun kvl ->
+  ignore kvl;failwith "TODO: change attributes representation in AST"
+  (* List.map ~f:Region.wrap_ghost *)
+let list_to_sepseq ~sep lst =
   match lst with
     [] -> None
   | hd::tl ->
-      let aux e = Wrap.ghost sep, e in
+      let aux e = sep, e in
       Some (hd, List.map ~f:aux tl)
-
-let list_to_nsepseq sep lst =
-  match list_to_sepseq sep lst with
+let list_to_nsepseq ~sep lst =
+  match list_to_sepseq ~sep lst with
     Some s -> s
   | None   -> failwith "List is not a non_empty list" (* TODO: NO failwith! *)
-
 let nelist_to_npseq (hd, tl) =
   hd, List.map ~f:(fun e -> (Wrap.ghost "", e)) tl
-
 let npseq_cons hd tl = hd, ((Wrap.ghost "", fst tl) :: snd tl)
-
 let par a = CST.{lpar=Token.ghost_lpar; inside=a; rpar=Token.ghost_rpar}
-
 let type_vars_of_list : string Region.reg list -> CST.type_vars =
   fun lst ->
-  let lst = list_to_nsepseq lst in
+  let lst = List.map lst ~f:(fun sr -> Wrap.ghost sr.value) in
+  let lst = list_to_nsepseq ~sep:Token.ghost_comma lst in
   Region.wrap_ghost (par lst)
-
-let braces a : _ CST.braces = CST.{lbrace=Wrap.ghost "";inside=a;rbrace=Wrap.ghost ""}
-
 let brackets a = CST.{lbracket=Wrap.ghost "";inside=a;rbracket=Wrap.ghost ""}
-
 let prefix_colon a = (Wrap.ghost "", a)
-
 let suffix_with a = (a, Wrap.ghost "")
 
 (* Dialect-relevant functions *)
 
 type dialect = Terse | Verbose
-
 let terminator = function
   | Terse -> Some (Wrap.ghost "")
   | Verbose -> None
-
 let lead_vbar = terminator
-
 let enclosing = function
-  | Terse -> CST.Brackets (Wrap.ghost "",Wrap.ghost "")
-  | Verbose -> CST.End (Wrap.ghost "")
-
+  | Terse -> CST.Brackets (Token.ghost_lbracket, Token.ghost_rbracket)
+  | Verbose -> CST.End Token.ghost_end
 let block_enclosing = function
-  | Terse -> CST.Block (Wrap.ghost "",Wrap.ghost "",Wrap.ghost "")
-  | Verbose -> CST.BeginEnd (Wrap.ghost "",Wrap.ghost "")
-
+  | Terse -> CST.Braces (None, Token.ghost_lbrace, Token.ghost_rbrace)
+  | Verbose -> CST.BeginEnd (Token.ghost_begin, Token.ghost_end)
 let module_enclosing = function
-  | Terse -> CST.Brace (Wrap.ghost "",Wrap.ghost "")
-  | Verbose -> CST.BeginEnd (Wrap.ghost "",Wrap.ghost "")
-
-let inject dialect kind a =
-  CST.{kind;enclosing=enclosing dialect;elements=a;terminator=terminator dialect}
-
-let ne_inject dialect kind a ~attr = CST.{
-  kind;
-  enclosing=enclosing dialect;
-  ne_elements=a;
-  terminator=terminator dialect;
-  attributes=attr
-  }
-
+  | Terse -> CST.Braces (None, Token.ghost_lbrace, Token.ghost_rbrace)
+  | Verbose -> CST.BeginEnd (Token.ghost_begin, Token.ghost_end)
+let inject : dialect -> string Wrap.wrap -> CST.attributes -> ('a, CST.semi) Utils.sepseq -> 'a CST.compound =
+  fun dialect kind attributes elements ->
+    { kind ;
+      enclosing=enclosing dialect ;
+      elements ;
+      terminator=Some Token.ghost_semi ;
+      attributes
+    }
 let to_block dialect a =
   CST.{enclosing=block_enclosing dialect;statements=a;terminator=terminator dialect}
-
+(* 
 let empty_block dialect =
-  to_block dialect (CST.Instr (CST.Skip (Wrap.ghost "")),[])
+  to_block dialect (CST.Instr (CST.Skip (Wrap.ghost "")),[]) *)
 
 (* Decompiler *)
 
@@ -89,44 +72,43 @@ let decompile_variable : type a. a Var.t -> CST.variable = fun var ->
   let var = Format.asprintf "%a" Var.pp var in
   if String.contains var '#' then
     let var = String.split_on_char '#' var in
-    Region.wrap_ghost @@ "gen__" ^ (String.concat "" var)
+    Wrap.ghost @@ "gen__" ^ (String.concat "" var)
   else
     if String.length var > 4 && String.equal "gen__" @@ String.sub var 0 5 then
-      Region.wrap_ghost @@ "user__" ^ var
+      Wrap.ghost @@ "user__" ^ var
     else
-      Region.wrap_ghost var
+      Wrap.ghost var
 let rec decompile_type_expr : dialect -> AST.type_expression -> CST.type_expr = fun dialect te ->
   let return te = te in
   match te.type_content with
-    T_sum {attributes ; fields } ->
+  | T_sum {attributes ; fields } ->
     let attributes = decompile_attributes attributes in
     let lst = AST.LMap.to_kv_list fields in
     let aux (AST.Label c, AST.{associated_type; attributes=row_attr; _}) =
-      let constr = Region.wrap_ghost c in
+      let ctor = Wrap.ghost c in
       let arg = decompile_type_expr dialect associated_type in
-      let arg = Some (Wrap.ghost "", arg) in
-      let row_attr = decompile_attributes row_attr in
-      let variant : CST.variant = {constr; arg; attributes=row_attr} in
+      let args = Some (Token.ghost_of, arg) in
+      let attributes : CST.attributes = decompile_attributes row_attr in
+      let variant : CST.variant = {ctor ; args; attributes} in
       Region.wrap_ghost variant in
     let variants = List.map ~f:aux lst in
-    let variants = list_to_nsepseq variants in
-    let lead_vbar = Some (Wrap.ghost "") in
+    let variants = list_to_nsepseq ~sep:Token.ghost_vbar variants in
+    let lead_vbar = Some Token.ghost_vbar in
     let sum : CST.sum_type = { lead_vbar ; variants ; attributes}in
-    return @@ CST.TSum (Region.wrap_ghost sum)
+    return @@ CST.T_Sum (Region.wrap_ghost sum)
   | T_record {fields; attributes} ->
      let record = AST.LMap.to_kv_list fields in
      let aux (AST.Label c, AST.{associated_type; attributes=field_attr; _}) =
-       let field_name = Region.wrap_ghost c in
-       let colon = Wrap.ghost "" in
-       let field_type = decompile_type_expr dialect associated_type in
+    let field_name = Wrap.ghost c in
+    let field_type = decompile_type_expr dialect associated_type in
       let field_attr = decompile_attributes field_attr in
        let field : CST.field_decl =
-         {field_name; colon; field_type; attributes=field_attr} in
+         {field_name; field_type = Some (Token.ghost_colon , field_type); attributes=field_attr} in
        Region.wrap_ghost field in
     let record = List.map ~f:aux record in
     let record = list_to_nsepseq record in
     let attributes = decompile_attributes attributes in
-    return @@ CST.TRecord (Region.wrap_ghost @@ ne_inject ~attr:attributes dialect (NEInjRecord (Wrap.ghost "")) record)
+    return @@ CST.T_Record (Region.wrap_ghost @@ inject ~attr:attributes dialect (NEInjRecord (Wrap.ghost "")) record)
   | T_tuple tuple ->
     let tuple = List.map ~f:(decompile_type_expr dialect) tuple in
     let tuple = list_to_nsepseq @@ tuple in
@@ -454,7 +436,7 @@ and decompile_eos : dialect -> eos -> AST.expression -> ((CST.statement List.Ne.
     in
     let record = List.map ~f:aux record in
     let record = list_to_nsepseq record in
-    let record = ne_inject ~attr:[] dialect (NEInjRecord (Wrap.ghost "")) record in
+    let record = inject ~attr:[] dialect (NEInjRecord (Wrap.ghost "")) record in
     (* why is the record not empty ? *)
     return_expr @@ CST.ERecord (Region.wrap_ghost record)
   | E_accessor {record; path} ->
@@ -497,7 +479,7 @@ and decompile_eos : dialect -> eos -> AST.expression -> ((CST.statement List.Ne.
     let field_expr = decompile_expression ~dialect update in
     let field_assign : CST.field_path_assignment = {field_path;assignment=Wrap.ghost "";field_expr} in
     let updates = updates.value.ne_elements in
-    let updates = Region.wrap_ghost @@ ne_inject ~attr:[] dialect (NEInjRecord (Wrap.ghost ""))
+    let updates = Region.wrap_ghost @@ inject ~attr:[] dialect (NEInjRecord (Wrap.ghost ""))
                   @@ npseq_cons (Region.wrap_ghost @@ field_assign) updates in
     let update : CST.update = {record;kwd_with=Wrap.ghost "";updates} in
     return_expr @@ CST.EUpdate (Region.wrap_ghost @@ update)
@@ -512,7 +494,7 @@ and decompile_eos : dialect -> eos -> AST.expression -> ((CST.statement List.Ne.
         let record : CST.path = Name record in
         let field_path = CST.Name (Region.wrap_ghost name) in
         let update : CST.field_path_assignment = {field_path;assignment=Wrap.ghost "";field_expr} in
-        let updates = Region.wrap_ghost @@ ne_inject ~attr:[] dialect (NEInjRecord (Wrap.ghost "")) @@ (Region.wrap_ghost update,[]) in
+        let updates = Region.wrap_ghost @@ inject ~attr:[] dialect (NEInjRecord (Wrap.ghost "")) @@ (Region.wrap_ghost update,[]) in
         let update : CST.update = {record;kwd_with=Wrap.ghost "";updates;} in
         return_expr @@ CST.EUpdate (Region.wrap_ghost update)
       | Access_tuple _ -> failwith @@ Format.asprintf "invalid tuple update %a" AST.PP.expression expr
@@ -544,7 +526,7 @@ and decompile_eos : dialect -> eos -> AST.expression -> ((CST.statement List.Ne.
         let field_path : CST.path = CST.Path (Region.wrap_ghost @@ field_path) in
         let record : CST.path = Name record in
         let update : CST.field_path_assignment = {field_path;assignment=Wrap.ghost "";field_expr} in
-        let updates = Region.wrap_ghost @@ ne_inject ~attr:[] dialect (NEInjRecord (Wrap.ghost "")) @@ (Region.wrap_ghost update,[]) in
+        let updates = Region.wrap_ghost @@ inject ~attr:[] dialect (NEInjRecord (Wrap.ghost "")) @@ (Region.wrap_ghost update,[]) in
         let update : CST.update = {record;kwd_with=Wrap.ghost "";updates;} in
         return_expr @@ CST.EUpdate (Region.wrap_ghost update)
       )
