@@ -237,7 +237,7 @@ let rec find file_path = function
     try Some (path, open_in path) with
       Sys_error _ -> find file_path dirs
 
-let find dir file dirs external_dirs =
+let find dir file dirs inclusion_list =
   let path =
     if dir = "." || dir = "" then file
     else dir ^ Filename.dir_sep ^ file in
@@ -247,7 +247,7 @@ let find dir file dirs external_dirs =
       if base = file 
       then find file dirs 
       else 
-        let file_opt = ModuleResolutions.find_external_file file external_dirs in
+        let file_opt = ModuleResolutions.find_external_file ~file ~inclusion_list in
         Option.map (fun file -> (file, open_in file)) file_opt
 
 (* PRINTING *)
@@ -492,7 +492,7 @@ rule scan state = parse
         if state.mode = Copy then
           let incl_dir = Filename.dirname incl_file in
           let path = mk_path state in
-          let external_dirs = ModuleResolutions.get_inclusion_list file state.config#module_resolutions in
+          let external_dirs = ModuleResolutions.get_inclusion_list ~file state.config#module_resolutions in
           let incl_path, incl_chan =
             match find path incl_file state.config#dirs external_dirs with
               Some p -> p
@@ -502,7 +502,6 @@ rule scan state = parse
           let () =
             let open Lexing in
             incl_buf.lex_curr_p <-
-              (* TODO: check if this is okay ??? *)
               {incl_buf.lex_curr_p with pos_fname = incl_path} in
           let state  = {state with chans = incl_chan::state.chans} in
           let state' = {state with mode=Copy; trace=[]} in
@@ -518,7 +517,7 @@ rule scan state = parse
         let file = Lexing.(lexbuf.lex_curr_p.pos_fname) in
         if state.mode = Copy then
           let path = mk_path state in
-          let external_dirs = ModuleResolutions.get_inclusion_list file state.config#module_resolutions in
+          let external_dirs = ModuleResolutions.get_inclusion_list ~file state.config#module_resolutions in
           let import_path =
             match find path import_file state.config#dirs external_dirs with
               Some p -> fst p

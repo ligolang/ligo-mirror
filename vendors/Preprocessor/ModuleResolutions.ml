@@ -1,16 +1,26 @@
-module List = Simple_utils.List
-module Map = Simple_utils.Map
+module SMap = Simple_utils.Map.String
 
-(* TODO: review one last time *)
-  
-type t = (string * string list) list
+type inclusion_list = string list
+
+type dependency_list = string list
+
+type lock_file = {
+  root : string ;
+  node : dependency_list SMap.t
+}
+
+type t = {
+  root_path   : string ;
+  resolutions : (string * inclusion_list) list ;
+}
 
 let traverse xs =
-  List.fold_left xs
-    ~init:(Some [])
-    ~f:(fun acc x -> 
+  List.fold_left
+    (fun acc x -> 
       Option.bind acc 
         (fun acc -> Option.map (fun x -> x :: acc) x))
+    (Some [])
+    xs
 
 module JsonHelpers = struct
   let string json = 
@@ -25,20 +35,13 @@ module JsonHelpers = struct
     let l = list json in
     match l with
       Some l ->
-        let strings = List.map ~f:string l in
+        let strings = List.map string l in
         traverse strings
     | None -> None
 
   let from_file_opt file =
     try Some (Yojson.Basic.from_file file) with _ -> None
 end
-
-module SMap = Map.String
-
-type lock_file = {
-  root : string ;
-  node : (string list) SMap.t
-}
 
 let clean_installation_json installation_json =
   match installation_json with
@@ -77,47 +80,22 @@ let clean_lock_file_json lock_json =
       Some root, Some node -> Some ({ root ; node })
     | _ -> None
 
+let resolve_path installation path = SMap.find_opt path installation
+
 let resolve_paths installation graph =
-  let resolve p = SMap.find_opt p installation
-  in
   SMap.fold (fun k v xs ->
     Option.bind xs (fun xs -> 
-      let resolved = traverse (List.map ~f:resolve v) in
-      let k = resolve k in
+      let resolved = traverse (List.map (resolve_path installation) v) in
+      let k = resolve_path installation k in
       (match k,resolved with
         Some k, Some resolved ->
-          let paths = List.sort ~compare:String.compare resolved in 
+          let paths = List.sort String.compare resolved in 
           Some ((k, paths) :: xs)
       | _ -> None) 
     )
   ) graph (Some [])
 
-
-(* string -> string list *)
-(* 
-
-    ligo-main@link-dev:./esy.json ->    [ "temp-ligo-bin@0.28.1@d41d8cd9", "ligo-list-helpers@1.0.1@d41d8cd9", "ligo-foo@1.0.4@d41d8cd9" ]
-    temp-ligo-bin@0.28.1@d41d8cd9 ->    [  ]
-    ligo-list-helpers@1.0.1@d41d8cd9 -> [ temp-ligo-bin@0.25.0@d41d8cd9 ]
-    ligo-foo@1.0.4@d41d8cd9 ->          [ "temp-ligo-bin@0.25.2@d41d8cd9", "ligo-set-helpers@1.0.2@d41d8cd9", "ligo-list-helpers@1.0.0@d41d8cd9" ]
-    ligo-set-helpers@1.0.2@d41d8cd9 ->  [ "temp-ligo-bin@0.25.0@d41d8cd9" ]
-    ligo-list-helpers@1.0.0@d41d8cd9 -> [ temp-ligo-bin@0.25.0@d41d8cd9 ]
-
-    {
-      /home/melwyn95/projects/ligo-pkg-mgmnt/ligo-main -> [
-        /home/melwyn95/.esy/source/i/ligo_list_helpers__1.0.1__6233bebd,
-        ...
-      ]
-      ...
-    }
-
-    main.mligo: #import "ligo-list-helpers/list.mligo" "ListExt"
-
-    /home/melwyn95/.esy/source/i/ligo_foo__1.0.4__f8f13fa1/foo.mligo
-*)
-
-
-let find_dependencies lock_file = 
+let find_dependencies (lock_file : lock_file) = 
   let root = lock_file.root in
   let node = lock_file.node in
   let rec dfs dep graph =
@@ -125,7 +103,7 @@ let find_dependencies lock_file =
     match deps,graph with
       Some deps,Some graph -> 
         let graph = SMap.add dep deps graph in
-        List.fold_left ~f:(fun graph dep -> dfs dep graph) ~init:(Some graph) deps
+        List.fold_left (fun graph dep -> dfs dep graph) (Some graph) deps
     | _ -> None
   in
   dfs root (Some SMap.empty)
@@ -136,7 +114,7 @@ let installation_json_path path =
 let lock_file_path path =
   path ^ Fpath.dir_sep ^ "esy.lock/index.json"
 
-let make project_path =
+let make project_path : t option =
   let installation_json = installation_json_path project_path 
     |> JsonHelpers.from_file_opt
     |> clean_installation_json
@@ -149,22 +127,38 @@ let make project_path =
     Some installation_json, Some lock_file_json ->
       let dependencies = find_dependencies lock_file_json in
       Option.bind dependencies (fun dependencies ->
-        resolve_paths installation_json dependencies
+        let resolutions = resolve_paths installation_json dependencies in
+        let root_path = resolve_path installation_json lock_file_json.root in
+        (match root_path, resolutions with
+          Some root_path, Some resolutions -> Some { root_path ; resolutions = resolutions }
+        | _ -> None)
       )
   | _ -> None)
+
+let get_root_inclusion_list (module_resolutions : t option) = 
+  match module_resolutions with
+  | Some module_resolutions  ->
+    let root_path = module_resolutions.root_path in
+    let root_inclusion_list = List.find_opt 
+      (fun (path,_) -> path = root_path) 
+      module_resolutions.resolutions in
+    (match root_inclusion_list with 
+      Some (_,root_inclusion_list) -> root_inclusion_list
+    | None -> [])
+  | None -> []
 
 let get_absolute_path path = 
   let path' = Fpath.v path in
   if Fpath.is_abs path' then path
   else Fpath.v ((Sys.getcwd ()) ^ Fpath.dir_sep ^ path) |> Fpath.normalize |> Fpath.to_string
 
-let get_inclusion_list path module_resolutions =
+let get_inclusion_list ~file (module_resolutions : t option) =
   match module_resolutions with
     Some module_resolutions ->
-      let path = get_absolute_path path in
-      (match List.find ~f:(fun (mod_path, _) -> 
+      let path = get_absolute_path file in
+      (match List.find_opt (fun (mod_path, _) -> 
           Fpath.is_prefix (Fpath.v mod_path) (Fpath.v path)
-        ) module_resolutions 
+        ) module_resolutions.resolutions 
       with
         Some (_,paths) -> paths
       | None -> []
@@ -191,7 +185,7 @@ let get_inclusion_list path module_resolutions =
    identified, the file path is package path / rest of path
 *)
 (* TODO: review carefully one last time *)
-let find_external_file file dirs = 
+let find_external_file ~file ~inclusion_list = 
   let starts_with ~prefix s =
     let s1 = String.length prefix in
     let s2 = String.length s in
@@ -204,53 +198,18 @@ let find_external_file file dirs =
   in
   let segs = Fpath.segs @@ Fpath.v file in
   if List.length segs > 1 then
-    let file_name = String.concat Filename.dir_sep (List.tl_exn segs) in
-    let pkg_name = (List.hd_exn @@ segs) 
+    let file_name = String.concat Filename.dir_sep (List.tl segs) in
+    let pkg_name = (List.hd @@ segs) 
       |> String.split_on_char '_'
       |> String.concat "__"
       |> String.split_on_char '-' 
       |> String.concat "_" in
-    let dir = List.find ~f:(fun dir ->
+    let dir = List.find_opt (fun dir ->
       let basename = (Fpath.basename @@ Fpath.v dir) in
       starts_with ~prefix:pkg_name basename 
-    ) dirs in
+    ) inclusion_list in
     Option.map (fun dir -> 
       let path = dir ^ Filename.dir_sep ^ file_name in
       path
     ) dir
   else None
-
-let find_root_dependencies lock_file = 
-  let root = lock_file.root in
-  let node = lock_file.node in
-  let dependencies = SMap.find_opt root node in
-  match dependencies with
-    Some dependencies -> dependencies
-  | None -> []
-
-let get_root_inclusion_list project_path = 
-  match project_path with
-  | Some project_path  ->
-    let installation_json = installation_json_path project_path 
-      |> JsonHelpers.from_file_opt
-      |> clean_installation_json
-    in
-    let lock_file_json = lock_file_path project_path 
-      |> JsonHelpers.from_file_opt
-      |> clean_lock_file_json
-    in
-    (match installation_json,lock_file_json with
-      Some installation_json, Some lock_file_json -> 
-        let root_dependencies = find_root_dependencies lock_file_json in
-        let resolve p =
-          SMap.find_opt p installation_json
-        in
-        let dependencies_paths = List.map ~f:resolve root_dependencies in
-        let dependencies_paths = List.fold_left 
-          ~f:(fun acc path -> Option.bind acc (fun paths -> Option.map (fun path -> path :: paths) path)) 
-          ~init:(Some []) dependencies_paths in
-        (match dependencies_paths with
-          Some dependencies_paths -> dependencies_paths
-        | None -> [])
-    | _ -> [])
-  | None -> []
