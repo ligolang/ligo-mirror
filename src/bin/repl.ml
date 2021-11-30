@@ -137,7 +137,7 @@ let import_file ~raise state file_name module_name =
       (fun ~raise -> Build.combined_contract ~raise ~add_warning ~options (variant_to_syntax state.syntax) file_name) 
       (fun e -> 
         match e with
-          `Main_preproc _ ->
+          `Preproc_tracer _ ->
             let root_inclusion_list = Preprocessor.ModuleResolutions.get_root_inclusion_list state.esy_project_path in
             let file_name = Preprocessor.ModuleResolutions.find_external_file file_name root_inclusion_list in
             (match file_name with
@@ -161,7 +161,7 @@ let use_file ~raise state s =
       (fun ~raise -> Build.build_contract_use ~raise ~add_warning ~options (variant_to_syntax state.syntax) s) 
       (fun e -> 
         match e with
-          `Main_preproc _ ->
+          `Preproc_tracer _ ->
             let root_inclusion_list = Preprocessor.ModuleResolutions.get_root_inclusion_list state.esy_project_path in
             let file_name = Preprocessor.ModuleResolutions.find_external_file s root_inclusion_list in
             (match file_name with
