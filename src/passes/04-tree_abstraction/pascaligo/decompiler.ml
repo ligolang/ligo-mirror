@@ -1,8 +1,10 @@
-module AST = Ast_imperative
-module CST = Cst.Pascaligo
-module Predefined = Predefined.Tree_abstraction.Pascaligo
+(* Decompiler to the CST of PascaLIGO *)
 
+module AST  = Ast_imperative
+module CST  = Cst.Pascaligo
 module Wrap = Lexing_shared.Wrap
+module Token = Lexing_pascaligo.Token
+module Predefined = Predefined.Tree_abstraction.Pascaligo
 
 open Function
 
@@ -10,30 +12,40 @@ open Function
 
 let decompile_attributes = List.map ~f:Region.wrap_ghost
 
-let list_to_sepseq lst =
+let list_to_sepseq sep lst =
   match lst with
     [] -> None
-  |  hd :: lst ->
-      let aux e = (Wrap.ghost "", e) in
-      Some (hd, List.map ~f:aux lst)
+  | hd::tl ->
+      let aux e = Wrap.ghost sep, e in
+      Some (hd, List.map ~f:aux tl)
 
-let list_to_nsepseq lst =
-  match list_to_sepseq lst with
+let list_to_nsepseq sep lst =
+  match list_to_sepseq sep lst with
     Some s -> s
-  | None   -> failwith "List is not a non_empty list"
-let nelist_to_npseq (hd, lst) = (hd, List.map ~f:(fun e -> (Wrap.ghost "", e)) lst)
-let npseq_cons hd lst = hd,(Wrap.ghost "", fst lst)::(snd lst)
+  | None   -> failwith "List is not a non_empty list" (* TODO: NO failwith! *)
 
-let par a = CST.{lpar=Wrap.ghost "";inside=a;rpar=Wrap.ghost ""}
-let type_vars_of_list : string Region.reg list -> CST.type_vars = fun lst ->
+let nelist_to_npseq (hd, tl) =
+  hd, List.map ~f:(fun e -> (Wrap.ghost "", e)) tl
+
+let npseq_cons hd tl = hd, ((Wrap.ghost "", fst tl) :: snd tl)
+
+let par a = CST.{lpar=Token.ghost_lpar; inside=a; rpar=Token.ghost_rpar}
+
+let type_vars_of_list : string Region.reg list -> CST.type_vars =
+  fun lst ->
   let lst = list_to_nsepseq lst in
   Region.wrap_ghost (par lst)
-let braces a = CST.{lbrace=Wrap.ghost "";inside=a;rbrace=Wrap.ghost ""}
+
+let braces a : _ CST.braces = CST.{lbrace=Wrap.ghost "";inside=a;rbrace=Wrap.ghost ""}
+
 let brackets a = CST.{lbracket=Wrap.ghost "";inside=a;rbracket=Wrap.ghost ""}
+
 let prefix_colon a = (Wrap.ghost "", a)
+
 let suffix_with a = (a, Wrap.ghost "")
 
 (* Dialect-relevant functions *)
+
 type dialect = Terse | Verbose
 
 let terminator = function
@@ -82,7 +94,7 @@ let decompile_variable : type a. a Var.t -> CST.variable = fun var ->
     if String.length var > 4 && String.equal "gen__" @@ String.sub var 0 5 then
       Region.wrap_ghost @@ "user__" ^ var
     else
-      Region.wrap_ghost @@ var
+      Region.wrap_ghost var
 let rec decompile_type_expr : dialect -> AST.type_expression -> CST.type_expr = fun dialect te ->
   let return te = te in
   match te.type_content with
@@ -636,7 +648,7 @@ and decompile_if_clause : dialect -> AST.expression -> CST.if_clause = fun diale
     CST.ClauseInstr instr
   | _ ->
     let clause = nelist_to_npseq clause, Some (Wrap.ghost "") in
-    CST.ClauseBlock (ShortBlock (Region.wrap_ghost @@ braces @@ clause))
+    CST.ClauseBlock (ShortBlock (Region.wrap_ghost @@ braces clause))
 
 and decompile_to_data_decl : dialect -> _ AST.binder -> AST.expression -> AST.attributes -> CST.data_decl =
     fun dialect binder expr attributes ->

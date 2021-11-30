@@ -1,12 +1,13 @@
 [@@@warning "-42"]
 
 module CST = Cst_jsligo.CST
-open CST
+(*open CST*)
 module Region = Simple_utils.Region
 open! Region
 open! PPrint
 module Option = Simple_utils.Option
 
+(*
 let pp_braces printer (node : 'a braces reg) =
   let inside = node.value.inside
   in string "{" ^^ nest 1 (printer inside ^^ string "}")
@@ -21,9 +22,10 @@ let pp_nsepseq :
     let elems = Utils.nsepseq_to_list elements
     and sep   = string sep ^^ break 1
     in separate_map sep printer elems
+ *)
 
-
-let rec print ast =
+let (*rec*) print _ast = failwith "[JsLIGO] Pretty.print: TODO"
+(*
   let stmt     = Utils.nseq_to_list ast.statements in
   let stmt     = List.filter_map pp_toplevel_statement stmt in
   let app stmt = group (stmt ^^ string ";")
@@ -86,9 +88,9 @@ and pp_namespace ?top {value = (_, name, statements, attributes); _} =
   let is_private = List.exists (fun a -> a.value = "private") attributes in
   let attributes  = filter_private attributes in
   let pp_statements = pp_nsepseq ";" pp_statement in
-  (if attributes = [] then empty else pp_attributes attributes) ^^ 
+  (if attributes = [] then empty else pp_attributes attributes) ^^
   string "namespace " ^^ string name.value
-  ^^ (if ((top && is_private) || not top) then string "" else string "export ") 
+  ^^ (if ((top && is_private) || not top) then string "" else string "export ")
   ^^ group (pp_braces pp_statements statements)
 
 and pp_cond_expr {value; _} =
@@ -104,7 +106,7 @@ and pp_return {value = {expr; _}; _} =
     Some s -> string "return " ^^ pp_expr s
   | None -> string "return"
 
-and filter_private (attributes: CST.attributes) : CST.attributes = 
+and filter_private (attributes: CST.attributes) : CST.attributes =
   List.filter (fun (v: CST.attribute) -> not (v.value = "private")) attributes
 
 and pp_let ?top (node : let_decl reg) =
@@ -116,7 +118,7 @@ and pp_let ?top (node : let_decl reg) =
   let is_private = List.exists (fun a -> a.value = "private") attributes in
   let attributes  = filter_private attributes in
   (if attributes = [] then empty else pp_attributes attributes)
-     ^^ (if ((top && is_private) || not top) then string "" else string "export ") 
+     ^^ (if ((top && is_private) || not top) then string "" else string "export ")
      ^^ string "let " ^^ pp_nsepseq "," pp_val_binding bindings
 
 and pp_const {value = {bindings; _}; _} =
@@ -203,13 +205,13 @@ and pp_expr = function
 | ECodeInj _ -> failwith "TODO: ECodeInj"
 
 and pp_array (node: (array_item, comma) Utils.sepseq brackets reg) =
-  match node.value.inside with 
-    Some node -> 
+  match node.value.inside with
+    Some node ->
       let pp_items = pp_nsepseq "," pp_array_item in
       let result = string "[" ^^ nest 1 (pp_items node ^^ string "]") in
       group result
       (* pp_brackets (fun _ -> empty) node *)
-  | None -> 
+  | None ->
       pp_brackets (fun _ -> empty) node
 
 and pp_call_expr {value; _} =
@@ -259,7 +261,7 @@ and pp_projection {value = {expr; selection}; _} =
   pp_expr expr ^^ pp_selection selection
 
 and pp_assign (a, op, b) =
-  let operator = match op.value with 
+  let operator = match op.value with
       Eq -> " = "
     | Assignment_operator Times_eq ->  " *= "
     | Assignment_operator Div_eq ->    " /= "
@@ -492,9 +494,16 @@ and pp_assign_pattern {value = {property; value; _}; _} =
 and pp_destruct {value = {property; target; _}; _} =
   pp_ident property ^^ string ":" ^^ pp_val_binding target
 
-let print_type_expr = pp_type_expr
-let print_pattern   = pp_pattern
-let print_expr      = pp_expr
+*)
+
+let print_type_expr =
+  failwith "[JsLIGO] Pretty.print_type_expr: TODO" (*pp_type_expr*)
+
+let print_pattern   = (*pp_pattern*)
+  failwith "[JsLIGO] Pretty.print_pattern: TODO" (*pp_pattern*)
+
+let print_expr      = (*pp_expr*)
+  failwith "[JsLIGO] Pretty.print_expr: TODO" (*pp_expr*)
 
 type cst       = CST.t
 type expr      = CST.expr

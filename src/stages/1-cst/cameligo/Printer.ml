@@ -53,7 +53,7 @@ let compact state (region: Region.t) =
 
 let print_nsepseq :
   state -> string -> (state -> 'a -> unit) ->
-  ('a, _ Token.wrap) Utils.nsepseq -> unit =
+  ('a, _ Wrap.t) Utils.nsepseq -> unit =
   fun state sep print (head, tail) ->
     let print_aux (sep_reg, item) =
       let sep_line =
@@ -64,7 +64,7 @@ let print_nsepseq :
 
 let print_sepseq :
   state -> string -> (state -> 'a -> unit) ->
-  ('a, _ Token.wrap) Utils.sepseq -> unit =
+  ('a, _ Wrap.t) Utils.sepseq -> unit =
   fun state sep print -> function
         None -> ()
   | Some seq -> print_nsepseq state sep print seq
@@ -108,7 +108,7 @@ let print_ctor state {region; value} =
 let print_attributes state attributes =
   let apply {value = attribute; region} =
     let attribute_formatted = sprintf "[@%s]" attribute in
-    let token = Token.wrap attribute_formatted region in
+    let token = Wrap.wrap attribute_formatted region in
     print_token state token
   in List.iter apply attributes
 

@@ -10,13 +10,6 @@ module Utils = Simple_utils.Utils
 
 let sprintf = Printf.sprintf
 
-let ghost = 
-  object 
-    method region = Region.ghost 
-    method attributes = []
-    method payload = ""
-  end 
-
 type state = <
   offsets  : bool;
   mode     : [`Point | `Byte];
@@ -57,7 +50,7 @@ let compact state (region: Region.t) =
 
 let print_nsepseq :
   state -> string -> (state -> 'a -> unit) ->
-  ('a, _ Token.wrap) Utils.nsepseq -> unit =
+  ('a, _ Wrap.t) Utils.nsepseq -> unit =
   fun state sep print (head, tail) ->
     let print_aux (sep_reg, item) =
       let sep_line =
@@ -100,7 +93,7 @@ let print_pconstr state {region; value} =
 let print_attributes state attributes =
   let apply {value = attribute; region} =
     let attribute_formatted = sprintf "[@%s]" attribute in
-    let token = Token.wrap attribute_formatted region in
+    let token = Wrap.wrap attribute_formatted region in
     print_token state token attribute_formatted
   in List.iter apply attributes
 
@@ -280,12 +273,12 @@ type a.(state -> a -> unit ) -> state -> a module_access reg -> unit =
 and print_sum_type state (node : sum_type reg) =
   let {variants; attributes; leading_vbar} : sum_type = node.value in
   print_attributes state attributes;
-  (match leading_vbar with 
+  (match leading_vbar with
     Some leading_vbar ->
       print_token state leading_vbar "|"
   | None -> ());
   print_nsepseq state "|" print_variant variants.value
-  
+
 and print_variant state (node : variant reg) =
   let {attributes; tuple} = node.value in
   print_attributes    state attributes;
@@ -457,15 +450,15 @@ and print_object state (node: object_expr) =
 
 and print_assignment state (lhs, op, rhs) =
   print_expr state lhs;
-  let lexeme = match op.value with 
+  let lexeme = match op.value with
     Eq -> " = "
-  | Assignment_operator Times_eq ->  " *= "  
+  | Assignment_operator Times_eq ->  " *= "
   | Assignment_operator Div_eq ->    " /= "
   | Assignment_operator Min_eq ->    " -= "
   | Assignment_operator Plus_eq ->   " += "
   | Assignment_operator Mod_eq ->    " %= "
   in
-  let token = Token.wrap lexeme op.region in
+  let token = Wrap.wrap lexeme op.region in
   print_token state token lexeme;
   print_expr state rhs;
 
@@ -504,8 +497,8 @@ and print_array_item state = function
 
 and print_array state {value = {lbracket; inside; rbracket};_ } =
   print_token state lbracket "[";
-  (match inside with 
-    Some inside -> 
+  (match inside with
+    Some inside ->
       print_nsepseq state "," print_array_item inside;
   | None -> ());
   print_token state rbracket "]"
@@ -560,8 +553,8 @@ and print_arith_expr state = function
     print_token state op "-";
     print_expr  state arg
 | Int {region; value=lex,z} ->
-    let line = sprintf "Int %s (%s)" lex (Z.to_string z) in 
-    let token = Token.wrap line region in
+    let line = sprintf "Int %s (%s)" lex (Z.to_string z) in
+    let token = Wrap.wrap line region in
     print_token state token line
 
 and print_string_expr state = function
@@ -664,7 +657,6 @@ and print_fun_expr state {value; _} =
 
 and print_conditional state {value; _} =
   let {kwd_if; test = {lpar; inside; rpar}; ifso; ifnot} = value in
-  print_token state ghost "(";
   print_token state kwd_if "if";
   print_token state lpar "(";
   print_expr state inside;
@@ -673,9 +665,8 @@ and print_conditional state {value; _} =
   print_option state
     (fun state (kwd_else,ifnot) ->
       print_token state kwd_else "else";
-      print_statement state ifnot
-    ) ifnot;
-  print_token state ghost ")"
+      print_statement state ifnot)
+    ifnot
 
 (* Conversion to string *)
 
@@ -960,12 +951,12 @@ and pp_expr state = function
     pp_bytes state b
 | EArray {value = {inside; _}; region} ->
     pp_loc_node state "EArray" region;
-    (match inside with 
+    (match inside with
       Some inside ->
         let items  = Utils.nsepseq_to_list inside in
         let apply len rank = pp_array_item (state#pad len rank) in
         List.iteri (List.length items |> apply) items
-    | None -> 
+    | None ->
         pp_loc_node state "<empty>" region)
 | EConstr e_constr ->
     pp_node state "EConstr";

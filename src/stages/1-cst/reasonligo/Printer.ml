@@ -7,8 +7,6 @@ module Directive = LexerLib.Directive
 module Region = Simple_utils.Region
 open! Region
 
-let ghost = Token.wrap "" ghost
-
 let sprintf = Printf.sprintf
 
 type state = <
@@ -51,7 +49,7 @@ let compact state (region: Region.t) =
 
 let print_nsepseq :
   state -> string -> (state -> 'a -> unit) ->
-  ('a, _ Token.wrap) Utils.nsepseq -> unit =
+  ('a, _ Wrap.t) Utils.nsepseq -> unit =
   fun state sep print (head, tail) ->
     let print_aux (sep_reg, item) =
       let sep_line =
@@ -62,7 +60,7 @@ let print_nsepseq :
 
 let print_sepseq :
   state -> string -> (state -> 'a -> unit) ->
-  ('a, _ Token.wrap) Utils.sepseq -> unit =
+  ('a, _ Wrap.t) Utils.sepseq -> unit =
   fun state sep print -> function
         None -> ()
   | Some seq -> print_nsepseq state sep print seq
@@ -106,7 +104,7 @@ let print_constr state {region; value} =
 let print_attributes state attributes =
   let apply {value = attribute; region} =
     let attribute_formatted = sprintf "[@%s]" attribute in
-    let token = Token.wrap attribute_formatted region in
+    let token = Wrap.wrap attribute_formatted region in
     print_token state token
   in List.iter apply attributes
 
@@ -470,7 +468,7 @@ and print_list_expr state = function
 | EListComp e ->
    if e.value.elements = None
    then
-    let token = Token.wrap "[]" e.region in
+    let token = Wrap.wrap "[]" e.region in
     print_token state token
    else print_injection state print_expr e
 (*
@@ -530,11 +528,11 @@ and print_arith_expr state = function
     print_token state token
 | Mutez {region; value=lex,int64} ->
     let line = sprintf "Mutez %s (%s)" lex (Int64.to_string int64) in
-    let token = Token.wrap line region in
+    let token = Wrap.wrap line region in
     print_token state token
 | Nat {region; value=lex,z} ->
     let line = sprintf "Nat %s (%s)" lex (Z.to_string z) in
-    let token = Token.wrap line region in
+    let token = Wrap.wrap line region in
     print_token state token
 
 and print_string_expr state = function
@@ -598,7 +596,7 @@ and print_code_inj state {value; _} =
   let {value=lang; region} = language in
   let header_stop = region#start#shift_bytes 1 in
   let header_reg  = Region.make ~start:region#start ~stop:header_stop in
-  let header_t    = Token.wrap "[%" header_reg in
+  let header_t    = Wrap.wrap "[%" header_reg in
   print_token  state header_t;
   print_string state lang;
   print_expr   state code;
@@ -695,7 +693,7 @@ and print_fun_expr state {value; _} =
 
 and print_conditional state {value; _} =
   let {kwd_if; test; ifso; ifnot} = value in
-  print_token state ghost;
+  print_token state (Wrap.ghost "");
   print_token state kwd_if;
   print_test_expr state test;
   print_braces state
@@ -707,7 +705,7 @@ and print_conditional state {value; _} =
     (fun state (kwd_else,branch) ->
        print_token state kwd_else;
        print_branch state branch) ifnot;
-  print_token state ghost
+  print_token state (Wrap.ghost "")
 
 and print_branch state (node : branch) =
   let printer : state -> expr * semi option -> unit =

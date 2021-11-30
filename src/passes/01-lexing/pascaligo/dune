@@ -4,7 +4,8 @@
 (rule
   (targets MenhirToken.ml MenhirToken.mli)
   (deps (:ParToken ../../02-parsing/pascaligo/ParToken.mly))
-  (action (run menhir %{ParToken} --only-tokens --inspection --table --base MenhirToken)))
+  (action (run menhir %{ParToken} --only-tokens --inspection --table
+               --base MenhirToken)))
 
 (library
   (name menhir_pascaligo_tokens)
