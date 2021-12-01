@@ -185,7 +185,7 @@ let build_views ~raise ~add_warning :
       let typed_prg,e   = build_typed ~raise ~add_warning:(fun _ -> ()) ~options syntax (Ligo_compile.Of_core.View (main_name,view_name)) source_file in
       let aggregated = Ligo_compile.Of_typed.apply_to_entrypoint ~raise (typed_prg,e) view_name in
       let mini_c = Ligo_compile.Of_aggregated.compile_expression ~raise aggregated in
-      let michelson  = Ligo_compile.Of_mini_c.compile_expression ~raise ~options mini_c in
+      let michelson  = Ligo_compile.Of_mini_c.compile_contract ~raise ~options mini_c in
       (view_name, michelson)
     in
     List.map ~f views
