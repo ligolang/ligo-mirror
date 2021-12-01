@@ -474,17 +474,19 @@ and compile_for_each ~raise ~last I.{fe_binder;collection;fe_body} =
     O.e_let_in_ez name false [] (O.e_accessor (O.e_variable args) [Access_tuple Z.zero; Access_record (Var.to_name name.wrap_content)]) expr
   in
   let restore = fun expr -> List.fold_right ~f:aux free_vars ~init:expr in
-  let restore = match collection_type with
+  let restore = fun _remitodo -> ignore restore; failwith "REMITODO"
+    (* match collection_type with
     | Map -> (match snd fe_binder with
       | Some v -> fun expr -> restore (O.e_let_in_ez (fst fe_binder) false [] (O.e_accessor (O.e_variable args) [Access_tuple Z.one; Access_tuple Z.zero])
                                     (O.e_let_in_ez v false [] (O.e_accessor (O.e_variable args) [Access_tuple Z.one; Access_tuple Z.one]) expr))
       | None -> fun expr -> restore (O.e_let_in_ez (fst fe_binder) false [] (O.e_accessor (O.e_variable args) [Access_tuple Z.one; Access_tuple Z.zero]) expr)
     )
-    | _ -> fun expr -> restore (O.e_let_in_ez (fst fe_binder) false [] (O.e_accessor (O.e_variable args) [Access_tuple Z.one]) expr)
+    | _ -> fun expr -> restore (O.e_let_in_ez (fst fe_binder) false [] (O.e_accessor (O.e_variable args) [Access_tuple Z.one]) expr) *)
   in
   let lambda = O.e_lambda_ez args None (restore for_body) in
-  let op_name = match collection_type with
-   | Map -> O.C_MAP_FOLD | Set -> O.C_SET_FOLD | List -> O.C_LIST_FOLD | Any -> O.C_FOLD
+  let op_name = failwith "REMITODO"
+    (* match collection_type with
+   | Map -> O.C_MAP_FOLD | Set -> O.C_SET_FOLD | List -> O.C_LIST_FOLD | Any -> O.C_FOLD *)
   in
   let fold = fun expr ->
     O.e_let_in_ez env_rec false [] (O.e_constant op_name [lambda; collect ; init_record]) expr
