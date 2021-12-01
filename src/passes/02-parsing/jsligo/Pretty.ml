@@ -1,13 +1,12 @@
 [@@@warning "-42"]
 
 module CST = Cst_jsligo.CST
-(*open CST*)
+open CST
 module Region = Simple_utils.Region
 open! Region
 open! PPrint
 module Option = Simple_utils.Option
 
-(*
 let pp_braces printer (node : 'a braces reg) =
   let inside = node.value.inside
   in string "{" ^^ nest 1 (printer inside ^^ string "}")
@@ -17,16 +16,14 @@ let pp_brackets printer (node : 'a brackets reg) =
   in string "[" ^^ nest 1 (printer inside ^^ string "]")
 
 let pp_nsepseq :
-  'a. string -> ('a -> document) -> ('a, _ Token.wrap) Utils.nsepseq -> document =
+  'a. string -> ('a -> document) -> ('a, lexeme Wrap.t) Utils.nsepseq -> document =
   fun sep printer elements ->
     let elems = Utils.nsepseq_to_list elements
     and sep   = string sep ^^ break 1
     in separate_map sep printer elems
- *)
 
-let (*rec*) print _ast = failwith "[JsLIGO] Pretty.print: TODO"
-(*
-  let stmt     = Utils.nseq_to_list ast.statements in
+let rec print cst =
+  let stmt     = Utils.nseq_to_list cst.statements in
   let stmt     = List.filter_map pp_toplevel_statement stmt in
   let app stmt = group (stmt ^^ string ";")
   in separate_map (hardline ^^ hardline) app stmt
@@ -494,16 +491,9 @@ and pp_assign_pattern {value = {property; value; _}; _} =
 and pp_destruct {value = {property; target; _}; _} =
   pp_ident property ^^ string ":" ^^ pp_val_binding target
 
-*)
-
-let print_type_expr =
-  failwith "[JsLIGO] Pretty.print_type_expr: TODO" (*pp_type_expr*)
-
-let print_pattern   = (*pp_pattern*)
-  failwith "[JsLIGO] Pretty.print_pattern: TODO" (*pp_pattern*)
-
-let print_expr      = (*pp_expr*)
-  failwith "[JsLIGO] Pretty.print_expr: TODO" (*pp_expr*)
+let print_type_expr = pp_type_expr
+let print_pattern   = pp_pattern
+let print_expr      = pp_expr
 
 type cst       = CST.t
 type expr      = CST.expr

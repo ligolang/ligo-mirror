@@ -1,22 +1,24 @@
 [@@@warning "-42"]
 
 module CST = Cst_cameligo.CST
-(*open CST*)
+open CST
 module Region = Simple_utils.Region
 open! Region
 open! PPrint
 module Option = Simple_utils.Option
 module Token  = Lexing_cameligo.Token
 
-(*let pp_par printer {value; _} =
+let pp_par printer {value; _} =
   string "(" ^^ nest 1 (printer value.inside ^^ string ")")
- *)
 
-let (*rec*) print _ast = failwith "[CameLIGO] Pretty.print: TODO"
-(*
-  let decl = Utils.nseq_to_list ast.decl in
+(* The CST *)
+
+let rec print cst =
+  let decl = Utils.nseq_to_list cst.decl in
   let decl = List.filter_map pp_declaration decl
   in separate_map (hardline ^^ hardline) group decl
+
+(* Declarations *)
 
 and pp_declaration = function
   Let         decl -> Some (pp_let_decl     decl)
@@ -39,6 +41,20 @@ and pp_dir_decl = function
     in string lexeme
 *)
 
+(* Variables *)
+
+and pp_ident t = string t.value
+
+(* Strings *)
+
+and pp_string s = string "\"" ^^ pp_ident s ^^ string "\""
+
+(* Verbatim strings *)
+
+and pp_verbatim s = string "{|" ^^ pp_ident s ^^ string "|}"
+
+(* Value declarations *)
+
 and pp_let_decl {value; _} =
   let _, rec_opt, binding, attr = value in
   let let_str =
@@ -54,12 +70,6 @@ and pp_attributes = function
 | attr ->
    let make s = string "[@" ^^ string s.value ^^ string "]"
    in separate_map (break 0) make attr
-
-and pp_ident t = string t.value
-
-and pp_string s = string "\"" ^^ pp_ident s ^^ string "\""
-
-and pp_verbatim s = string "{|" ^^ pp_ident s ^^ string "|}"
 
 and pp_let_binding (binding : let_binding) =
   let {binders; lhs_type; let_rhs; _} = binding in
@@ -94,7 +104,7 @@ and pp_pvar {value; _} =
   if attributes = [] then v
   else group (pp_attributes attributes ^/^ v)
 
-and pp_pctor {value; _} =
+and pp_pconstr {value; _} =
   match value with
     constr, None -> pp_ident constr
   | constr, Some pat ->
@@ -261,7 +271,7 @@ and pp_arith_expr = function
 | Mutez e -> pp_mutez e
 
 and pp_mutez {value; _} =
-  Z.to_string (snd value) ^ "mutez" |> string
+  Int64.to_string (snd value) ^ "mutez" |> string
 
 and pp_string_expr = function
      Cat e -> pp_bin_op "^" e
@@ -293,8 +303,8 @@ and pp_constr_expr {value; _} =
   let constr, arg = value in
   let constr = string constr.value in
   match arg with
-      None -> ctor
-  | Some e -> prefix 2 1 ctor (pp_expr e)
+      None -> constr
+  | Some e -> prefix 2 1 constr (pp_expr e)
 
 and pp_record_expr ne_inj = group (pp_ne_injection pp_field_assign ne_inj)
 
@@ -317,7 +327,7 @@ and pp_ne_injection :
     in inj
 
 and pp_nsepseq :
-  'a.string -> ('a -> document) -> ('a, _ Token.wrap) Utils.nsepseq -> document =
+  'a.string -> ('a -> document) -> ('a, lexeme Wrap.t) Utils.nsepseq -> document =
   fun sep printer elements ->
     let elems = Utils.nsepseq_to_list elements
     and sep   = string sep ^^ break 1
@@ -507,14 +517,14 @@ and pp_field_decl {value; _} =
   let t_expr = pp_type_expr field_type
   in prefix 2 1 (name ^^ string " :") t_expr
 
-and pp_type_ctor_app (node : type_ctor_app reg) =
+and pp_type_app (node : type_ctor_app reg) =
   let {value; _} = node in
   let mod_path, type_ctor_arg = value in
-  let path_doc = pp_module_path pp_ident mod_path in
-  pp_type_ctor_arg type_ctor_arg
-  ^^ pp_region_t (group (nest 2 (break 1 ^^ path_doc))) mod_path.region
+  let path_doc = pp_module_path pp_type_constr mod_path in
+  pp_type_constr_arg type_ctor_arg
+  ^^ group (nest 2 (break 1 ^^ path_doc))
 
-and pp_type_ctor_arg = function
+and pp_type_constr_arg = function
   CArg t -> pp_type_expr t
 | CArgTuple t -> pp_ctor_arg_tuple t
 
@@ -533,23 +543,17 @@ and pp_ctor_arg_tuple {value; _} =
       pp_type_expr head ^^ string "," ^^ app (h :: tail)
     in string "(" ^^ nest 1 (components ^^ string ")")
 
-and pp_type_ctor ctor = string ctor.value
+and pp_type_constr constr = string constr.value
 
 and pp_fun_type {value; _} =
   let lhs, _, rhs = value in
   group (pp_type_expr lhs ^^ string " ->" ^/^ pp_type_expr rhs)
 
 and pp_type_par t = pp_par pp_type_expr t
- *)
 
-let print_type_expr =
-  failwith "[CameLIGO] Pretty.print_type_expr: TODO" (*pp_type_expr*)
-
-let print_pattern   = (*pp_pattern*)
-  failwith "[CameLIGO] Pretty.print_pattern: TODO" (*pp_pattern*)
-
-let print_expr      = (*pp_expr*)
-  failwith "[CameLIGO] Pretty.print_expr: TODO" (*pp_expr*)
+let print_type_expr = pp_type_expr
+let print_pattern   = pp_pattern
+let print_expr      = pp_expr
 
 type cst        = CST.t
 type expr       = CST.expr

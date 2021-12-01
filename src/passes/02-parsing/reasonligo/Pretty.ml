@@ -1,14 +1,13 @@
 [@@@warning "-42"]
 
 module CST = Cst_reasonligo.CST
-(* open CST *)
+open CST
 module Region = Simple_utils.Region
 open! Region
 open! PPrint
 module Option = Simple_utils.Option
 (*module Directive = LexerLib.Directive*)
 
-(*
 let pp_par printer (node : 'a par reg) =
   let inside = node.value.inside
   in string "(" ^^ nest 1 (printer inside ^^ string ")")
@@ -16,11 +15,9 @@ let pp_par printer (node : 'a par reg) =
 let pp_braces printer (node : 'a braces reg) =
   let inside = node.value.inside
   in string "{" ^^ nest 1 (printer inside ^^ string "}")
-*)
 
-let (*rec*) print _ast = failwith "[CameLIGO] Pretty.print: TODO"
-(*
-  let decl = Utils.nseq_to_list ast.decl in
+let rec print cst =
+  let decl = Utils.nseq_to_list cst.decl in
   let decl = List.filter_map pp_declaration decl
   in separate_map (hardline ^^ hardline) group decl
 
@@ -352,7 +349,7 @@ and pp_ne_injection :
     in inj
 
 and pp_nsepseq :
-  'a.string -> ('a -> document) -> ('a, _ Token.wrap) Utils.nsepseq -> document =
+  'a.string -> ('a -> document) -> ('a, lexeme Wrap.t) Utils.nsepseq -> document =
   fun sep printer elements ->
     let elems = Utils.nsepseq_to_list elements
     and sep   = string sep ^^ break 1
@@ -565,16 +562,10 @@ and pp_fun_type {value; _} =
 
 and pp_type_par {value; _} =
   string "(" ^^ nest 1 (pp_type_expr value.inside ^^ string ")")
-*)
 
-let print_type_expr =
-  failwith "[CameLIGO] Pretty.print_type_expr: TODO" (*pp_type_expr*)
-
-let print_pattern   = (*pp_pattern*)
-  failwith "[CameLIGO] Pretty.print_pattern: TODO" (*pp_pattern*)
-
-let print_expr      = (*pp_expr*)
-  failwith "[CameLIGO] Pretty.print_expr: TODO" (*pp_expr*)
+let print_type_expr = pp_type_expr
+let print_pattern   = pp_pattern
+let print_expr      = pp_expr
 
 type cst       = CST.t
 type expr      = CST.expr
