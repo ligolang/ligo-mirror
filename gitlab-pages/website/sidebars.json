@@ -109,6 +109,9 @@
       "tutorials/taco-shop/tezos-taco-shop-smart-contract",
       "tutorials/taco-shop/tezos-taco-shop-payout"
     ],
+    "Package Management": [
+      "tutorials/package-management/package-management"
+    ],
     "Migrating from Ethereum": [
       "tutorials/tz-vs-eth/tz-vs-eth"
     ],
