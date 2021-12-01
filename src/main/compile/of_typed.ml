@@ -5,8 +5,6 @@ open Main_errors
 
 module SMap = Map.Make(String)
 
-let aggregate prg = Aggregation.compile_expression_in_context Ast_typed.e_a_unit prg
-
 let compile_program ~raise : Ast_typed.module_fully_typed -> Ast_typed.expression Ast_aggregated.program = fun p ->
   trace ~raise aggregation_tracer @@ Aggregation.compile_program p
 

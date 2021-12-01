@@ -79,7 +79,6 @@ let ast_typed source_file syntax infer protocol_version display_format =
         Compiler_options.make ~infer ~protocol_version ()
       in
       let typed,_ = Build.type_contract ~raise ~add_warning ~options syntax Env source_file in
-      let typed = Self_ast_typed.monomorphise_module typed in
       typed
 
 let ast_combined  source_file syntax infer protocol_version display_format =
@@ -91,8 +90,8 @@ let ast_combined  source_file syntax infer protocol_version display_format =
         Compiler_options.make ~infer ~protocol_version ()
       in
       let typed,_ = Build.combined_contract ~raise ~add_warning ~options syntax source_file in
-      let expr = Compile.Of_typed.aggregate typed in
-      let _, expr = Self_ast_aggregated.monomorphise_expression expr in
+      let aggregated = Compile.Of_typed.compile_program ~raise typed in
+      let expr = Compile.Of_typed.compile_expression_in_context (Ast_typed.e_a_unit) aggregated in
       expr
 
 let mini_c source_file syntax infer protocol_version display_format optimize =
@@ -103,9 +102,14 @@ let mini_c source_file syntax infer protocol_version display_format optimize =
         let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
         Compiler_options.make ~infer ~protocol_version ()
       in
-      let mini_c,_ = Build.build_mini_c ~raise ~add_warning ~options syntax Ligo_compile.Of_core.Env source_file in
+      let typed,env = Build.combined_contract ~raise ~add_warning ~options syntax source_file in
+      let aggregated = Compile.Of_typed.compile_program ~raise typed in
       match optimize with
-        | None -> Mini_c.Formatter.Raw mini_c
+        | None ->
+          let expr = Compile.Of_typed.compile_expression_in_context (Ast_typed.e_a_unit) aggregated in
+          let mini_c = Compile.Of_aggregated.compile_expression ~raise expr in
+          Mini_c.Formatter.Raw mini_c
         | Some entry_point ->
-          let o = Compile.Of_mini_c.aggregate_contract ~raise mini_c entry_point in
+          let expr = Compile.Of_typed.apply_to_entrypoint ~raise (typed,env) entry_point in
+          let o = Compile.Of_aggregated.compile_expression ~raise expr in
           Mini_c.Formatter.Optimized o

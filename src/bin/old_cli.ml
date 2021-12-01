@@ -69,7 +69,7 @@ let steps =
     let docv = "STEPS" in
     let doc = "$(docv) is a bound in the number of steps to be done by the interpreter." in
     info ~docv ~doc ["steps" ; "n"] in
-  value @@ opt string "1000000" info
+  value @@ opt int 1000000 info
 
 let protocol_version =
   let open Arg in
@@ -510,7 +510,7 @@ let evaluate_call ~cmdname_deprecation =
 let evaluate_expr ~cmdname_deprecation =
   let f source_file entry_point amount balance sender source now syntax infer protocol_version display_format warn werror =
     return_result ~warn @@
-    Api.Run.evaluate_expr source_file entry_point amount balance sender source now syntax infer protocol_version display_format werror
+    Api.Run.evaluate_expr (Some source_file) entry_point amount balance sender source now syntax infer protocol_version display_format werror
     in
   let term =
     Term.(const f $ source_file 0 $ entry_point 1 $ amount $ balance $ sender $ source $ now  $ syntax $ infer $ protocol_version $ display_format $ warn $ werror) in

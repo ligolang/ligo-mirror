@@ -109,7 +109,7 @@ let type_contract ~raise ~add_warning : options:Compiler_options.t -> string -> 
     let contract,env = trace ~raise build_error_tracer @@ from_result (compile_separate file_name) in
     Ast_typed.Module_Fully_Typed contract, env
 
-let combined_contract ~raise ~add_warning : options:Compiler_options.t -> _ -> file_name -> _ =
+let combined_contract ~raise ~add_warning : options:Compiler_options.t -> 'a -> file_name -> Ast_typed.module_fully_typed * Ast_typed.environment =
   fun ~options _syntax file_name ->
     let open BuildSystem.Make(Infer(struct
       let raise = raise

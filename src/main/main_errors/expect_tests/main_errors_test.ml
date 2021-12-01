@@ -1005,14 +1005,12 @@ let%expect_test "self_mini_c" =
 
 let%expect_test "spilling" =
   let error (e:Spilling.Errors.spilling_error) = human_readable_error (`Main_spilling e) in
-  let open Ast_typed in
   let open Location in
   let type_variable : Ast_typed.type_variable = Var.of_name "foo" in
   let location_t = File default_location in
   let expression_variable = Location.wrap (Var.of_name "bar") in
-  let type_expression : Ast_typed.type_expression =
+  let type_expression : Ast_aggregated.type_expression =
     { type_content= T_variable (Var.of_name "foo");
-      type_meta= None ;
       orig_var = None ;
       location= File default_location }
   in

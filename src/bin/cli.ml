@@ -46,12 +46,12 @@ let on_chain_views : (string list, _) Clic.arg =
     | _ -> Base.String.split ~on:',' s
   )
 
-let steps =
+let steps : (int , unit) Clic.arg =
   let docv = "STEPS" in
   let doc = "a bound in the number of steps to be done by the interpreter." in
   Clic.default_arg ~doc ~short:'n' ~long:"steps" ~placeholder:docv ~default:"1000000" @@
   Clic.parameter @@
-  fun _ s -> Proto_alpha_utils.Error_monad.return s
+  fun _ s -> (Proto_alpha_utils.Error_monad.return (int_of_string s) : int Tezos_error_monad.Error_monad.tzresult Lwt.t)
 
 let protocol_version =
   let open Environment.Protocols in
@@ -406,7 +406,7 @@ let evaluate_call ~cmdname_deprecation =
 let evaluate_expr ~cmdname_deprecation =
   let f (entry_point, amount, balance, sender, source, now, syntax, infer, protocol_version, display_format, warn, werror) source_file () =
     return_result ~warn @@
-    Api.Run.evaluate_expr source_file entry_point amount balance sender source now syntax infer protocol_version display_format werror
+    Api.Run.evaluate_expr (Some source_file) entry_point amount balance sender source now syntax infer protocol_version display_format werror
     in
   (* "run-function" was renamed to "evaluate-call", keeping both for a few versions for backward-compatibility. *)
   let cmdname = match cmdname_deprecation with

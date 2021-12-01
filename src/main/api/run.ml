@@ -1,6 +1,5 @@
 open Api_helpers
 open Simple_utils
-open Trace
 module Compile = Ligo_compile
 module Helpers   = Ligo_compile.Helpers
 module Run = Ligo_run.Of_michelson
@@ -58,7 +57,7 @@ let evaluate_call source_file entry_point parameter amount balance sender source
         let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
         Compiler_options.make ~infer ~protocol_version ()
       in
-      let typed_prg,env = Build.build_context ~raise ~add_warning ~options syntax source_file in
+      let _,env = Build.build_context ~raise ~add_warning ~options syntax source_file in
       let meta             = Compile.Of_source.extract_meta ~raise syntax source_file in
       let c_unit_param,_   = Compile.Of_source.compile_string ~raise ~options ~meta parameter in
       let imperative_param = Compile.Of_c_unit.compile_expression ~raise ~meta c_unit_param in

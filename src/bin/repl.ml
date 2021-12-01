@@ -80,7 +80,7 @@ type state = { env : Ast_typed.environment;
                syntax : Ligo_compile.Helpers.v_syntax;
                infer : bool ;
                protocol : Environment.Protocols.t;
-               decl_list : Mini_c.program;
+               top_level : Ast_typed.module_fully_typed;
                dry_run_opts : Run.options;
               }
 
@@ -88,32 +88,34 @@ let try_eval ~raise state s =
   let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol () in
   let options = {options with init_env = state.env } in
   let typed_exp,env = Ligo_compile.Utils.type_expression_string ~raise ~options:options state.syntax s state.env in
-  let env,applied = trace ~raise Main_errors.self_ast_typed_tracer @@ Self_ast_typed.morph_expression env typed_exp in
-  let mini_c_exp = Ligo_compile.Of_typed.compile_expression ~raise applied in
-  let compiled_exp = Ligo_compile.Of_mini_c.aggregate_and_compile_expression ~raise ~options:options state.decl_list mini_c_exp in
+  let aggregated_exp = Ligo_compile.Of_typed.compile_expression ~raise typed_exp in
+  let mini_c = Ligo_compile.Of_aggregated.compile_expression ~raise aggregated_exp in
+  let compiled_exp = Ligo_compile.Of_mini_c.compile_expression ~raise ~options mini_c in
   let options = state.dry_run_opts in
   let runres = Run.run_expression ~raise ~options:options compiled_exp.expr compiled_exp.expr_ty in
-  let x = Decompile.Of_michelson.decompile_expression ~raise applied.type_expression runres in
+  let x = Decompile.Of_michelson.decompile_expression ~raise aggregated_exp.type_expression runres in
   match x with
   | Success expr ->
-     let state = { state with env = env; decl_list = state.decl_list } in
+     let state = { state with env = env; top_level = state.top_level } in
      (state, Expression_value expr)
   | Fail _ ->
     raise.raise `Repl_unexpected
 
-let try_contract ~raise state s =
+let concat_modules ~statement (m1 : Ast_typed.module_fully_typed) (m2 : Ast_typed.module_fully_typed) : Ast_typed.module_fully_typed =
+  let (Module_Fully_Typed m1) = m1 in
+  let (Module_Fully_Typed m2) = m2 in
+  let () = if statement then assert (List.length m2 = 1) in
+  Module_Fully_Typed (m1 @ m2)
+
+let try_statement ~raise state s(* let x = 42 *) =
   let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol () in
   let options = {options with init_env = state.env } in
   try
     try_with (fun ~raise ->
       let typed_prg,core_prg,env =
         Ligo_compile.Utils.type_contract_string ~raise ~add_warning ~options:options state.syntax s state.env in
-      let env,applied =
-        trace ~raise Main_errors.self_ast_typed_tracer @@ Self_ast_typed.morph_module env typed_prg in
-      let mini_c =
-        Ligo_compile.Of_typed.compile_with_modules ~raise applied in
       let state = { state with env = env;
-                               decl_list = state.decl_list @ mini_c;
+                               top_level = concat_modules ~statement:true state.top_level typed_prg;
                                } in
       (state, Defined_values_core core_prg))
     (function
@@ -134,19 +136,18 @@ let import_file ~raise state file_name module_name =
   let module_,env = Build.combined_contract ~raise ~add_warning ~options (variant_to_syntax state.syntax) file_name in
   let env = Ast_typed.Environment.add_module ~public:true module_name env state.env in
   let module_ = Ast_typed.(Module_Fully_Typed [Location.wrap @@ Declaration_module {module_binder=module_name;module_;module_attr={public=true}}]) in
-  let env,contract = trace ~raise Main_errors.self_ast_typed_tracer @@ Self_ast_typed.morph_module env module_ in
-  let mini_c = Ligo_compile.Of_typed.compile_with_modules ~raise contract in
-  let state = { state with env = env; decl_list = state.decl_list @ mini_c } in
+  let state = { state with env = env; top_level = concat_modules ~statement:true state.top_level module_ } in
   (state, Just_ok)
 
 let use_file ~raise state s =
   let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol () in
   let options = {options with init_env = state.env } in
   (* Missing typer environment? *)
-  let mini_c,(Ast_typed.Module_Fully_Typed module'),env = Build.build_contract_use ~raise ~add_warning ~options (variant_to_syntax state.syntax) s in
+  let module',env = Build.combined_contract ~raise ~add_warning ~options (variant_to_syntax state.syntax) s in
   let state = { state with env = env;
-                           decl_list = state.decl_list @ mini_c;
+                           top_level = concat_modules ~statement:false state.top_level module'
                           } in
+  let (Module_Fully_Typed module') = module' in
   (state, Defined_values_typed module')
 
 (* REPL "parsing" *)
@@ -192,7 +193,7 @@ let parse_and_eval display_format state s =
   let c = match parse s with
     | Use s -> use_file state s
     | Import (fn, mn) -> import_file state fn mn
-    | Expr s -> try_contract state s in
+    | Expr s -> try_statement state s in
   eval display_format state c
 
 let welcome_msg = "Welcome to LIGO's interpreter!
@@ -202,7 +203,7 @@ Included directives:
 
 let make_initial_state syntax protocol infer dry_run_opts =
   { env = Environment.default protocol;
-    decl_list = [];
+    top_level = Module_Fully_Typed [];
     syntax = syntax;
     infer = infer;
     protocol = protocol;
