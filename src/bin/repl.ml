@@ -88,7 +88,8 @@ let try_eval ~raise state s =
   let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol () in
   let options = {options with init_env = state.env } in
   let typed_exp,env = Ligo_compile.Utils.type_expression_string ~raise ~options:options state.syntax s state.env in
-  let aggregated_exp = Ligo_compile.Of_typed.compile_expression ~raise typed_exp in
+  let module_ = Ligo_compile.Of_typed.compile_program ~raise state.top_level in
+  let aggregated_exp = Ligo_compile.Of_typed.compile_expression_in_context typed_exp module_ in
   let mini_c = Ligo_compile.Of_aggregated.compile_expression ~raise aggregated_exp in
   let compiled_exp = Ligo_compile.Of_mini_c.compile_expression ~raise ~options mini_c in
   let options = state.dry_run_opts in
