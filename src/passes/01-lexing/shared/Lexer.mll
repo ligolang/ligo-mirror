@@ -120,7 +120,7 @@ module Make (Token : Token.S) =
       then fail region Non_canonical_zero
       else match Token.mk_nat nat z region with
              Ok token -> Core.Token token, state
-           | Error (Token.Wrong_nat_syntax hint) ->
+           | Error Token.Wrong_nat_syntax hint ->
                fail region (Wrong_nat_syntax hint)
 
     (* Mutez *)
@@ -135,7 +135,7 @@ module Make (Token : Token.S) =
           else let suffix = "mutez" in
                match Token.mk_mutez nat ~suffix mutez_64 region with
                  Ok token -> Core.Token token, state
-               | Error (Token.Wrong_mutez_syntax hint) ->
+               | Error Token.Wrong_mutez_syntax hint ->
                    fail region (Wrong_mutez_syntax hint)
 
     (* Integral Tez (internally converted to mutez) *)
@@ -149,7 +149,7 @@ module Make (Token : Token.S) =
         then fail region Non_canonical_zero
         else match Token.mk_mutez nat ~suffix mutez_64 region with
                Ok token -> Core.Token token, state
-             | Error (Token.Wrong_mutez_syntax hint) ->
+             | Error Token.Wrong_mutez_syntax hint ->
                  fail region (Wrong_mutez_syntax hint)
       with Z.Overflow -> fail region Overflow_mutez
 
@@ -173,7 +173,7 @@ module Make (Token : Token.S) =
           else let lexeme = integral ^ "." ^ fractional in
                match Token.mk_mutez lexeme ~suffix mutez_64 region with
                  Ok token -> Core.Token token, state
-               | Error (Token.Wrong_mutez_syntax hint) ->
+               | Error Token.Wrong_mutez_syntax hint ->
                    fail region (Wrong_mutez_syntax hint)
         with Z.Overflow -> fail region Overflow_mutez
       else fail region Underflow_mutez
@@ -206,7 +206,7 @@ module Make (Token : Token.S) =
       let lang     = Region.{value=lang; region=lang_reg} in
       match Token.mk_lang lang region with
         Ok token -> Core.Token token, state
-      | Error (Token.Wrong_lang_syntax hint) ->
+      | Error Token.Wrong_lang_syntax hint ->
           fail region (Wrong_lang_syntax hint)
 
     (* Symbols *)

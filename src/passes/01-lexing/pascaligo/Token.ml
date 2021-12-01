@@ -583,28 +583,27 @@ module T =
 
     (* IMPORTANT: These values cannot be exported in Token.mli *)
 
-    let ghost_string   = Wrap.ghost "\"a string\""
-    let ghost_verbatim = Wrap.ghost "{|verbatim|}"
-    let ghost_bytes    = Wrap.ghost ("0xAA", `Hex "AA")
-    let ghost_int      = Wrap.ghost ("1", Z.one)
-    let ghost_nat      = Wrap.ghost ("1n", Z.one)
-    let ghost_mutez    = Wrap.ghost ("1mutez", Int64.one)
-    let ghost_ident    = Wrap.ghost "id"
-    let ghost_uident   = Wrap.ghost "C"
-    let ghost_lang     = Region.(wrap_ghost (wrap_ghost "Michelson"))
-    let ghost_attr     = Region.(wrap_ghost ("attr", None))
+    let ghost_string   s = Wrap.ghost s
+    let ghost_verbatim s = Wrap.ghost s
+    let ghost_bytes    b = Wrap.ghost ("0x" ^ Hex.show b, b)
+    let ghost_int      z = Wrap.ghost (Z.to_string z, z)
+    let ghost_nat      z = Wrap.ghost (Z.to_string z ^ "n", z)
+    let ghost_mutez    i = Wrap.ghost (Int64.to_string i ^ "mutez", i)
+    let ghost_ident    i = Wrap.ghost i
+    let ghost_uident   c = Wrap.ghost c
+    let ghost_lang     l = Region.(wrap_ghost (wrap_ghost l))
+    let ghost_attr     a = Region.(wrap_ghost (a, None))
 
-    let ghost_String   = String   ghost_string
-    let ghost_Verbatim = Verbatim ghost_verbatim
-    let ghost_Bytes    = Bytes    ghost_bytes
-    let ghost_Int      = Int      ghost_int
-    let ghost_Nat      = Nat      ghost_nat
-    let ghost_Mutez    = Mutez    ghost_mutez
-    let ghost_Ident    = Ident    ghost_ident
-    let ghost_UIdent   = UIdent   ghost_uident
-    let ghost_Lang     = Lang     ghost_lang
-    let ghost_Attr     = Attr     ghost_attr
-
+    let ghost_String   s = String   (ghost_string s)
+    let ghost_Verbatim s = Verbatim (ghost_verbatim s)
+    let ghost_Bytes    b = Bytes    (ghost_bytes b)
+    let ghost_Int      z = Int      (ghost_int z)
+    let ghost_Nat      z = Nat      (ghost_nat z)
+    let ghost_Mutez    i = Mutez    (ghost_mutez i)
+    let ghost_Ident    i = Ident    (ghost_ident i)
+    let ghost_UIdent   c = UIdent   (ghost_uident c)
+    let ghost_Lang     l = Lang     (ghost_lang l)
+    let ghost_Attr     a = Attr     (ghost_attr a)
 
     (* END-OF-FILE TOKEN *)
 
@@ -629,16 +628,16 @@ module T =
     let concrete = function
       (* Literals *)
 
-      "Ident"    -> ghost_ident#payload (*id_sym ()*)
-    | "UIdent"   -> ghost_uident#payload (*ctor_sym ()*)
-    | "Int"      -> fst ghost_int#payload
-    | "Nat"      -> fst ghost_nat#payload
-    | "Mutez"    -> fst ghost_mutez#payload
-    | "String"   -> ghost_string#payload
-    | "Verbatim" -> ghost_verbatim#payload
-    | "Bytes"    -> fst ghost_bytes#payload
-    | "Attr"     -> Attr.to_lexeme Region.(ghost_attr.value)
-    | "Lang"     -> "[%" ^ Region.(ghost_lang.value.value)
+      "Ident"    -> "x" (*id_sym ()*)
+    | "UIdent"   -> "C" (*ctor_sym ()*)
+    | "Int"      -> "1"
+    | "Nat"      -> "1n"
+    | "Mutez"    -> "1mutez"
+    | "String"   -> "\"a string\""
+    | "Verbatim" -> "{|verbatim|}"
+    | "Bytes"    -> "0xAA"
+    | "Attr"     -> "[@attr]"
+    | "Lang"     -> "[%Michelson"
 
     (* Symbols *)
 
