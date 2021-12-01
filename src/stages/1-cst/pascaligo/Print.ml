@@ -470,17 +470,17 @@ and print_block state (node : block reg) =
 
 (* Conditional instructions *)
 
-and print_I_Cond state =
+and print_I_Cond state (node : test_clause conditional reg) =
   print_conditional state "I_Cond"
-    ~if_so:print_test_clause ~if_not:print_test_clause
+    ~if_so:print_test_clause ~if_not:print_test_clause node
 
 and print_conditional :
-  'if_so 'if_not.
+  'branch.
   state ->
   label ->
-  if_so:('if_so Tree.printer) ->
-  if_not:('if_not Tree.printer) ->
-  ('if_so,'if_not) conditional reg ->
+  if_so:('branch Tree.printer) ->
+  if_not:('branch Tree.printer) ->
+  'branch conditional reg ->
   unit =
   fun state label ~if_so:print_if_so ~if_not:print_if_not node ->
     let Region.{value; region} = node in
@@ -906,7 +906,7 @@ and print_E_Equal state (node : equal bin_op reg) =
 
 (* Conditional expressions *)
 
-and print_E_Cond state (node : (expr, expr) conditional reg) =
+and print_E_Cond state (node : expr conditional reg) =
   print_conditional state "E_Cond"
     ~if_so:print_expr ~if_not:print_expr node
 

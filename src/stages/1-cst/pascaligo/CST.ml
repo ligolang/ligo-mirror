@@ -325,7 +325,7 @@ and instruction =
   I_Assign of assignment reg
 | I_Call   of call
 | I_Case   of test_clause case reg
-| I_Cond   of (test_clause, test_clause) conditional reg
+| I_Cond   of test_clause conditional reg
 | I_For    of for_int reg
 | I_ForIn  of for_in reg
 | I_Patch  of patch reg
@@ -384,12 +384,12 @@ and block_enclosing =
 
 (* General conditionals *)
 
-and ('if_so, 'if_not) conditional = {
+and 'branch conditional = {
   kwd_if   : kwd_if;
   test     : expr;
   kwd_then : kwd_then;
-  if_so    : 'if_so;
-  if_not   : (kwd_else * 'if_not) option
+  if_so    : 'branch;
+  if_not   : (kwd_else * 'branch) option
 }
 
 (* Interation over integer intervals *)
@@ -524,7 +524,7 @@ and expr =
 | E_CodeInj   of code_inj reg
 | E_Ctor      of ctor                          (* Empty           *)
 | E_Equal     of equal bin_op reg              (* x = y           *)
-| E_Cond      of (expr, expr) conditional reg
+| E_Cond      of expr conditional reg
 | E_Cons      of sharp bin_op reg              (* head :: tail    *)
 | E_Div       of slash bin_op reg              (* x / y           *)
 | E_Fun       of fun_expr reg                  (* fun x -> x      *)
