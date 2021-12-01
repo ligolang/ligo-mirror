@@ -57,7 +57,7 @@ and compile_declaration ~raise : hole:I.expression -> Mod_env.t -> I.declaration
         aggregate (binder, mod_as_record, attr) ~new_env:env'
       )
       | I.Module_alias { alias ; binders } -> (
-        let access = module_access_to_record_access mod_env binders in
+        let access = module_access_to_record_access mod_env binders [] in
         let attr = known_attributes_for_modules None in
         let env',alias = Mod_env.add ~loc:hd.location mod_env (alias, access.type_expression) in
         aggregate (alias, access, attr) ~new_env:env'
@@ -111,7 +111,7 @@ and module_to_record ~raise : Mod_env.t -> ?acc:(binder_repr * label * O.express
         aggregate ((binder,Some module_binder), mod_as_record, attr) ~new_env:mod_env
       )
       | I.Module_alias { alias ; binders } -> (
-        let access = module_access_to_record_access mod_env binders in
+        let access = module_access_to_record_access mod_env binders [] in
         let attr = known_attributes_for_modules None in
         let mod_env,binder = Mod_env.add ~loc:hd.location mod_env (alias, access.type_expression) in
         aggregate ((binder,Some alias), access, attr) ~new_env:mod_env
@@ -222,19 +222,24 @@ and compile_expression ~raise : Mod_env.t -> I.expression -> O.expression =
       return @@ O.E_constant { cons_name ; arguments }
     )
     | I.E_module_accessor { module_name; element} -> (
-      let rec aux : string List.Ne.t -> I.expression -> string List.Ne.t =
-        fun acc exp ->
+      let rec aux : string List.Ne.t -> (O.type_expression * O.type_expression) list -> I.expression -> string List.Ne.t * (O.type_expression * O.type_expression) list =
+        fun acc_path acc_types exp ->
           match exp.expression_content with
           | E_module_accessor {module_name ; element} ->
-            let acc = Simple_utils.List.Ne.cons module_name acc in
-            aux acc element
+            let acc_path = Simple_utils.List.Ne.cons module_name acc_path in
+            aux acc_path acc_types element
           | E_variable v ->
             let (name,_int_opt) = Var.internal_get_name_and_counter v.wrap_content in (* feels wrong *)
-            Simple_utils.List.Ne.cons name acc
+            Simple_utils.List.Ne.cons name acc_path, acc_types
+          | E_type_inst { forall ; type_ } ->
+            let type_ = compile_type ~raise mod_env type_ in
+            let exp_ty = compile_type ~raise mod_env exp.type_expression in
+            aux acc_path ((type_, exp_ty) :: acc_types) forall
           | _ -> failwith "TODO: corner case, not allowed in the syntax"
       in
-      let path = List.Ne.rev (aux (List.Ne.of_list [module_name]) element) in
-      module_access_to_record_access mod_env path
+      let path, types = aux (List.Ne.of_list [module_name]) [] element in
+      let path = List.Ne.rev path in
+      module_access_to_record_access mod_env path types
     )
     | I.E_mod_in { module_binder ; rhs ; let_result } -> (
       let mod_as_record =
@@ -246,7 +251,7 @@ and compile_expression ~raise : Mod_env.t -> I.expression -> O.expression =
       return @@ O.e_let_in binder mod_as_record let_result (known_attributes_for_modules None)
     )
     | I.E_mod_alias { alias ; binders ; result } -> (
-      let access = module_access_to_record_access mod_env binders in
+      let access = module_access_to_record_access mod_env binders [] in
       let (env',alias) = Mod_env.add ~loc:Location.generated mod_env (alias, access.type_expression) in
       let result = compile_expression ~raise env' result in
       let attr = known_attributes_for_modules None in
@@ -272,7 +277,7 @@ and compile_cases ~raise : Mod_env.t -> I.matching_expr -> O.matching_expr =
       Match_record {fields; body; tv}
 
 (* morph a module access (A.B.C) to a record access (a.b.c) *)
-and module_access_to_record_access : Mod_env.t -> string List.Ne.t -> O.expression = fun mod_env (fst,path) ->
+and module_access_to_record_access : Mod_env.t -> string List.Ne.t -> (O.type_expression * O.type_expression) list -> O.expression = fun mod_env (fst,path) _types ->
   let f : O.expression -> string -> O.expression =
     fun prev module_name ->
       let label = Label module_name in
@@ -283,7 +288,8 @@ and module_access_to_record_access : Mod_env.t -> string List.Ne.t -> O.expressi
   in
   let (t,binder) = Mod_env.find mod_env fst in
   let init = O.e_a_variable binder t in
-  List.fold_left path ~f ~init
+  let expr = List.fold_left path ~f ~init in
+  List.fold_right ~f:(fun (t, u) e -> O.e_a_type_inst e t u) ~init:expr (List.rev _types)
 
 and record_of_binders : (binder_repr * label *  O.expression) list -> O.expression =
   fun lst ->
