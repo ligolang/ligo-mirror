@@ -615,21 +615,11 @@ module T =
 
     (* FROM TOKEN STRINGS TO LEXEMES *)
 
-    (* TODO: Remove. We don't need fresh variables for syntax checking.
-
-`   let gen_sym prefix =
-      let count = ref 0 in
-      fun () -> incr count; prefix ^ string_of_int !count
-
-    let id_sym   = gen_sym "id"
-    and ctor_sym = gen_sym "C"
-     *)
-
     let concrete = function
       (* Literals *)
 
-      "Ident"    -> "x" (*id_sym ()*)
-    | "UIdent"   -> "C" (*ctor_sym ()*)
+      "Ident"    -> "x"
+    | "UIdent"   -> "C"
     | "Int"      -> "1"
     | "Nat"      -> "1n"
     | "Mutez"    -> "1mutez"
