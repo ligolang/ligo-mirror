@@ -43,9 +43,9 @@ let terminator = function
   | Terse -> Some Token.ghost_semi
   | Verbose -> None
 let lead_vbar = terminator
-let brackets = CST.Brackets (Token.ghost_lbracket, Token.ghost_rbracket)
+let enclosing_brackets = CST.Brackets (Token.ghost_lbracket, Token.ghost_rbracket)
 let enclosing = function
-  | Terse -> brackets
+  | Terse -> enclosing_brackets
   | Verbose -> CST.End Token.ghost_end
 let block_enclosing = function
   | Terse -> CST.Braces (None, Token.ghost_lbrace, Token.ghost_rbrace)
@@ -110,7 +110,7 @@ let rec decompile_type_expr : dialect -> AST.type_expression -> CST.type_expr = 
     let elements = list_to_sepseq ~sep:(Token.ghost_semi) record in
     let attributes = decompile_attributes attributes in
     let compound : CST.field_decl CST.reg CST.compound =
-      { kind = Token.ghost_record ; enclosing = brackets ; elements ; terminator = None ; attributes }
+      { kind = Token.ghost_record ; enclosing = enclosing_brackets ; elements ; terminator = None ; attributes }
     in
     return @@ CST.T_Record (Region.wrap_ghost compound)
   | T_tuple tuple ->
@@ -396,13 +396,13 @@ and decompile_eos : dialect -> eos -> AST.expression -> ((CST.statement List.Ne.
   | E_raw_code {language; code} ->
     let language = Region.wrap_ghost @@ Region.wrap_ghost @@ language in
     let code = decompile_expression ~dialect code in
-    let ci : CST.code_inj = {language;code;rbracket=Wrap.ghost ""} in
-    return_expr @@ CST.ECodeInj (Region.wrap_ghost ci)
+    let ci : CST.code_inj = {language;code;rbracket=Token.ghost_rbracket} in
+    return_expr @@ CST.E_CodeInj (Region.wrap_ghost ci)
   | E_constructor {constructor;element} ->
     let Label constr = constructor in
-    let constr = Region.wrap_ghost constr in
+    let constr = Wrap.ghost constr in
     let element = decompile_to_tuple_expr dialect @@ get_e_tuple element in
-    return_expr_with_par @@ CST.EConstr (Region.wrap_ghost (constr, Some element))
+    return_expr_with_par @@ CST.E_App (Region.wrap_ghost (CST.E_Ctor constr, Some element))
   | E_matching {matchee; cases} -> (
     let expr  = decompile_expression ~dialect matchee in
     let enclosing = enclosing dialect in
@@ -411,78 +411,81 @@ and decompile_eos : dialect -> eos -> AST.expression -> ((CST.statement List.Ne.
       fun ({ pattern ; body }:(AST.expression, AST.type_expression) AST.match_case) ->
         let pattern = decompile_pattern dialect pattern in
         let rhs = decompile_f body in
-        let clause : (_ CST.case_clause)= { pattern ; arrow = Wrap.ghost "" ; rhs } in
+        let clause : (_ CST.case_clause)= { pattern ; arrow = Token.ghost_arrow ; rhs } in
         (Region.wrap_ghost clause)
     in
     match output with
     | Expression ->
       let cases = List.map ~f:(aux (decompile_expression ~dialect)) cases in
-      let cases = list_to_nsepseq cases in
-      let cases : _ CST.case = {kwd_case=Wrap.ghost "";expr;kwd_of=Wrap.ghost "";enclosing;lead_vbar;cases = Region.wrap_ghost cases} in
-      return_expr @@ CST.ECase (Region.wrap_ghost cases)
+      let cases = list_to_nsepseq ~sep:Token.ghost_vbar cases in
+      let cases : _ CST.case = {kwd_case=Token.ghost_case;expr;kwd_of=Token.ghost_of;enclosing;lead_vbar;cases} in
+      return_expr @@ CST.E_Case (Region.wrap_ghost cases)
     | Statements ->
       let cases = List.map ~f:(aux (decompile_if_clause dialect)) cases in
-      let cases = list_to_nsepseq cases in
-      let cases : _ CST.case = {kwd_case=Wrap.ghost "";expr;kwd_of=Wrap.ghost "";enclosing;lead_vbar;cases = Region.wrap_ghost cases} in
-      return_inst @@ CST.CaseInstr (Region.wrap_ghost cases)
+      let cases : (CST.test_clause CST.case_clause CST.reg, CST.vbar) Utils.nsepseq = list_to_nsepseq ~sep:Token.ghost_vbar cases in
+      let cases : CST.test_clause CST.case = {kwd_case=Token.ghost_case;expr;kwd_of=Token.ghost_of;enclosing;lead_vbar;cases} in
+      return_inst @@ CST.I_Case (Region.wrap_ghost cases)
   )
   | E_record record  ->
     let record = AST.LMap.to_kv_list record in
     let aux (AST.Label str, expr) =
-      let field_name = Region.wrap_ghost str in
-      let field_expr = decompile_expression ~dialect expr in
-      let field : CST.field_assignment = {field_name;assignment=Wrap.ghost "";field_expr} in
+      let field_name = Wrap.ghost str in
+      let field_rhs = decompile_expression ~dialect expr in
+      let field : (CST.expr , CST.expr) CST.field =
+        Complete {field_lhs = E_Var field_name ; assign=Token.ghost_ass;field_rhs;attributes=[]}
+      in
       Region.wrap_ghost field
     in
     let record = List.map ~f:aux record in
-    let record = list_to_nsepseq record in
-    let record = inject ~attr:[] dialect (NEInjRecord (Wrap.ghost "")) record in
-    (* why is the record not empty ? *)
-    return_expr @@ CST.ERecord (Region.wrap_ghost record)
-  | E_accessor {record; path} ->
-    (match List.rev path with
+    let record = list_to_sepseq ~sep:Token.ghost_semi record in
+    let record = inject dialect Token.ghost_record [] record in
+    return_expr @@ CST.E_Record (Region.wrap_ghost record)
+  | E_accessor {record; path} -> (
+    match List.rev path with
       Access_map e :: [] ->
       let (var,lst) = get_e_accessor @@ record in
-      let path = decompile_to_path var lst in
+      let map = decompile_to_path var lst in
       let e = decompile_expression ~dialect e in
       let index = Region.wrap_ghost @@ brackets @@ e in
-      let mlu : CST.map_lookup = {path;index} in
-      return_expr @@ CST.EMap(MapLookUp (Region.wrap_ghost @@ mlu))
+      let mlu : CST.map_lookup = {map;index} in
+      return_expr @@ CST.E_MapLookup (Region.wrap_ghost @@ mlu)
     | Access_map e :: lst ->
       let path = List.rev lst in
-      let field_path = list_to_nsepseq @@ List.map ~f:decompile_to_selection path in
-      let struct_name = decompile_variable @@ get_e_variable record in
-      let proj : CST.projection = {struct_name;selector=Wrap.ghost "";field_path} in
-      let path : CST.path = CST.Path (Region.wrap_ghost proj) in
+      let field_path = list_to_nsepseq ~sep:Token.ghost_dot @@ List.map ~f:decompile_to_selection path in
+      let struct_name = CST.E_Var (decompile_variable @@ get_e_variable record) in
+      let proj = CST.{record_or_tuple = struct_name ; selector=Token.ghost_dot ; field_path} in
+      let map = CST.E_Proj (Region.wrap_ghost proj) in
       let e = decompile_expression ~dialect e in
       let index = Region.wrap_ghost @@ brackets @@ e in
-      let mlu : CST.map_lookup = {path;index} in
-      return_expr @@ CST.EMap(MapLookUp (Region.wrap_ghost @@ mlu))
+      let mlu : CST.map_lookup = {map;index} in
+      return_expr @@ CST.E_MapLookup (Region.wrap_ghost @@ mlu)
     | _ ->
-      let field_path = list_to_nsepseq @@ List.map ~f:decompile_to_selection path in
-       let struct_name = decompile_variable @@ get_e_variable record in
-      let proj : CST.projection = {struct_name;selector=Wrap.ghost "";field_path} in
-      return_expr @@ CST.EProj (Region.wrap_ghost proj)
-    )
+      let field_path = list_to_nsepseq ~sep:Token.ghost_dot @@ List.map ~f:decompile_to_selection path in
+      let record_or_tuple = CST.E_Var (decompile_variable @@ get_e_variable record) in
+      let proj = CST.{record_or_tuple ; selector=Token.ghost_dot ; field_path} in
+      return_expr @@ CST.E_Proj (Region.wrap_ghost proj)
+  )
   (* Update on multiple field of the same record. may be removed by adding sugar *)
   | E_update {record={expression_content=E_update _;_} as record;path;update} ->
     let record = decompile_expression ~dialect record in
-    let (record,updates) = match record with
-      CST.EUpdate {value;_} -> (value.record,value.updates)
-    | _ -> failwith @@ Format.asprintf "Inpossible case %a" AST.PP.expression expr
+    let (record,updates) =
+      match record with
+      | CST.E_Update {value;_} -> (value.structure,value.update)
+      | _ -> failwith @@ Format.asprintf "Inpossible case %a" AST.PP.expression expr
     in
-    let var,path = match path with
-      Access_record var::path -> (var,path)
-    | _ -> failwith "Impossible case %a"
+    let var,path =
+      match path with
+      | Access_record var::path -> (var,path)
+      | _ -> failwith "Impossible case %a"
     in
     let field_path = decompile_to_path (Location.wrap @@ Var.of_name var) path in
     let field_expr = decompile_expression ~dialect update in
-    let field_assign : CST.field_path_assignment = {field_path;assignment=Wrap.ghost "";field_expr} in
+    let field_assign : CST.update = {field_path ; assignment=Token.ghost_with ; field_expr} in
     let updates = updates.value.ne_elements in
     let updates = Region.wrap_ghost @@ inject ~attr:[] dialect (NEInjRecord (Wrap.ghost ""))
                   @@ npseq_cons (Region.wrap_ghost @@ field_assign) updates in
     let update : CST.update = {record;kwd_with=Wrap.ghost "";updates} in
-    return_expr @@ CST.EUpdate (Region.wrap_ghost @@ update)
+    return_expr @@ CST.E_Update (Region.wrap_ghost @@ update)
   | E_update {record; path; update} ->
     let record = decompile_variable @@ get_e_variable record in
     let field_expr = decompile_expression ~dialect update in
@@ -623,7 +626,7 @@ and decompile_eos : dialect -> eos -> AST.expression -> ((CST.statement List.Ne.
     let loop : CST.while_loop = {kwd_while=Wrap.ghost "";cond;block} in
     return_inst @@ CST.Loop (While (Region.wrap_ghost loop))
 
-and decompile_if_clause : dialect -> AST.expression -> (CST.expr CST.case_clause CST.reg, CST.vbar) Utils.nsepseq = fun dialect e ->
+and decompile_if_clause : dialect -> AST.expression -> CST.test_clause = fun dialect e ->
   let clause = decompile_statements dialect e in
   match clause with
     CST.Instr instr,[] ->
