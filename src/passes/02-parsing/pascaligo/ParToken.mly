@@ -33,7 +33,7 @@
 
 (* Literals *)
 
-%token         <LexerLib.Directive.t> Directive "<directive>" [@recover.expr ghost_Linemarker]
+%token         <LexerLib.Directive.t> Directive "<directive>" [@recover.expr ghost_linemarker]
 %token                <string Wrap.t> String    "<string>"    [@recover.expr ghost_string]
 %token                <string Wrap.t> Verbatim  "<verbatim>"  [@recover.expr ghost_verbatim]
 %token      <(string * Hex.t) Wrap.t> Bytes     "<bytes>"     [@recover.expr ghost_bytes]
