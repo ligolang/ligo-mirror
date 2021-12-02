@@ -11,29 +11,52 @@
 %[@recover.prelude
   (* See [dune] file for [-open] flags for modules used in the
      semantic value of tokens, like [Wrap]. *)
+
   module Directive = LexerLib.Directive
-  module Region = Simple_utils.Region
-  module Token = Lexing_jsligo.Token
+  module Region    = Simple_utils.Region
+  module Token     = Lexing_jsligo.Token
+
+  (* Ghosty semantic values for inserted tokens *)
+
+
+  let ghost_block_com  = Token.ghost_block_com
+  let ghost_line_com   = Token.ghost_line_com
+  let ghost_linemarker = Directive.ghost_Linemarker
+  let ghost_string     = Token.ghost_string   "ghost string"
+  let ghost_verbatim   = Token.ghost_verbatim "ghost verbatim"
+  let ghost_bytes      = Token.ghost_bytes    (Hex.of_string "Ghost bytes")
+  let ghost_int        = Token.ghost_int      Z.zero
+(*
+  let ghost_nat        = Token.ghost_nat      Z.zero
+  let ghost_mutez      = Token.ghost_mutez    Int64.zero
+*)
+  let ghost_ident      = Token.ghost_ident    "ghost_ident"
+  let ghost_uident     = Token.ghost_uident   "Ghost_uident"
+  let ghost_attr       = Token.ghost_attr     "ghost_attr"
+(*
+  let ghost_lang       = Token.ghost_lang     "Ghost_lang"
+*)
  ]
 
 (* Literals *)
 
-%token         <LexerLib.Directive.t> Directive "<directive>" [@recover.expr Directive.ghost_Linemarker]
-%token             <string Wrap.wrap> BlockCom  "<block_comment>" [@recover.expr Token.ghost_block_com]
-%token             <string Wrap.wrap> LineCom   "<line_comment>"  [@recover.expr Token.ghost_line_com]
-%token                <string Wrap.t> String    "<string>"        [@recover.expr Token.ghost_string]
-%token                <string Wrap.t> Verbatim  "<verbatim>"      [@recover.expr Token.ghost_verbatim]
-%token      <(string * Hex.t) Wrap.t> Bytes     "<bytes>"         [@recover.expr Token.ghost_bytes]
-%token        <(string * Z.t) Wrap.t> Int       "<int>"           [@recover.expr Token.ghost_int]
+%token             <string Wrap.wrap> BlockCom  "<block_comment>" [@recover.expr ghost_block_com]
+%token             <string Wrap.wrap> LineCom   "<line_comment>"  [@recover.expr ghost_line_com]
+
+%token         <LexerLib.Directive.t> Directive "<directive>" [@recover.expr ghost_linemarker]
+%token                <string Wrap.t> String    "<string>"    [@recover.expr ghost_string]
+%token                <string Wrap.t> Verbatim  "<verbatim>"  [@recover.expr ghost_verbatim]
+%token      <(string * Hex.t) Wrap.t> Bytes     "<bytes>"     [@recover.expr ghost_bytes]
+%token        <(string * Z.t) Wrap.t> Int       "<int>"       [@recover.expr ghost_int]
 (*
-%token        <(string * Z.t) Wrap.t> Nat       "<nat>"           [@recover.expr Token.ghost_nat]
-%token    <(string * Int64.t) Wrap.t> Mutez     "<mutez>"         [@recover.expr Token.ghost_mutez]
+%token        <(string * Z.t) Wrap.t> Nat       "<nat>"       [@recover.expr ghost_nat]
+%token    <(string * Int64.t) Wrap.t> Mutez     "<mutez>"     [@recover.expr ghost_mutez]
 *)
-%token                <string Wrap.t> Ident     "<ident>"         [@recover.expr Token.ghost_ident]
-%token                <string Wrap.t> UIdent    "<uident>"        [@recover.expr Token.ghost_uident]
-%token            <Attr.t Region.reg> Attr      "[@attr]"         [@recover.expr Token.ghost_attr]
+%token                <string Wrap.t> Ident     "<ident>"     [@recover.expr ghost_ident]
+%token                <string Wrap.t> UIdent    "<uident>"    [@recover.expr ghost_uident]
+%token            <Attr.t Region.reg> Attr      "[@attr]"     [@recover.expr ghost_attr]
 (*
-%token <string Region.reg Region.reg> Lang      "[%lang"          [@recover.expr Token.ghost_lang]
+%token <string Region.reg Region.reg> Lang      "[%lang"      [@recover.expr ghost_lang]
 *)
 
 (* Symbols *)
