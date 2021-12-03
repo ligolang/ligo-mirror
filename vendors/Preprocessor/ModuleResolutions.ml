@@ -43,13 +43,39 @@ module JsonHelpers = struct
     try Some (Yojson.Basic.from_file file) with _ -> None
 end
 
+module Path = struct
+  type t = Fpath.t option
+
+  let v : string -> t = fun s -> try Some (Fpath.v s) with _ -> None
+
+  let dir_sep = Fpath.dir_sep
+
+  let segs : t -> string list option = fun t -> Option.map Fpath.segs t
+
+  let is_prefix : string option -> string option -> bool = 
+    fun prefix p ->
+      let prefix = Option.bind prefix v in
+      let p      = Option.bind p v in
+      match prefix, p with
+        Some prefix, Some p -> 
+          Fpath.is_prefix prefix p
+      | _ -> false 
+
+  let is_abs : t -> bool = function Some p -> Fpath.is_abs p | None -> false
+
+  let normalize : t -> t = Option.map Fpath.normalize
+
+  let to_string_opt : t -> string option = Option.map Fpath.to_string
+
+end
+
 let clean_installation_json installation_json =
   match installation_json with
     None -> None
   | Some installation_json -> let open Yojson.Basic in
     let keys = Util.keys installation_json in
     let values = Util.values installation_json in
-    Stdlib.List.fold_left2 
+    List.fold_left2 
       (fun m key value -> 
         Option.bind m (fun m -> 
           let value = JsonHelpers.string value in
@@ -66,7 +92,7 @@ let clean_lock_file_json lock_json =
     let node = Util.member "node" lock_json in
     let keys = Util.keys node in
     let values = Util.values node in
-    let node = Stdlib.List.fold_left2
+    let node = List.fold_left2
       (fun m key value ->
         let dependencies = Util.member "dependencies" value in  
         let dependencies = JsonHelpers.string_list dependencies in
@@ -109,10 +135,10 @@ let find_dependencies (lock_file : lock_file) =
   dfs root (Some SMap.empty)
   
 let installation_json_path path = 
-  path ^ Fpath.dir_sep ^ "_esy/default/installation.json"
+  path ^ Path.dir_sep ^ "_esy/default/installation.json"
 
 let lock_file_path path =
-  path ^ Fpath.dir_sep ^ "esy.lock/index.json"
+  path ^ Path.dir_sep ^ "esy.lock/index.json"
 
 let make project_path : t option =
   let installation_json = installation_json_path project_path 
@@ -148,16 +174,19 @@ let get_root_inclusion_list (module_resolutions : t option) =
   | None -> []
 
 let get_absolute_path path = 
-  let path' = Fpath.v path in
-  if Fpath.is_abs path' then path
-  else Fpath.v ((Sys.getcwd ()) ^ Fpath.dir_sep ^ path) |> Fpath.normalize |> Fpath.to_string
+  let path' = Path.v path in
+  if Path.is_abs path' then Some path
+  else 
+    Path.v ((Sys.getcwd ()) ^ Path.dir_sep ^ path) 
+      |> Path.normalize 
+      |> Path.to_string_opt
 
 let get_inclusion_list ~file (module_resolutions : t option) =
   match module_resolutions with
     Some module_resolutions ->
       let path = get_absolute_path file in
       (match List.find_opt (fun (mod_path, _) -> 
-          Fpath.is_prefix (Fpath.v mod_path) (Fpath.v path)
+        Path.is_prefix (Some mod_path) path
         ) module_resolutions.resolutions 
       with
         Some (_,paths) -> paths
@@ -195,24 +224,27 @@ let find_external_file ~file ~inclusion_list =
     in
     s2 >= s1 && aux 0
   in
-  let segs = Fpath.segs @@ Fpath.v file in
-  if List.length segs > 1 then
-    let file_name = String.concat Filename.dir_sep (List.tl segs) in
-    let pkg_name = (List.hd @@ segs) in
-    let normalized_pkg_name = pkg_name
-      |> String.split_on_char '_'
-      |> String.concat "__"
-      |> String.split_on_char '-' 
-      |> String.concat "_" in
-    let dir = List.find_opt (fun dir ->
-      let basename = Filename.basename dir in
-      let found = starts_with ~prefix:normalized_pkg_name basename  in
-      if not found 
-      then starts_with ~prefix:pkg_name basename 
-      else found
-    ) inclusion_list in
-    Option.map (fun dir -> 
-      let path = dir ^ Filename.dir_sep ^ file_name in
-      path
-    ) dir
-  else None
+  let segs = Path.segs (Path.v file) in
+  Option.bind segs (fun segs -> 
+    match segs with
+      pkg_name::file_name -> 
+        let file_name = String.concat Filename.dir_sep (List.tl segs) in
+        let pkg_name = (List.hd segs) in
+        let normalized_pkg_name = pkg_name
+          |> String.split_on_char '_'
+          |> String.concat "__"
+          |> String.split_on_char '-' 
+          |> String.concat "_" in
+        let dir = List.find_opt (fun dir ->
+          let basename = Filename.basename dir in
+          let found = starts_with ~prefix:normalized_pkg_name basename  in
+          if not found 
+          then starts_with ~prefix:pkg_name basename 
+          else found
+        ) inclusion_list in
+        Option.map (fun dir -> 
+          let path = dir ^ Filename.dir_sep ^ file_name in
+          path
+        ) dir
+    | _ -> None
+  )
