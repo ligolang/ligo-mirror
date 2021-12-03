@@ -523,7 +523,10 @@ rule scan state = parse
         else scan state lexbuf
     | "import" ->
         let reg, import_file, imported_module = scan_import state lexbuf in
-        let file = Lexing.(lexbuf.lex_curr_p.pos_fname) in
+        let file = match state.parent with
+          Some parent -> parent
+        | None        -> Lexing.(lexbuf.lex_curr_p.pos_fname)
+        in
         if state.mode = Copy then
           let path = mk_path state in
           let external_dirs = ModuleResolutions.get_inclusion_list ~file state.config#module_resolutions in

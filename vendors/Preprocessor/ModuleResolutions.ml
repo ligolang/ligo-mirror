@@ -184,7 +184,6 @@ let get_inclusion_list ~file (module_resolutions : t option) =
    We find the path with the longest prefix, once the package path is
    identified, the file path is package path / rest of path
 *)
-(* TODO: review carefully one last time *)
 let find_external_file ~file ~inclusion_list = 
   let starts_with ~prefix s =
     let s1 = String.length prefix in
@@ -206,7 +205,7 @@ let find_external_file ~file ~inclusion_list =
       |> String.split_on_char '-' 
       |> String.concat "_" in
     let dir = List.find_opt (fun dir ->
-      let basename = (Fpath.basename @@ Fpath.v dir) in
+      let basename = Filename.basename dir in
       let found = starts_with ~prefix:normalized_pkg_name basename  in
       if not found 
       then starts_with ~prefix:pkg_name basename 
