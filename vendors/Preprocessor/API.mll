@@ -244,11 +244,15 @@ let find dir file dirs inclusion_list =
   try Some (path, open_in path) with
     Sys_error _ ->
       let base = Filename.basename file in
-      if base = file 
-      then find file dirs 
+      if base = file then find file dirs 
       else 
-        let file_opt = ModuleResolutions.find_external_file ~file ~inclusion_list in
-        Option.map (fun file -> (file, open_in file)) file_opt
+        let file_opt = 
+          ModuleResolutions.find_external_file ~file ~inclusion_list in
+        match file_opt with
+          Some file -> 
+            (try Some (file, open_in file) with 
+              Sys_error _ -> None)
+        | None -> None
 
 (* PRINTING *)
 
