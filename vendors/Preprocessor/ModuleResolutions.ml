@@ -199,14 +199,18 @@ let find_external_file ~file ~inclusion_list =
   let segs = Fpath.segs @@ Fpath.v file in
   if List.length segs > 1 then
     let file_name = String.concat Filename.dir_sep (List.tl segs) in
-    let pkg_name = (List.hd @@ segs) 
+    let pkg_name = (List.hd @@ segs) in
+    let normalized_pkg_name = pkg_name
       |> String.split_on_char '_'
       |> String.concat "__"
       |> String.split_on_char '-' 
       |> String.concat "_" in
     let dir = List.find_opt (fun dir ->
       let basename = (Fpath.basename @@ Fpath.v dir) in
-      starts_with ~prefix:pkg_name basename 
+      let found = starts_with ~prefix:normalized_pkg_name basename  in
+      if not found 
+      then starts_with ~prefix:pkg_name basename 
+      else found
     ) inclusion_list in
     Option.map (fun dir -> 
       let path = dir ^ Filename.dir_sep ^ file_name in
