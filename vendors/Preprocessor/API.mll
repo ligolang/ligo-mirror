@@ -88,6 +88,7 @@ type state = {
   chans  : in_channel list;
   incl   : file_path list;
   import : (file_path * module_name) list;
+  parent : file_path option;
 }
 
 (* Directories *)
@@ -493,10 +494,14 @@ rule scan state = parse
         and file = Lexing.(lexbuf.lex_curr_p.pos_fname) in
         let base = Filename.basename file
         and reg, incl_file = scan_include state lexbuf in
+        let parent = match state.parent with
+          Some parent -> parent
+        | None        -> file
+        in
         if state.mode = Copy then
           let incl_dir = Filename.dirname incl_file in
           let path = mk_path state in
-          let external_dirs = ModuleResolutions.get_inclusion_list ~file state.config#module_resolutions in
+          let external_dirs = ModuleResolutions.get_inclusion_list ~file:parent state.config#module_resolutions in
           let incl_path, incl_chan =
             match find path incl_file state.config#dirs external_dirs with
               Some p -> p
@@ -506,9 +511,9 @@ rule scan state = parse
           let () =
             let open Lexing in
             incl_buf.lex_curr_p <-
-              {incl_buf.lex_curr_p with pos_fname = incl_path} in
+              {incl_buf.lex_curr_p with pos_fname = incl_file} in
           let state  = {state with chans = incl_chan::state.chans} in
-          let state' = {state with mode=Copy; trace=[]} in
+          let state' = {state with mode=Copy; trace=[]; parent=Some incl_path} in
           let state' = scan (push_dir incl_dir state') incl_buf in
           let state  = {state with env=state'.env; chans=state'.chans;import=state'.import} in
           let path   = if path = "" || path = "." then base
@@ -796,7 +801,8 @@ let from_lexbuf config buffer =
     out    = Buffer.create 80;
     chans  = [];
     incl   = [Filename.dirname path];
-    import = []
+    import = [];
+    parent = None;
   } in
   match preproc state buffer with
     state ->
