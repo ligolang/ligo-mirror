@@ -13,7 +13,7 @@ let compile_program ~raise : Ast_typed.module_fully_typed -> Ast_typed.expressio
     (fun hole -> Compiler.compile ~raise hole prg)
 
 let compile_type ~raise : Ast_typed.type_expression -> Ast_aggregated.type_expression =
-  fun ty -> Compiler.compile_type ~raise Compiler.Mod_env.empty ty
+  fun ty -> Compiler.compile_type ~raise ty
 
 
 let rec decompile ~raise : Ast_aggregated.expression -> Ast_typed.expression =

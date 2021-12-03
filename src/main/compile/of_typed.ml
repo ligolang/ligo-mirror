@@ -10,9 +10,12 @@ let compile_program ~raise : Ast_typed.module_fully_typed -> Ast_typed.expressio
 
 let compile_expression_in_context : Ast_typed.expression -> Ast_typed.expression Ast_aggregated.program -> Ast_aggregated.expression =
   fun exp prg ->
-    Aggregation.compile_expression_in_context exp prg
+    let x = Aggregation.compile_expression_in_context exp prg in
+    Self_ast_aggregated.monomorphise_expression x
+
 let compile_expression ~raise : Ast_typed.expression -> Ast_aggregated.expression = fun e ->
-  trace ~raise aggregation_tracer @@ compile_expression e
+  let x = trace ~raise aggregation_tracer @@ compile_expression e in
+  Self_ast_aggregated.monomorphise_expression x
 
 let compile_type ~raise : Ast_typed.type_expression -> Ast_aggregated.type_expression = fun e ->
   trace ~raise aggregation_tracer @@ compile_type e
