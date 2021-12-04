@@ -141,9 +141,9 @@ and print_ret_type (node : type_annotation option) =
                      ^^ string " is"))
 
 and print_kwd_recursive (node : lexeme Wrap.t) =
-  match kwd_recursive with
-    None -> string "function"
-  | Some _ -> string "recursive" ^/^ string "function"
+  if kwd_recursive = None then
+    string "function"
+  else string "recursive" ^/^ string "function"
 
 and print_parameters p = print_nsepseq ";" print_param_decl p
 
@@ -154,10 +154,10 @@ and print_param_decl (node : param_decl) =
   | `Const _ -> print_param "const" var param_type
 
 and print_param thread var param_type =
-  let name = string (thread ^ " ") ^^ print_variable var in
+  let thread = string (thread ^ " ") ^^ print_variable var in
   match param_type with
-    None -> name
-  | Some (_, e) -> (name ^^ string " :") ^//^ print_type_expr e
+    None -> thread
+  | Some (_, e) -> (thread ^^ string " :") ^//^ print_type_expr e
 
 and print_variable (node : variable) =
   let {variable; attributes} = value in
@@ -231,12 +231,12 @@ and print_type_tuple (node : type_tuple) =
   let node = node.value in
   let head, tail = node.inside in
   let rec app = function
-    []  -> empty
-  | [e] -> group (break 1 ^^ print_type_expr e)
-  | e::items ->
-      group (break 1 ^^ print_type_expr e ^^ string ",") ^^ app items in
+    []       -> empty
+  | [e]      -> group (break 1 ^^ print_type_expr e)
+  | e::items -> group (break 1 ^^ print_type_expr e ^^ string ",")
+                ^^ app items in
   let components =
-    if tail = []
+    if   tail = []
     then print_type_expr head
     else print_type_expr head ^^ string "," ^^ app (List.map snd tail)
   in string "(" ^^ nest 1 (components ^^ string ")")
@@ -244,25 +244,25 @@ and print_type_tuple (node : type_tuple) =
 (* Cartesian type *)
 
 and print_T_Cart (node : cartesian) =
-  let head, tail = node.value in
+  let head, _, tail = node.value in
   let rec app = function
-    []  -> empty
-  | [e] -> group (break 1 ^^ print_type_expr e)
+    []       -> empty
+  | [e]      -> group (break 1 ^^ print_type_expr e)
   | e::items -> group (break 1 ^^ print_type_expr e ^^ string " *")
-               ^^ app items
+                ^^ app items
   in print_type_expr head ^^ string " *" ^^ app (Utils.nsepseq_to_list tail)
 
 (* Functional type *)
 
-and print_T_Fun {value; _} =
-  let lhs, _, rhs = value in
+and print_T_Fun (node : (type_expr * arrow * type_expr) reg) =
+  let lhs, _, rhs = node.value in
   group (print_type_expr lhs ^^ string " ->" ^/^ print_type_expr rhs)
 
 (* Integer type *)
 
-and print_T_Int node = print_int node
+and print_T_Int (node :  (lexeme * Z.t) wrap) = print_int node
 
-(* Module paths *)
+(* Module path *)
 
 and print_T_ModPath (node : type_expr module_path reg) =
   print_module_path print_type_expr node
@@ -276,54 +276,69 @@ and print_module_path
     let modules     = Utils.nsepseq_to_list module_path
     and sep         = string "." ^^ break 0 in
     let modules     = separate_map sep print_ident fields in
-    group (modules ^^ string "." ^^ break 0 ^^ print field)
+    group (modules ^^ sep ^^ print field)
 
-(* XXX *)
+(* Type variable *)
 
-and print_T_Var node = print_ident node
+and print_T_Var (node : variable) = print_ident node
 
-and print_T_String node = print_string node
+(* Type string *)
 
-and print_T_Sum {value; _} =
-  let {variants; attributes; _} = value in
-  let head, tail = variants in
-  let head = print_variant head in
-  let padding_flat =
-    if attributes = [] then empty else string "| " in
-  let padding_non_flat =
+and print_T_String (node : lexeme wrap) = print_string node
+
+(* Sum type *)
+
+and print_T_Sum (node : sum_type reg) =
+  let node = node.value in
+  let head, tail = node.variants
+  and attributes = node.attributes in
+  let head = print_variant head
+  and padding_flat =
+    if attributes = [] then empty else string "| "
+  and padding_non_flat =
     if attributes = [] then blank 2 else string "| " in
   let head =
     if tail = [] then head
-    else ifflat (padding_flat ^^ head) (padding_non_flat ^^ head) in
-  let rest = List.map snd tail in
-  let app variant =
+    else ifflat (padding_flat ^^ head) (padding_non_flat ^^ head)
+  and tail = List.map snd tail
+  and app variant =
     group (break 1 ^^ string "| " ^^ print_variant variant) in
-  let whole = head ^^ concat_map app rest in
-  if attributes = [] then whole
-  else group (print_attributes attributes ^/^ whole)
+  let thread = head ^^ concat_map app tail
+  in print_attributes thread attributes
 
-and print_variant {value; _} =
-  let {ctor; args; attributes=attr} = value in
-  let pre = if attr = [] then print_ident constr
-            else group (print_attributes attr ^/^ print_ident ctor) in
+and print_variant (node : variant reg) =
+  let node       = node.value in
+  let ctor       = node.ctor
+  and args       = node.args
+  and attributes = node.attributes in
+  let thread     = print_ident ctor in
+  let thread     = print_attributes thread attributes in
   match args with
-    None -> pre
-  | Some (_,e) -> prefix 4 1 (pre ^^ string " of") (print_type_expr e)
+    None -> thread
+  | Some (_,e) -> prefix 4 1 (thread ^^ string " of") (print_type_expr e)
 
-and print_T_Record fields = group (print_compound print_field_decl fields)
+(* Record type *)
 
-and print_field_decl {value; _} =
-  let {field_name; field_type; attributes; _} = value in
-  let attr = print_attributes attributes in
-  let name = if attributes = [] then print_ident field_name
-             else attr ^/^ print_ident field_name in
+and print_T_Record (node : field_decl reg compound reg) =
+  group (print_compound print_field_decl node)
+
+and print_field_decl (node : field_decl reg) =
+  let node       = node.value in
+  let field_name = node.field_name
+  and field_type = node.field_type
+  and attributes = node.attributes in
+  let thread     = print_ident field_name in
+  let thread     = print_attributes thread attributes in
   match field_type with
-    None -> name
-  | Some (_, type_expr) ->
-     let t_expr = print_type_expr type_expr
-     in prefix 2 1 (group (name ^^ string " :")) t_expr
+    None -> thread
+  | Some (_, e) -> (thread ^^ string " :") ^//^ print_type_expr e
 
-and print_T_Par t = print_par print_type_expr t
+(* Parenthesised type *)
+
+and print_T_Par (node : type_expr par reg) =
+  print_par print_type_expr node
+
+(* XXX *)
 
 (* Function and procedure declarations *)
 
