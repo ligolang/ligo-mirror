@@ -7,3 +7,4 @@ module Formatter = Formatter
 module Helpers = Helpers
 module Combinators = Combinators
 module Compare = Compare
+module Types = Types

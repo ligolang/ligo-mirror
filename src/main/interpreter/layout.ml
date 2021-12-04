@@ -1,4 +1,4 @@
-module AST = Ast_typed
+module AST = Ast_aggregated
 module Append_tree = Tree.Append
 open Trace
 open Ligo_interpreter.Types

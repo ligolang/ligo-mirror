@@ -61,7 +61,7 @@ let get_michelson_contract : value -> unit Tezos_utils.Michelson.michelson optio
   | V_Michelson ( Contract x ) -> Some x
   | _ -> None
 
-let get_michelson_expr : value -> (unit Tezos_utils.Michelson.michelson * unit Tezos_utils.Michelson.michelson * Ast_typed.type_expression) option =
+let get_michelson_expr : value -> (unit Tezos_utils.Michelson.michelson * unit Tezos_utils.Michelson.michelson * Ast_aggregated.type_expression) option =
   function
   | V_Michelson ( Ty_code x ) -> Some x
   | _ -> None

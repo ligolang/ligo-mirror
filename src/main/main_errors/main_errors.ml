@@ -27,6 +27,7 @@ let sugaring_tracer (e:Desugaring.Errors.desugaring_error) : all = `Main_sugarin
 let inference_tracer (e:Inference.Errors.typer_error) : all = `Main_inference e
 let checking_tracer (e:Checking.Errors.typer_error) : all = `Main_checking e
 let self_ast_typed_tracer (e:Self_ast_typed.Errors.self_ast_typed_error) : all = `Main_self_ast_typed e
+let self_ast_aggregated_tracer (e:Self_ast_aggregated.Errors.self_ast_aggregated_error) : all = `Main_self_ast_aggregated e
 let self_mini_c_tracer (e:Self_mini_c.Errors.self_mini_c_error) : all = `Main_self_mini_c e
 let spilling_tracer (e:Spilling.Errors.spilling_error) : all = `Main_spilling e
 let aggregation_tracer (e:Aggregation.Errors.aggregation_error) : all = `Main_aggregation e
