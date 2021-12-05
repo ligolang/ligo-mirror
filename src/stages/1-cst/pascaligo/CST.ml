@@ -176,7 +176,7 @@ and fun_decl = {
   kwd_recursive : kwd_recursive option;
   kwd_function  : kwd_function;
   fun_name      : variable;
-  param         : parameters;
+  parameters    : parameters;
   ret_type      : type_annotation option;
   kwd_is        : kwd_is;
   return        : expr;
@@ -614,7 +614,7 @@ and code_inj = {
 
 and fun_expr = {
   kwd_function : kwd_function;
-  param        : parameters;
+  parameters   : parameters;
   ret_type     : type_annotation option;
   kwd_is       : kwd_is;
   return       : expr;

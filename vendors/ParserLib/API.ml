@@ -296,8 +296,8 @@ module Make (Lexer: LEXER)
       struct
         type 'a intermediate_step =
           | Correct of 'a Inter.checkpoint
-            (* [Correct (InputNeeded env)].
-               Other variants of [checkpoint] is considered as invalid intermediate step
+          (* [Correct (InputNeeded env)].  Other variants of
+               [checkpoint] is considered as invalid intermediate step
                because we cannot proceed parsing with new token. *)
           | Recovering of 'a Inter.checkpoint * 'a R.candidates
             (* [Recovering (failure_checkpoint, candidates)]  *)
@@ -306,10 +306,12 @@ module Make (Lexer: LEXER)
           | Intermediate  of 'a intermediate_step
           | Success       of 'a
           | InternalError of string
-            (* returned in impossible match cases or [Merlin_recovery]'s logic error *)
+        (* returned in impossible match cases or [Merlin_recovery]'s
+           logic error *)
 
-        (* Moves parser through [Shifting] and [AboutToReduce] checkpoints like
-           in simple [loop_handle] from MenhirLib. *)
+        (* Moves parser through [Shifting] and [AboutToReduce]
+           checkpoints like in simple [loop_handle] from MenhirLib. *)
+
         let rec check_for_error checkpoint : ('a step, 'a Inter.checkpoint) Stdlib.result =
           match checkpoint with
           | Inter.InputNeeded _ -> Ok (Intermediate (Correct checkpoint))
@@ -318,8 +320,10 @@ module Make (Lexer: LEXER)
           | Inter.Shifting _      | Inter.AboutToReduce _ ->
              check_for_error (Inter.resume checkpoint)
 
-        (* Returns recovered parser after feeding with the [token] or intermediate
-           step with the same candidates and checkpoint if recovery doesn't succeed. *)
+        (* Returns recovered parser after feeding with the [token] or
+           intermediate step with the same candidates and checkpoint
+           if recovery fails. *)
+
         let try_recovery failure_cp candidates token : 'a step =
           begin match R.attempt candidates token with
           | `Ok (Inter.InputNeeded _ as cp, _) -> Intermediate (Correct cp)

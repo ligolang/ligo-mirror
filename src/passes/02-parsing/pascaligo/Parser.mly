@@ -636,7 +636,7 @@ fun_decl:
     let stop   = expr_to_region $8 in
     let region = cover start#region stop
     and value  = {attributes=$1; kwd_recursive=$2; kwd_function=$3;
-                  fun_name=$4; param=$5; ret_type=$6; kwd_is=$7;
+                  fun_name=$4; parameters=$5; ret_type=$6; kwd_is=$7;
                   return=$8; terminator=None}
     in {region; value} }
 
@@ -1053,7 +1053,7 @@ block_with(right_expr):
 fun_expr(right_expr):
   attributes "function" parameters ioption(type_annotation) "is" right_expr {
     let region = cover $2#region (expr_to_region $6)
-    and value  = {kwd_function=$2; param=$3; ret_type=$4;
+    and value  = {kwd_function=$2; parameters=$3; ret_type=$4;
                   kwd_is=$5; return=$6; attributes=$1}
     in {region; value} }
 

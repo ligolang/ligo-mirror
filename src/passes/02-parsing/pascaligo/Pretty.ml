@@ -118,32 +118,32 @@ and print_D_Fun (node : fun_decl reg) =
   and ret_type      = node.ret_type
   and return        = node.return
   and attributes    = node.attributes
+
+  and print_return (node : expr) =
+    let expr = print_expr node in
+    match node with
+      E_Block _ -> break 1 ^^ expr
+    | _         -> nest 2 (break 1 ^^ expr)
+
+  and print_ret_type (node : type_annotation option) =
+    match node with
+      None -> string " is"
+    | Some (_, e) ->
+        let e = nest 2 (print_type_expr e)
+        in nest 2 (break 1 ^^ string ": " ^^ e ^^ string " is")
+
+  and print_kwd_recursive (node : lexeme Wrap.t) =
+    if kwd_recursive = None then
+      string "function"
+    else string "recursive" ^/^ string "function"
   in
-  let thread = print_kwd_recursive kwd_recursive in
+  let thread = group (print_kwd_recursive kwd_recursive) in
   let thread = print_attributes thread attributes in
   let thread = group (thread ^/^ nest 2 (print_ident fun_name)) in
   let thread = group (thread ^//^ print_par print_parameters param) in
-  let thread = thread ^^ print_ret_type ret_type in
-  let thread = thread ^^ print_return return
+  let thread = thread ^^ group (print_ret_type ret_type) in
+  let thread = thread ^^ group (print_return return)
   in thread
-
-and print_return (node : expr) =
-  let expr = print_expr node in
-  match node with
-    E_Block _ -> group (break 1 ^^ expr)
-  | _         -> group (nest 2 (break 1 ^^ expr))
-
-and print_ret_type (node : type_annotation option) =
-  match node with
-    None -> string " is"
-  | Some (_, e) ->
-      group (nest 2 (break 1 ^^ string ": " ^^ nest 2 (print_type_expr e)
-                     ^^ string " is"))
-
-and print_kwd_recursive (node : lexeme Wrap.t) =
-  if kwd_recursive = None then
-    string "function"
-  else string "recursive" ^/^ string "function"
 
 and print_parameters p = print_nsepseq ";" print_param_decl p
 
@@ -160,42 +160,43 @@ and print_param thread var param_type =
   | Some (_, e) -> (thread ^^ string " :") ^//^ print_type_expr e
 
 and print_variable (node : variable) =
-  let {variable; attributes} = value in
+  let {variable; attributes} = node.value in
   let thread = print_ident node#payload in
   print_attributes thread node#attributes
 
 (* Module declaration (structure) *)
 
 and print_D_Module (node : module_decl reg) =
-  let node = node.value in
+  let node         = node.value in
   let name         = node.name
   and declarations = mode.declarations
-  and enclosing    = node.enclosing
   in
-  string "module " ^^ print_ident name ^^ string " is {"
-  ^^ group (nest 2 (break 1 ^^ print_declarations declarations))
-  ^^ string "}"
+  let declarations = nest 2 (break 1 ^^ print_declarations declarations)
+  in string "module " ^^ print_ident name ^^ string " is {"
+     ^^ group declarations ^^ string "}"
 
 (* Declaration of module alias *)
 
 and print_ModAlias (node : module_alias reg) =
-  let node = node.value in
-  let alias = node.alias
-  and mod_path = node.mod_path in
-  string "module " ^^ string alias.value
-  ^^ group (nest 2 (break 1 ^^ print_nsepseq "." print_ident mod_path))
+  let node     = node.value in
+  let alias    = node.alias
+  and mod_path = node.mod_path
+  in
+  let mod_path = print_nsepseq "." print_ident mod_path
+  in string "module " ^^ string alias.value
+     ^^ group (nest 2 (break 1 ^^ mod_path))
 
 (* Type declaration *)
 
 and print_D_Type (node : type_decl reg) =
-  let node = node.value in
-  let name = node.name
-  and params = node.params
+  let node      = node.value in
+  let name      = node.name
+  and params    = node.params
   and type_expr = node.type_expr
   in
-  string "type " ^^ print_ident name
-  ^^ print_type_params params ^^ string " is"
-  ^^ group (nest 2 (break 1 ^^ print_type_expr type_expr))
+  let type_expr = nest 2 (break 1 ^^ print_type_expr type_expr)
+  in string "type " ^^ print_ident name
+     ^^ print_type_params params ^^ string " is" ^^ group type_expr
 
 and print_type_params (node : type_vars option) =
   match node with
@@ -230,33 +231,36 @@ and print_T_App (node : (type_expr * type_tuple) reg) =
 and print_type_tuple (node : type_tuple) =
   let node = node.value in
   let head, tail = node.inside in
-  let rec app = function
+  let head = print_type_expr head
+  and app = function
     []       -> empty
   | [e]      -> group (break 1 ^^ print_type_expr e)
   | e::items -> group (break 1 ^^ print_type_expr e ^^ string ",")
-                ^^ app items in
+               ^^ app items in
   let components =
-    if   tail = []
-    then print_type_expr head
-    else print_type_expr head ^^ string "," ^^ app (List.map snd tail)
+    if tail = [] then head
+    else head ^^ string "," ^^ app (List.map snd tail)
   in string "(" ^^ nest 1 (components ^^ string ")")
 
 (* Cartesian type *)
 
 and print_T_Cart (node : cartesian) =
   let head, _, tail = node.value in
-  let rec app = function
+  let head = print_type_expr head
+  and app = function
     []       -> empty
   | [e]      -> group (break 1 ^^ print_type_expr e)
   | e::items -> group (break 1 ^^ print_type_expr e ^^ string " *")
                 ^^ app items
-  in print_type_expr head ^^ string " *" ^^ app (Utils.nsepseq_to_list tail)
+  in head ^^ string " *" ^^ app (Utils.nsepseq_to_list tail)
 
 (* Functional type *)
 
 and print_T_Fun (node : (type_expr * arrow * type_expr) reg) =
   let lhs, _, rhs = node.value in
-  group (print_type_expr lhs ^^ string " ->" ^/^ print_type_expr rhs)
+  let lhs         = print_type_expr lhs
+  and rhs         = print_type_expr rhs
+  in group ( lhs ^^ string " ->" ^/^ rhs)
 
 (* Integer type *)
 
@@ -272,7 +276,8 @@ and print_module_path
   fun print node ->
     let node        = node.value in
     let module_path = node.module_path
-    and field       = node.field in
+    and field       = node.field
+    in
     let modules     = Utils.nsepseq_to_list module_path
     and sep         = string "." ^^ break 0 in
     let modules     = separate_map sep print_ident fields in
@@ -289,9 +294,10 @@ and print_T_String (node : lexeme wrap) = print_string node
 (* Sum type *)
 
 and print_T_Sum (node : sum_type reg) =
-  let node = node.value in
+  let node       = node.value in
   let head, tail = node.variants
-  and attributes = node.attributes in
+  and attributes = node.attributes
+  in
   let head = print_variant head
   and padding_flat =
     if attributes = [] then empty else string "| "
@@ -310,12 +316,14 @@ and print_variant (node : variant reg) =
   let node       = node.value in
   let ctor       = node.ctor
   and args       = node.args
-  and attributes = node.attributes in
+  and attributes = node.attributes
+  in
   let thread     = print_ident ctor in
   let thread     = print_attributes thread attributes in
   match args with
     None -> thread
-  | Some (_,e) -> prefix 4 1 (thread ^^ string " of") (print_type_expr e)
+  | Some (_,e) -> let args = print_type_expr e
+                 in prefix 4 1 (thread ^^ string " of") args
 
 (* Record type *)
 
@@ -326,7 +334,8 @@ and print_field_decl (node : field_decl reg) =
   let node       = node.value in
   let field_name = node.field_name
   and field_type = node.field_type
-  and attributes = node.attributes in
+  and attributes = node.attributes
+  in
   let thread     = print_ident field_name in
   let thread     = print_attributes thread attributes in
   match field_type with
@@ -338,73 +347,172 @@ and print_field_decl (node : field_decl reg) =
 and print_T_Par (node : type_expr par reg) =
   print_par print_type_expr node
 
-(* XXX *)
-
 (* Function and procedure declarations *)
 
-and print_fun_expr {value; _} =
-  let {param; ret_type; return; _} : fun_expr = value in
-  let start      = string "function" in
-  let parameters = print_par print_parameters param in
-  let t_annot    =
+and print_fun_expr (node : fun_expr reg) =
+  let node       = node.value in
+  let parameters = node.parameters
+  and ret_type   = node.ret_type
+  and ret_expr   = node.return
+  in
+  let thread     = string "function" in
+  let parameters = print_par print_parameters parameters in
+  let thread     = group (thread ^^ nest 2 (break 1 ^^ parameters)) in
+  let thread     =
     match ret_type with
-      None -> empty
+      None -> thread
     | Some (_, e) ->
-        group (break 1 ^^ nest 2 (string ": " ^^ print_type_expr e)) in
-  group (start ^^ nest 2 (break 1 ^^ parameters))
-  ^^ t_annot
-  ^^ string " is" ^^ group (nest 4 (break 1 ^^ print_expr return))
+       let e = print_type_expr e
+       in thread ^^ group (break 1 ^^ nest 2 (string ": " ^^ e)) in
+  let ret_expr = nest 4 (break 1 ^^ print_expr ret_expr) in
+  let thread = thread ^^ string " is" ^^ group ret_expr
+  in thread
 
 (* Blocks *)
 
-and print_block {value; _} =
+and print_block (node : block reg) =
+  let statements = node.value.statements in
   string "{"
-  ^^ nest 2 (hardline ^^ print_statements value.statements)
-  ^^ hardline ^^ string "}"
+  ^^ nest 2 (hardline ^^ print_statements statements) ^^ hardline
+  ^^ string "}"
 
-and print_statements s = print_nsepseq ";" print_statement s
+(* STATEMENTS *)
 
-and print_statement = function
-  S_Instr   s -> print_instruction s
-| S_Decl    s -> print_declaration s
-| S_VarDecl s -> print_var_decl    s
+and print_statements (node : statements) =
+  print_nsepseq ";" print_statement node
+
+and print_statement (node : statement) =
+  match node with
+    S_Instr   s -> print_S_Instr   s
+  | S_Decl    s -> print_S_Decl    s
+  | S_VarDecl s -> print_S_VarDecl s
+
+
+(* INSTRUCTIONS *)
+
+and print_S_Instr (node : instruction) =
+  match node with
+    I_Assign i -> print_I_Assign i
+  | I_Call   i -> print_I_Call   i
+  | I_Case   i -> print_I_Case   i
+  | I_Cond   i -> print_I_Cond   i
+  | I_For    i -> print_I_For    i
+  | I_ForIn  i -> print_I_ForIn  i
+  | I_Patch  i -> print_I_Patch  i
+  | I_Remove i -> print_I_Remove i
+  | I_Skip   i -> print_I_Skip   i
+  | I_While  i -> print_I_While  i
+
+(* Assignment *)
+
+and print_I_Assign (node : assignment reg) =
+  let node = node.value in
+  let lhs  = node.lhs
+  and rhs  = node.rhs
+  in print_expr lhs ^^ string " :=" ^//^ print_expr rhs
+
+(* Procedure call *)
+
+and print_I_Call (node : call) =
+  let node              = node.value in
+  let lambda, arguments = node in
+  let arguments         = print_tuple_expr arguments in
+  group (print_expr lambda ^^ nest 2 (break 1 ^^ arguments))
+
+(* Case *)
+
+and print_I_Case (node : test_clause case reg) =
+  print_case print_test_clause node
+
+and print_case : 'a.('a -> document) -> 'a case Region.reg -> document =
+  fun printer node ->
+    let node  = node.value in
+    let expr  = node.expr
+    and cases = node.case in
+    let expr = nest 5 (print_expr expr)
+    in
+    group (string "case " ^^ expr ^/^ string "of [")
+    ^^ hardline ^^ print_cases printer cases
+    ^^ hardline ^^ string "]"
+
+and print_cases :
+  'a.('a -> document) ->
+    ('a case_clause reg, vbar) Utils.nsepseq Region.reg ->
+    document =
+  fun printer node ->
+    let node       = node.value in
+    let head, tail = node in
+    let head       = print_case_clause printer head in
+    let head       = blank 2 ^^ head in
+    let tail       = List.map snd tail in
+    let app clause = break 1 ^^ string "| "
+                     ^^ print_case_clause printer clause
+    in head ^^ concat_map app tail
+
+and print_case_clause :
+  'a.('a -> document) -> 'a case_clause Region.reg -> document =
+  fun printer node ->
+    let node    = node.value in
+    let pattern = node.pattern
+    and rhs     = node.rhs in
+    print_pattern pattern ^^ prefix 4 1 (string " ->") (printer rhs)
+
+(* Conditional instruction *)
+
+and print_I_Cond (node : test_clause conditional reg) =
+  let node   = node.value in
+  let test   = node.test
+  and if_so  = node.if_so
+  and if_not = node.if_not
+  in
+  let thread = string "if " ^^ group (nest 3 (print_expr test))
+  and thread = thread ^/^ string "then"
+               ^^ match if_so with
+                    ClauseInstr _ ->
+                      group (nest 2 (break 1 ^^ print_test_clause if_so))
+                  | ClauseBlock _ ->
+                      string " {"
+                      ^^ group (nest 2 (hardline ^^ print_test_clause if_so))
+                      ^^ hardline ^^ string "}"
+  and thread = match if_not with
+                Some ClauseInstr _ ->
+                  thread ^/^ string "else"
+                  ^^ group (nest 2 (break 1 ^^ print_test_clause if_not))
+              | Some ClauseBlock _ ->
+                  thread ^/^ string "else {"
+                  ^^ group (nest 2 (hardline ^^ print_test_clause if_not))
+                  ^^ hardline ^^ string "}"
+              | None -> thread
+  in group thread
+
+and print_test_clause = function
+  ClauseInstr i -> print_ClauseInstr i
+| ClauseBlock i -> print_ClauseBlock i
+
+and print_ClauseInstr (node : instruction) = print_I_Instr node
+
+and print_ClauseBlock (node : block reg) = print_block node
+
+(*
+and print_clause_block = function
+  LongBlock b  -> print_block b
+| ShortBlock b -> Utils.(print_statements <@ fst) b.value.inside
+ *)
+
+(* XXX *)
 
 and print_var_decl {value; _} =
   let {pattern; var_type; init; _} = value in
-  let start = string "var " ^^ print_pattern pattern in
-  let start =
+  let thread = string "var " ^^ print_pattern pattern in
+  let thread =
     match var_type with
-      None -> start
+      None -> thread
     | Some (_, e) ->
-        group (start ^/^ nest 2 (string ": " ^^ print_type_expr e)) in
-  start
-  ^^ group (break 1 ^^ nest 2 (string ":= " ^^ print_expr init))
-
-and print_instruction = function
-  I_Assign i -> print_assignement i
-| I_Call   i -> print_call i
-| I_Case   i -> print_case print_test_clause i
-| I_Cond   i -> print_conditional print_test_clause i
-| I_For    i -> print_for_int i
-| I_ForIn  of for_in reg CCC
-| I_Patch  of patch reg
-| I_Remove of removal reg
-| I_Skip   of kwd_skip
-| I_While  of while_loop reg
-
-(*
-  Cond        i -> group (print_conditional i)
-| CaseInstr   i -> print_case print_if_clause i
-| Assign      i -> print_assignment i
-| Loop        i -> print_loop i
-| ProcCall    i -> print_fun_call i
-| Skip        _ -> string "skip"
-| RecordPatch i -> print_record_patch i
-| MapPatch    i -> print_map_patch i
-| SetPatch    i -> print_set_patch i
-| MapRemove   i -> print_map_remove i
-| SetRemove   i -> print_set_remove i
- *)
+        let annotation = nest 2 (string ": " ^^ print_type_expr e)
+        in group (thread ^/^ annotation) in
+  let init = print_expr init in
+  let assignment = group (break 1 ^^ nest 2 (string ":= " ^^ init))
+  in thread  ^^ assignment
 
 and print_set_remove {value; _} =
   let {element; set; _} : set_remove = value in
@@ -443,73 +551,16 @@ and print_record_patch {value; _} =
   ^^ group (nest 2 (break 1 ^^ inj))
 
 and print_cond_expr {value; _} =
-  let {test; ifso; ifnot; _} : cond_expr = value in
+  let {test; if_so; if_not; _} : cond_expr = value in
   let test  = string "if "  ^^ group (nest 3 (print_expr test))
-  and ifso  = string "then" ^^ group (nest 2 (break 1 ^^ print_expr ifso))
-  and ifnot = string "else" ^^ group (nest 2 (break 1 ^^ print_expr ifnot))
-  in test ^/^ ifso ^/^ ifnot
+  and if_so  = string "then" ^^ group (nest 2 (break 1 ^^ print_expr if_so))
+  and if_not = string "else" ^^ group (nest 2 (break 1 ^^ print_expr if_not))
+  in test ^/^ if_so ^/^ if_not
 
-and print_conditional {value; _} =
-  let {test; ifso; ifnot; _} : conditional = value in
-  let test  = string "if "  ^^ group (nest 3 (print_expr test))
-  and ifso  = match ifso with
-                ClauseInstr _ | ClauseBlock LongBlock _ ->
-                  string "then"
-                  ^^ group (nest 2 (break 1 ^^ print_if_clause ifso))
-              | ClauseBlock ShortBlock _ ->
-                  string "then {"
-                  ^^ group (nest 2 (hardline ^^ print_if_clause ifso))
-                  ^^ hardline ^^ string "}"
-  and ifnot = match ifnot with
-                ClauseInstr _ | ClauseBlock LongBlock _ ->
-                  string "else"
-                  ^^ group (nest 2 (break 1 ^^ print_if_clause ifnot))
-              | ClauseBlock ShortBlock _ ->
-                  string "else {"
-                  ^^ group (nest 2 (hardline ^^ print_if_clause ifnot))
-                  ^^ hardline ^^ string "}"
-  in test ^/^ ifso ^/^ ifnot
-
-and print_if_clause = function
-  ClauseInstr i -> print_instruction i
-| ClauseBlock b -> print_clause_block b
-
-and print_clause_block = function
-  LongBlock b  -> print_block b
-| ShortBlock b -> Utils.(print_statements <@ fst) b.value.inside
 
 and print_set_membership {value; _} =
   let {set; element; _} : set_membership = value in
   group (print_expr set ^/^ string "contains" ^/^ print_expr element)
-
-and print_case : 'a.('a -> document) -> 'a case Region.reg -> document =
-  fun printer {value; _} ->
-    let {expr; cases; _} = value in
-    group (string "case " ^^ nest 5 (print_expr expr) ^/^ string "of [")
-    ^^ hardline ^^ print_cases printer cases
-    ^^ hardline ^^ string "]"
-
-and print_cases :
-  'a.('a -> document) ->
-    ('a case_clause reg, vbar) Utils.nsepseq Region.reg ->
-    document =
-  fun printer {value; _} ->
-    let head, tail = value in
-    let head       = print_case_clause printer head in
-    let head       = blank 2 ^^ head in
-    let rest       = List.map snd tail in
-    let app clause = break 1 ^^ string "| " ^^ print_case_clause printer clause
-    in  head ^^ concat_map app rest
-
-and print_case_clause :
-  'a.('a -> document) -> 'a case_clause Region.reg -> document =
-  fun printer {value; _} ->
-    let {pattern; rhs; _} = value in
-    print_pattern pattern ^^ prefix 4 1 (string " ->") (printer rhs)
-
-and print_assignment {value; _} =
-  let {lhs; rhs; _} = value in
-  prefix 2 1 (print_expr lhs ^^ string " :=") (print_expr rhs)
 
 and print_loop = function
   While l -> print_while_loop l
@@ -523,19 +574,18 @@ and print_for_loop = function
   ForInt l     -> print_for_int l
 | ForCollect l -> print_for_collect l
 
-and print_for_int {value; _} =
+and print_I_For {value; _} =
   let {binder; init; bound; step; block; _} = value in
   let step =
     match step with
       None -> empty
-    | Some (_, e) -> prefix 2 1 (string " step") (print_expr e) in
-  prefix 2 1
-         (string "for")
-         (prefix 2 1 (print_ident binder ^^ string " :=") (print_expr init))
-  ^^ prefix 2 1 (string " to") (print_expr bound)
-  ^^ step ^^ hardline ^^ print_block block
+    | Some (_, e) -> string " step" ^//^ print_expr e
+  in string "for"
+     ^//^ (print_ident binder ^^ string " :=") ^//^ print_expr init
+     ^^ (string " to" ^//^ print_expr bound)
+     ^^ step ^^ hardline ^^ print_block block
 
-and print_for_collect {value; _} =
+and print_I_ForIn {value; _} =
   let {var; bind_to; collection; expr; block; _} = value in
   let binding =
     match bind_to with
@@ -712,11 +762,6 @@ and print_tuple_expr {value; _} =
     then print_expr head
     else print_expr head ^^ string "," ^^ app (List.map snd tail)
   in string "(" ^^ nest 1 (components ^^ string ")")
-
-and print_fun_call {value; _} =
-  let lambda, arguments = value in
-  let arguments = print_tuple_expr arguments in
-  group (print_expr lambda ^^ nest 2 (break 1 ^^ arguments))
 
 (* Injections *)
 

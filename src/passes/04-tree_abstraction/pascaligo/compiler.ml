@@ -319,7 +319,7 @@ let rec compile_expression ~raise : CST.expr -> AST.expr = fun e ->
     let (sels, _) = List.unzip @@ List.map ~f:compile_selection @@ Utils.nsepseq_to_list proj.field_path in
     e_accessor ~loc expr sels
   | E_ModPath ma -> (
-    let (ma, loc) = r_split ma in    
+    let (ma, loc) = r_split ma in
     match ma.module_path with
     | (module_name,[]) when List.mem ~equal:Caml.(=) build_ins module_name#payload -> (
       (*TODO: move to proper module*)
@@ -344,9 +344,9 @@ let rec compile_expression ~raise : CST.expr -> AST.expr = fun e ->
     let loc = Location.lift region in
     let (var, accesses) = compile_lvalue ~raise structure in
     let update = self update in
-    e_update ~loc (e_variable var) accesses update 
+    e_update ~loc (e_variable var) accesses update
   )
-  | E_Fun { value = { param ; ret_type ; return ; attributes ; _ } ; region} -> (
+  | E_Fun { value = { parameters; ret_type ; return ; attributes ; _ } ; region} -> (
     let () = check_no_attributes attributes in
     let compile_param : CST.param_decl CST.reg -> _  = fun { value = { param_kind ; var ; param_type } ; region } ->
       (* TODO: feels wrong, binders do not have loc in AST *)
@@ -363,7 +363,7 @@ let rec compile_expression ~raise : CST.expr -> AST.expr = fun e ->
     in
     let loc = Location.lift region in
     let (lambda, fun_type) =
-      let (params, loc_par)  = r_split param in
+      let (params, loc_par)  = r_split parameters in
       let params = Utils.nsepseq_map compile_param params.inside in
       let body = self return in
       let ret_ty = Option.map ~f:(compile_type_expression ~raise <@ snd ) ret_type in
@@ -684,7 +684,7 @@ and compile_lvalue ~raise : CST.expr -> AST.expression_variable * AST.expression
     | E_ModPath _ -> failwith "TODO: error, unsuported assignements for modules at region"
     | _ -> failwith "TODO: error, invalid lvalue at region"
   in
-  aux expr []  
+  aux expr []
 
 and compile_instruction ~raise : ?next: AST.expression -> CST.instruction -> AST.expression  = fun ?next instruction ->
   let return expr = Option.value_map next ~default:expr ~f:(e_sequence expr) in
@@ -931,12 +931,12 @@ and compile_block ~raise : ?next:AST.expression -> CST.block CST.reg -> AST.expr
     | None -> raise.raise @@ block_start_with_attribute block
 
 and compile_fun_decl ~raise : CST.fun_decl -> string * expression_variable * type_expression option * AST.attributes * expression =
-  fun ({kwd_recursive; fun_name; param; ret_type; return=r; attributes}: CST.fun_decl) ->
+  fun ({kwd_recursive; fun_name; parameters; ret_type; return=r; attributes}: CST.fun_decl) ->
   let return a = a in
   let (fun_name, loc) = w_split fun_name in
   let fun_binder = Location.wrap ~loc @@ Var.of_name fun_name in
   let ret_type = Option.map ~f:(compile_type_expression ~raise <@ snd) ret_type in
-  let param = compile_parameters ~raise param in
+  let param = compile_parameters ~raise parameters in
   let result = compile_expression ~raise r in
   let (lambda, fun_type) =
     match param with

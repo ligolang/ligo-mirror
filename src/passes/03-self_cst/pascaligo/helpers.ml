@@ -202,7 +202,7 @@ let rec fold_expr : ('a, 'err) folded -> 'a -> expr -> 'a =
      self init value.inside
 
   | E_Fun {value;region=_} ->
-     let ({kwd_function=_; param=_; ret_type; kwd_is=_; return}: fun_expr) = value in
+     let ({kwd_function=_; parameters=_; ret_type; kwd_is=_; return}: fun_expr) = value in
      let res = self init return in
      (match ret_type with
         Some (_, ty) -> self_type res ty
@@ -394,7 +394,7 @@ and fold_statement : ('a, 'err) folded -> 'a -> statement -> 'a = fun f init s  
     | None ->res)
 
   | S_Decl D_Fun {value;region=_} ->
-     let {kwd_recursive=_; kwd_function=_; fun_name=_; param=_;
+     let {kwd_recursive=_; kwd_function=_; fun_name=_; parameters=_;
           ret_type; kwd_is=_; return; terminator=_; attributes=_} = value in
      let res = self_expr init return in
      (match ret_type with
@@ -443,7 +443,7 @@ and fold_declaration : ('a, 'err) folded -> 'a -> declaration -> 'a =
     | None ->    res
     )
   | D_Fun {value;region=_} ->
-    let {kwd_recursive=_;kwd_function=_;fun_name=_;param=_;ret_type;kwd_is=_;return;terminator=_;attributes=_} = value in
+    let {kwd_recursive=_;kwd_function=_;fun_name=_;parameters=_;ret_type;kwd_is=_;return;terminator=_;attributes=_} = value in
     let res = self_expr init return in
     (match ret_type with
       Some (_, ty) -> self_type res ty
@@ -679,7 +679,7 @@ let rec map_expression : 'err mapped -> expr -> expr =
      let value = {value with inside} in
      return @@ E_Par {value; region}
   | E_Fun {value;region} ->
-     let ({kwd_function=_; param=_; ret_type; kwd_is=_; return=body}
+     let ({kwd_function=_; parameters=_; ret_type; kwd_is=_; return=body}
           : fun_expr) = value in
      let body = self body in
      let ret_type =
@@ -767,7 +767,7 @@ and map_statement : 'err mapped -> statement -> statement = fun f s  ->
      in S_VarDecl {value; region}
 
   | S_Decl D_Fun {value;region} ->
-     let {kwd_recursive=_; kwd_function=_; fun_name=_; param=_;
+     let {kwd_recursive=_; kwd_function=_; fun_name=_; parameters=_;
           ret_type; kwd_is=_; return; terminator=_; attributes=_} = value in
      let return = self_expr return in
      let ret_type =
@@ -978,7 +978,7 @@ type b. (b-> b) -> (b case_clause reg,_) Utils.nsepseq reg -> (b case_clause reg
       let value = {value with init; const_type}
       in return @@ D_Const {value; region}
   | D_Fun {value; region} ->
-     let {kwd_recursive=_; kwd_function=_; fun_name=_; param=_; ret_type;
+     let {kwd_recursive=_; kwd_function=_; fun_name=_; parameters=_; ret_type;
           kwd_is=_; return=expr; terminator=_; attributes=_} = value in
      let expr = self_expr expr in
      let ret_type =
