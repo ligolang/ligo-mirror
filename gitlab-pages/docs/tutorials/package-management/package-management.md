@@ -5,9 +5,9 @@ title: Working with external LIGO packages/libraries
 
 Often times when working on a project there arises a need to use some common reusable piece of code, most of the time such functions are provided by the standard library of the programming language.
 When it is not feasible for the standard library to provide such functions, these functions can be provided by an external library.
-To fetch (download) & manintain different versions of external libraries we need a package manager.
-Ligo libraries can be published to npm or opam and using the [esy](https://esy.sh/) package manager we can fetch these ligo libraries.
-Ligo compiler supports working with external libraries fetched by esy.
+To fetch (download) & maintain different versions of external libraries we need a package manager.
+LIGO libraries can be published to [npm](https://www.npmjs.com/) or [opam](opam.ocaml.org/) and using the [esy](https://esy.sh/) package manager we can fetch these ligo libraries.
+LIGO compiler supports working with external libraries fetched by esy.
 
 There are 2 aspects to working with external packages
 1. Using a package published on npm
@@ -21,7 +21,7 @@ Pre-requites:
 npm install -g esy
 ```
 
-## Using a ligo package published on npm
+## Using a LIGO package published on npm
 
 Start with empty package.json file
 
@@ -29,13 +29,13 @@ Start with empty package.json file
 {}
 ```
 
-We will need the ligo compiler binary to compile smart contracts, to get the ligo compiler from npm run the command
+We will need the LIGO compiler binary to compile smart contracts, to get the LIGO compiler from npm run the command
 
 ```bash
 esy add @ligo/ligo-bin
 ```
 
-Next we will use a simple dependeny `ligo-list-helper which` is published on npm, to get the library use the command
+Next we will use a simple dependency `ligo-list-helper` which is published on npm, to get the library use the command
 
 ```bash
 esy add ligo-list-helpers
@@ -100,7 +100,7 @@ and to test the contract using ligo's [testing framework](https://ligolang.org/d
 esy test
 ```
 
-If you want to use the ligo binary fetched via esy, just run your ligo command with the prefix esy
+If you want to use the LIGO binary fetched via esy, just run your ligo command with the prefix esy
 
 e.g. ligo version command
 
@@ -109,16 +109,16 @@ esy ligo --version
 ```
 
 
-## Creating and publishing ligo packages to npm
+## Creating and publishing LIGO packages to npm
 
 Since we are going to publish the library to npm, we start by creating a npm project by running 
 
 ```bash
 npm init
-````
+```
 
 Fill in the details prompted by `npm init`.
-Next we are going to need the ligo compiler binary, fetch it by running
+Next we are going to need the LIGO compiler binary, fetch it by running
 
 ```bash
 esy add @ligo/ligo-bin
@@ -173,7 +173,7 @@ To run the tests run the command
 esy test
 ```
 
-Now the final step is the publish the library to npm.
+Now the final step is publishing the library to npm.
 The steps are same as [publishing yet another library on npm](https://docs.npmjs.com/creating-and-publishing-scoped-public-packages#publishing-scoped-public-packages)
 
 ```bash 
