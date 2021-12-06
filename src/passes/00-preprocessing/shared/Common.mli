@@ -21,15 +21,15 @@ module Make (File : File.S) (Comments : Comments.S) :
 
     (* Preprocessing various sources *)
 
-    val from_file    : file_path option -> dirs -> file_path  -> result
-    val from_string  : file_path option -> dirs -> string     -> result
-    val from_channel : file_path option -> dirs -> in_channel -> result
+    val from_file    : ?esy_project_path:file_path  -> dirs -> file_path  -> result
+    val from_string  : ?esy_project_path:file_path  -> dirs -> string     -> result
+    val from_channel : ?esy_project_path:file_path  -> dirs -> in_channel -> result
 
     (* Aliases *)
 
-    val preprocess_file    : file_path option -> dirs -> file_path  -> result
-    val preprocess_string  : file_path option -> dirs -> string     -> result
-    val preprocess_channel : file_path option -> dirs -> in_channel -> result
+    val preprocess_file    : ?esy_project_path:file_path -> dirs -> file_path  -> result
+    val preprocess_string  : ?esy_project_path:file_path -> dirs -> string     -> result
+    val preprocess_channel : ?esy_project_path:file_path -> dirs -> in_channel -> result
   end
 
 (* For further passes *)

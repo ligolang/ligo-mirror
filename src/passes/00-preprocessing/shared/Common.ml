@@ -94,7 +94,7 @@ module Make (File : File.S) (Comments : Comments.S) =
 
     (* Preprocessing a file *)
 
-    let from_file esy_project_path dirs file_path =
+    let from_file ?esy_project_path dirs file_path =
       let module File : FILE =
         struct
           let extension        = File.extension
@@ -112,7 +112,7 @@ module Make (File : File.S) (Comments : Comments.S) =
 
     (* Preprocessing a string *)
 
-    let from_string esy_project_path dirs string =
+    let from_string ?esy_project_path dirs string =
       let module File : FILE =
         struct
           let extension        = File.extension
@@ -130,7 +130,7 @@ module Make (File : File.S) (Comments : Comments.S) =
 
     (* Preprocessing a channel *)
 
-    let from_channel esy_project_path dirs channel =
+    let from_channel ?esy_project_path dirs channel =
       let module File : FILE =
         struct
           let extension = File.extension
