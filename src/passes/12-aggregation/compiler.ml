@@ -6,7 +6,7 @@ type err = Errors.aggregation_error raise
 
 (* this pass does the following:
   - aggregates declarations into a chain of let-ins
-  - unify modules and records
+  - transform modules to "top-level" definitions
 *)
 let prepend : string -> O.expression_variable -> string = fun str v ->
   str ^ fst (Var.internal_get_name_and_counter v.wrap_content)
@@ -15,13 +15,16 @@ let postpend : string -> string -> string = fun str1 str2 ->
 module Mod_env = struct
   module ModMap = Map.Make(struct type t = string let compare = String.compare end)
   
-  type t = (O.expression_variable) ModMap.t * string
+  type t = {
+    prefixes : (O.expression_variable) ModMap.t ; 
+    current_mod : string ; (* prefix on the module currently being compiled *)
+  }
 
-  let add : t -> string -> O.expression_variable -> t = fun (env,current_mod) k v -> ModMap.add k v env, current_mod
-  let add_cur_path : t -> string -> t = fun (env,cur_path) new_ -> (env, postpend new_ cur_path)
-  let empty = ModMap.empty , ""
-  let find s (m, _) = ModMap.find_opt s m
-  let cur_path : t -> string = fun env -> snd env
+  let add : t -> string -> O.expression_variable -> t = fun x k v -> { x with prefixes = ModMap.add k v x.prefixes }
+  let add_cur_path : t -> string -> t = fun x current_mod -> { x with current_mod }
+  let empty = { prefixes = ModMap.empty ; current_mod = "" }
+  let find s x = ModMap.find_opt s x.prefixes
+  let cur_mod : t -> string = fun data -> data.current_mod 
 end
 
 let rec compile ~raise : I.expression -> I.module_fully_typed -> O.expression =
@@ -65,7 +68,7 @@ and module_to_record ~raise : Mod_env.t -> I.declaration_loc list -> (O.expressi
       | I.Declaration_type _ -> skip mod_env ()
       | I.Declaration_constant { name = _ ; binder ; expr ; attr } -> (
         let expr = compile_expression ~raise mod_env expr in
-        let binder = Location.wrap ~loc:hd.location @@ Var.of_name (prepend (Mod_env.cur_path mod_env) binder) in
+        let binder = Location.wrap ~loc:hd.location @@ Var.of_name (prepend (Mod_env.cur_mod mod_env) binder) in
         (binder,expr,attr)::(module_to_record ~raise mod_env tl)
       )
       | I.Declaration_module { module_binder ; module_ ; module_attr = _ } -> (
@@ -249,9 +252,10 @@ and known_attributes_for_modules : I.module_attribute option -> O.known_attribut
   Option.value_map opt ~default ~f:(fun {public} -> { default with public})
 
 and module_path_to_lident (mod_env : Mod_env.t) (l : module_variable Simple_utils.List.Ne.t) : O.expression_variable =
-      let (hd, tl) = l in
-      let prefix = match Mod_env.find hd mod_env with
-      | None -> hd
-      | Some l -> fst (Var.internal_get_name_and_counter l.wrap_content) in
-      let s = List.fold_left ~f:(fun r n -> r ^ "_" ^ n) ~init:prefix tl in
-      Location.wrap @@ Var.of_name s
+  let (hd, tl) = l in
+  let prefix = match Mod_env.find hd mod_env with
+    | None -> hd
+    | Some l -> fst (Var.internal_get_name_and_counter l.wrap_content)
+  in
+  let s = List.fold_left ~f:(fun r n -> r ^ "_" ^ n) ~init:prefix tl in
+  Location.wrap @@ Var.of_name s
