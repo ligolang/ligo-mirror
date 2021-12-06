@@ -620,6 +620,22 @@ let print_ast_typed =
     Clic.(prefixes ["print";"ast-typed"] @@ source_file @@ stop)
     f
 
+let print_ast_aggregated =
+  let f (syntax, infer, protocol_version, display_format) source_file () =
+    return_result @@
+    Api.Print.ast_aggregated source_file syntax infer protocol_version display_format
+  in
+  let _cmdname = "print ast-aggregated" in
+  let _doc = "Subcommand: Print the contract after aggregation.\n Warning: Intended for development of LIGO and can break at any time." in
+  let desc =     "This sub-command prints the source file in the AST \
+                  aggregated stage." in
+  Clic.command
+    ~group:print_group
+    ~desc
+    Clic.(args4 syntax infer protocol_version display_format)
+    Clic.(prefixes ["print";"ast-aggregated"] @@ source_file @@ stop)
+    f
+
 let print_ast_combined =
   let f (syntax, infer, protocol_version, display_format) source_file () =
     return_result @@
@@ -715,6 +731,7 @@ let main = [
     print_ast_core ;
     print_ast_typed ;
     print_ast_combined ;
+    print_ast_aggregated ;
     print_mini_c ;
     repl;
     dump_changelog ;

@@ -81,7 +81,7 @@ let ast_typed source_file syntax infer protocol_version display_format =
       let typed,_ = Build.type_contract ~raise ~add_warning ~options syntax Env source_file in
       typed
 
-let ast_combined  source_file syntax infer protocol_version display_format =
+let ast_aggregated  source_file syntax infer protocol_version display_format =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (Ast_aggregated.Formatter.expression_format) get_warnings @@
     fun ~raise ->
@@ -93,6 +93,17 @@ let ast_combined  source_file syntax infer protocol_version display_format =
       let aggregated = Compile.Of_typed.compile_program ~raise typed in
       let expr = Compile.Of_typed.compile_expression_in_context (Ast_typed.e_a_unit) aggregated in
       expr
+
+let ast_combined  source_file syntax infer protocol_version display_format =
+  Trace.warning_with @@ fun add_warning get_warnings ->
+  format_result ~display_format Ast_typed.Formatter.module_format_fully_typed get_warnings @@
+  fun ~raise ->
+    let options = (* TODO: options should be computed outside of the API *)
+      let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
+      Compiler_options.make ~infer ~protocol_version ()
+    in
+    let typed,_ = Build.combined_contract ~raise ~add_warning ~options syntax source_file in
+    typed
 
 let mini_c source_file syntax infer protocol_version display_format optimize =
     Trace.warning_with @@ fun add_warning get_warnings ->
