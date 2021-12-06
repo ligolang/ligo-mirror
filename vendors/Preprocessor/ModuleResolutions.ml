@@ -22,15 +22,18 @@ let traverse xs =
     (Some [])
     xs
 
+(* Wrapper over yojson helpers *)
 module JsonHelpers = struct
   let string json = 
     match json with
       `String s -> Some s
-    | _ -> None 
+    | _         -> None
+
   let list json = 
     match json with
       `List l -> Some l
-    | _ -> None
+    | _       -> None
+
   let string_list json = 
     let l = list json in
     match l with
@@ -43,6 +46,7 @@ module JsonHelpers = struct
     try Some (Yojson.Basic.from_file file) with _ -> None
 end
 
+(* Wrapper over Fpath that does not raise exceptions *)
 module Path = struct
   type t = Fpath.t option
 
@@ -52,10 +56,8 @@ module Path = struct
 
   let segs : t -> string list option = fun t -> Option.map Fpath.segs t
 
-  let is_prefix : string option -> string option -> bool = 
+  let is_prefix : t -> t -> bool = 
     fun prefix p ->
-      let prefix = Option.bind prefix v in
-      let p      = Option.bind p v in
       match prefix, p with
         Some prefix, Some p -> 
           Fpath.is_prefix prefix p
@@ -69,10 +71,19 @@ module Path = struct
 
 end
 
+(* The esy installation.json is of the form
+   {
+     "{package_name}@{version}@{hash}": path/to/package
+     ...
+   }
+
+   [clean_installation_json] converts installation.json to a {string SMap.t}
+*)
 let clean_installation_json installation_json =
   match installation_json with
     None -> None
-  | Some installation_json -> let open Yojson.Basic in
+  | Some installation_json -> 
+    let open Yojson.Basic in
     let keys = Util.keys installation_json in
     let values = Util.values installation_json in
     List.fold_left2 
@@ -84,10 +95,26 @@ let clean_installation_json installation_json =
       (Some SMap.empty) 
       keys values
 
+(* The esy lock file is of the form
+   {
+     "checksum": "<some hash>"
+     "root": "{package_name}@link-dev:./package.json",
+     "node": {
+       "{package_name1}@{version}@hash": {
+          ...
+          "dependencies": [..., "{package_name2}@{version}@hash", ...]
+          ...
+       } 
+     }
+   }
+  
+   [clean_lock_file_json] converts the esy lock file to a record {lock_file}
+*)
 let clean_lock_file_json lock_json =
   match lock_json with
     None -> None
-  | Some lock_json -> let open Yojson.Basic in
+  | Some lock_json -> 
+    let open Yojson.Basic in
     let root = Util.member "root" lock_json |> JsonHelpers.string in
     let node = Util.member "node" lock_json in
     let keys = Util.keys node in
@@ -108,6 +135,9 @@ let clean_lock_file_json lock_json =
 
 let resolve_path installation path = SMap.find_opt path installation
 
+(* [resolve_paths] takes the install.json {string SMap.t} and 
+   the Map constructed by [find_dependencies] and resolves the the
+   package names into file system paths *)
 let resolve_paths installation graph =
   SMap.fold (fun k v xs ->
     Option.bind xs (fun xs -> 
@@ -121,7 +151,10 @@ let resolve_paths installation graph =
     )
   ) graph (Some [])
 
-let find_dependencies (lock_file : lock_file) = 
+(* [find_dependencies] takes the esy lock file and traverses the dependency
+   graph and constructs a Map of package_name as key and list of dependencies
+   of the package as value *)
+let find_dependencies (lock_file : lock_file) : dependency_list SMap.t option = 
   let root = lock_file.root in
   let node = lock_file.node in
   let rec dfs dep graph =
@@ -140,6 +173,13 @@ let installation_json_path path =
 let lock_file_path path =
   path ^ Path.dir_sep ^ "esy.lock/index.json"
 
+(* [make] takes the root of an esy project and locates the 
+   esy intallation.json & esy lock file and constructs a record of 
+   { root_path : string ; resolutions : (string * inclusion_list) list }
+
+   [make] combines the data in the esy installation.json & esy lock file
+   using the [find_dependencies] & [resolve_paths] functions into a uniform
+   representation *)
 let make project_path : t option =
   let installation_json = installation_json_path project_path 
     |> JsonHelpers.from_file_opt
@@ -161,6 +201,11 @@ let make project_path : t option =
       )
   | _ -> None)
 
+(* [get_root_inclusion_list] is used in the case when external dependencies are
+   used in the REPL using the #use or #import commands.
+  
+   this functions gives the list of paths of dependencies used by the main project
+*)
 let get_root_inclusion_list (module_resolutions : t option) = 
   match module_resolutions with
   | Some module_resolutions  ->
@@ -175,18 +220,28 @@ let get_root_inclusion_list (module_resolutions : t option) =
 
 let get_absolute_path path = 
   let path' = Path.v path in
-  if Path.is_abs path' then Some path
+  if Path.is_abs path' then path'
   else 
     Path.v ((Sys.getcwd ()) ^ Path.dir_sep ^ path) 
       |> Path.normalize 
-      |> Path.to_string_opt
 
+(* [get_inclusion_list] takes [file] and [module_resolutions]
+    and returns the inclusion list (list of paths
+    of dependencies of that project/dependency) 
+   
+   e.g. #include "ligo-list-helpers/list.mligo" 
+   The preprocessor will resolve the include into a path like 
+   /path/to/ligo_list_helpers/list.mligo
+
+   To resolve the external packages used by ligo-list-helpers [get_inclusion_list]
+   will give a list of paths of dependencies. *)
 let get_inclusion_list ~file (module_resolutions : t option) =
   match module_resolutions with
     Some module_resolutions ->
       let path = get_absolute_path file in
-      (match List.find_opt (fun (mod_path, _) -> 
-        Path.is_prefix (Some mod_path) path
+      (match List.find_opt (fun (mod_path, _) ->
+        let mod_path = Path.v mod_path in
+        Path.is_prefix mod_path path
         ) module_resolutions.resolutions 
       with
         Some (_,paths) -> paths
@@ -197,7 +252,7 @@ let get_inclusion_list ~file (module_resolutions : t option) =
 (* the function [find_external_file] specifically resolves files
    for ligo packages downloaded via esy.
 
-   the [dirs] contains a list of paths. 
+   the [inclusion_list] contains a list of paths. 
    esy package path/dir is of the form {package-name}__{version}__{hash}
    e.g. /path/to/esy/cache/ligo_list_helpers__1.0.0__bf074147
 
@@ -210,6 +265,10 @@ let get_inclusion_list ~file (module_resolutions : t option) =
     package name = ligo-list-helpers
     rest of path = list.mligo
 
+   Esy transforms the path of package names, '-' in the project name are
+   transformed to '_' & '_' in the project name are transformed to '__'
+   before searching for the path of package we transform it accordingly
+
    We find the path with the longest prefix, once the package path is
    identified, the file path is package path / rest of path
 *)
@@ -219,6 +278,7 @@ let find_external_file ~file ~inclusion_list =
     let s2 = String.length s in
     let rec aux i =
       if i >= s1 || i >= s2 then true
+      (* This won't raise an exception as we have done the bounds check above *)
       else if prefix.[i] = s.[i] then aux (i + 1)
       else false
     in
@@ -227,9 +287,8 @@ let find_external_file ~file ~inclusion_list =
   let segs = Path.segs (Path.v file) in
   Option.bind segs (fun segs -> 
     match segs with
-      pkg_name::file_name -> 
-        let file_name = String.concat Filename.dir_sep (List.tl segs) in
-        let pkg_name = (List.hd segs) in
+      pkg_name::rest_of_path -> 
+        let rest_of_path = String.concat Filename.dir_sep rest_of_path in
         let normalized_pkg_name = pkg_name
           |> String.split_on_char '_'
           |> String.concat "__"
@@ -237,13 +296,13 @@ let find_external_file ~file ~inclusion_list =
           |> String.concat "_" in
         let dir = List.find_opt (fun dir ->
           let basename = Filename.basename dir in
-          let found = starts_with ~prefix:normalized_pkg_name basename  in
+          let found = starts_with ~prefix:normalized_pkg_name basename in
           if not found 
           then starts_with ~prefix:pkg_name basename 
           else found
         ) inclusion_list in
         Option.map (fun dir -> 
-          let path = dir ^ Filename.dir_sep ^ file_name in
+          let path = dir ^ Filename.dir_sep ^ rest_of_path in
           path
         ) dir
     | _ -> None
