@@ -14,7 +14,7 @@ let pascaligo_sdata = {
   preproc =
     (fun ~raise s -> trace ~raise preproc_tracer @@
     fun ~raise -> Trace.from_result ~raise @@
-    Preprocessing.Pascaligo.preprocess_string None [] s);
+    Preprocessing.Pascaligo.preprocess_string [] s);
   parser =
     fun ~raise buffer -> trace ~raise parser_tracer @@
       fun ~raise -> Parsing.Pascaligo.parse_expression buffer ~raise
@@ -26,7 +26,7 @@ let cameligo_sdata = {
   preproc =
     (fun ~raise s -> trace ~raise preproc_tracer @@
     fun ~raise -> Trace.from_result ~raise @@
-    Preprocessing.Cameligo.preprocess_string None [] s);
+    Preprocessing.Cameligo.preprocess_string [] s);
   parser =
     fun ~raise buffer -> trace ~raise parser_tracer (
     Parsing.Cameligo.parse_expression buffer)
@@ -38,7 +38,7 @@ let reasonligo_sdata = {
   preproc =
     (fun ~raise s -> trace ~raise preproc_tracer @@
     fun ~raise -> Trace.from_result ~raise @@
-    Preprocessing.Reasonligo.preprocess_string None [] s);
+    Preprocessing.Reasonligo.preprocess_string [] s);
   parser =
     fun ~raise buffer -> trace ~raise parser_tracer (
     Parsing.Reasonligo.parse_expression buffer)
