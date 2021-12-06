@@ -6,7 +6,7 @@ title: Working with external LIGO packages/libraries
 Often times when working on a project there arises a need to use some common reusable piece of code, most of the time such functions are provided by the standard library of the programming language.
 When it is not feasible for the standard library to provide such functions, these functions can be provided by an external library.
 To fetch (download) & maintain different versions of external libraries we need a package manager.
-LIGO libraries can be published to [npm](https://www.npmjs.com/) or [opam](opam.ocaml.org/) and using the [esy](https://esy.sh/) package manager we can fetch these ligo libraries.
+LIGO libraries can be published to [npm](https://www.npmjs.com/) or [opam](https://opam.ocaml.org/) and using the [esy](https://esy.sh/) package manager we can fetch these ligo libraries.
 LIGO compiler supports working with external libraries fetched by esy.
 
 There are 2 aspects to working with external packages
