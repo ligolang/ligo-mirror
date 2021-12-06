@@ -124,12 +124,12 @@ and vars_of_fields ~raise env fields =
   Helpers.fold_npseq (vars_of_field_pattern ~raise) env fields
 
 and vars_of_field_pattern ~raise env field =
-  let var = field.value.field_name in
+  (* let var = field.value.field_name in
   if VarSet.mem var env then
     raise.raise @@ non_linear_pattern var
-  else
+  else *)
     let p = field.value.pattern
-    in vars_of_pattern ~raise (VarSet.add var env) p
+    in vars_of_pattern ~raise env p
 
 and vars_of_pconstr ~raise env = function
   Some pattern -> vars_of_pattern ~raise env pattern

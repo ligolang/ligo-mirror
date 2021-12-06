@@ -400,125 +400,21 @@ let%expect_test _ =
 (* REASONLIGO LEFTOVER: for now, we only type the test file *)
 let%expect_test _ =
   run_ligo_good [ "print" ; "ast-typed" ; (good_test "pm_test.religo") ] ;
-  [%expect{|
-    type myt = sum[Cons -> ( int * int ) , Nil -> unit]
-    type myr = record[a -> int , b -> nat , c -> string]
-    type myd = sum[One -> sum[Cons -> ( int * int ) , Nil -> unit] , Two -> record[a -> int , b -> nat , c -> string]]
-    const t1 = lambda (x) return let fr = lambda (x) return 1 in let fl = lambda (x) return 2 in let #8 = x in
-     match #8 with
-      | ( tuple_proj#9 , ys ) ->
-       match tuple_proj#9 with
-        | Cons ctor_proj#22 ->
-           match ys with
-            | Cons ctor_proj#20 ->
-               match ctor_proj#22 with
-                | ( a , b ) ->
-                 match ctor_proj#20 with
-                  | ( c , d ) ->
-                  ADD(ADD(ADD(a , b) , c) , d)
-            | Nil unit_proj#19 ->
-              (fl)@(tuple_proj#9)
-        | Nil unit_proj#21 ->
-          (fr)@(ys)
-    const t7 = lambda (x) return let #23 = x in  match #23 with
-                                                  | Some x ->
-                                                    x
-                                                  | None unit_proj#24 ->
-                                                    1
-    const t8 = lambda (x) return lambda (y) return let #25 = ( x , y ) in
-     match #25 with
-      | ( tuple_proj#26 , x ) ->
-       match tuple_proj#26 with
-        | Some x ->
-          ADD(x ,
-          x) | None unit_proj#29 ->
-               x
-    const t9 = lambda (x) return lambda (y) return let #30 = ( x , y ) in
-     match #30 with
-      | ( tuple_proj#31 , ys ) ->
-       match tuple_proj#31 with
-        | Some ctor_proj#40 ->
-           match ys with
-            | Some ctor_proj#38 ->
-              ADD(ctor_proj#40 ,
-              ctor_proj#38)
-            | None unit_proj#37 ->
-              2
-        | None unit_proj#39 ->
-          1
-    type optioni = option (int)
-    type myti = sum[Consi -> option (int) , Nili -> unit]
-    const fl = lambda (x) return 1
-    const fo = lambda (x) return 2
-    const t10 = lambda (x) return lambda (y) return let #41 = ( x , y ) in
-     match #41 with
-      | ( tuple_proj#42 , ys ) ->
-       match tuple_proj#42 with
-        | Consi ctor_proj#58 ->
-           match ys with
-            | Consi ctor_proj#56 ->
-               match ctor_proj#58 with
-                | Some ctor_proj#53 ->
-                  ADD((fo)@(ctor_proj#58) ,
-                  (fo)@(ctor_proj#56))
-                | None unit_proj#49 ->
-                   match ys with
-                    | Nili ctor_proj#52 ->
-                      ADD((fo)@(ctor_proj#58) ,
-                      (fo)@(ctor_proj#56))
-                    | Consi ctor_proj#50 ->
-                       match ctor_proj#50 with
-                        | None ctor_proj#51 ->
-                          ADD((fo)@(ctor_proj#58) ,
-                          (fo)@(ctor_proj#56))
-                        | Some b ->
-                          let b = 1 in b
-            | Nili unit_proj#55 ->
-              (fl)@(tuple_proj#42)
-        | Nili unit_proj#57 ->
-          (fl)@(ys)
-    const t11 = lambda (x) return lambda (y) return let #59 = ( x , y ) in
-     match #59 with
-      | ( tuple_proj#60 , ys ) ->
-       match tuple_proj#60 with
-        | Consi ctor_proj#77 ->
-           match ys with
-            | Consi ctor_proj#75 ->
-               match ctor_proj#77 with
-                | None ctor_proj#72 ->
-                  let #66 = ctor_proj#77 in  match #66 with
-                                              | Some a ->
-                                                a
-                                              | None unit_proj#67 ->
-                                                ADD((fo)@(ctor_proj#77) ,
-                                                (fo)@(ctor_proj#75))
-                | Some a ->
-                   match ys with
-                    | Nili ctor_proj#71 ->
-                      let #66 = ctor_proj#77 in  match #66 with
-                                                  | Some a ->
-                                                    a
-                                                  | None unit_proj#67 ->
-                                                    ADD((fo)@(ctor_proj#77) ,
-                                                    (fo)@(ctor_proj#75))
-                    | Consi ctor_proj#69 ->
-                       match ctor_proj#69 with
-                        | None ctor_proj#70 ->
-                          let #66 = ctor_proj#77 in  match #66 with
-                                                      | Some a ->
-                                                        a
-                                                      | None unit_proj#67 ->
-                                                        ADD((fo)@(ctor_proj#77) ,
-                                                        (fo)@(ctor_proj#75))
-                        | Some b ->
-                          let a = 1 in ADD(a ,
-                          b)
-            | Nili unit_proj#74 ->
-              (fl)@(tuple_proj#60)
-        | Nili unit_proj#76 ->
-          (fl)@(ys)
-    type recordi = record[a -> option (list (int)) , b -> list (int)]
-    const none_a = record[a -> NONE() , b -> CONS(42 , LIST_EMPTY())]
-    const some_a = record[a -> SOME(CONS(1 , CONS(2 , CONS(3 , CONS(4 , LIST_EMPTY()))))) , b -> CONS(42 , LIST_EMPTY())]
-    const a_empty_b_not = record[a -> SOME(LIST_EMPTY()) , b -> CONS(111 , LIST_EMPTY())]
-    const b_empty_a_not = record[a -> SOME(CONS(222 , LIST_EMPTY())) , b -> LIST_EMPTY()] |}]
+  [%expect.unreachable]
+[@@expect.uncaught_exn {|
+  (* CR expect_test_collector: This test expectation appears to contain a backtrace.
+     This is strongly discouraged as backtraces are fragile.
+     Please change this test to not include a backtrace. *)
+
+  (Cli_expect_tests.Cli_expect.Should_exit_good)
+  Raised at Cli_expect_tests__Cli_expect.run_ligo_good in file "src/bin/expect_tests/cli_expect.ml", line 28, characters 7-29
+  Called from Cli_expect_tests__Deep_pattern_matching.(fun) in file "src/bin/expect_tests/deep_pattern_matching.ml", line 402, characters 2-72
+  Called from Expect_test_collector.Make.Instance.exec in file "collector/expect_test_collector.ml", line 244, characters 12-19
+
+  Trailing output
+  ---------------
+  File "../../test/contracts//deep_pattern_matching/pm_test.religo", line 114, characters 6-7:
+  113 |      | (_, _) => 2
+  114 |      };
+  115 |   )
+  Syntax error #371. |}]
