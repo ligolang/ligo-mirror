@@ -82,19 +82,19 @@ module Command = struct
       (Option.is_some storage', ctxt)
     | Pack (loc, value, value_ty) ->
       let expr = Michelson_backend.val_to_ast ~raise ~loc value value_ty in
-      let expr = Ast_typed.e_a_pack expr in
+      let expr = Ast_aggregated.e_a_pack expr in
       let mich = Michelson_backend.compile_value ~raise expr in
       let (ret_co, ret_ty) = Michelson_backend.run_expression_unwrap ~raise ~ctxt ~loc mich in
-      let ret = LT.V_Michelson (Ty_code (ret_co, ret_ty, Ast_typed.t_bytes ())) in
-      let ret = Michelson_backend.val_to_ast ~raise ~loc ret (Ast_typed.t_bytes ()) in
+      let ret = LT.V_Michelson (Ty_code (ret_co, ret_ty, Ast_aggregated.t_bytes ())) in
+      let ret = Michelson_backend.val_to_ast ~raise ~loc ret (Ast_aggregated.t_bytes ()) in
       (ret, ctxt)
     | Unpack (loc, bytes, value_ty) ->
-      let value_ty = trace_option ~raise (Errors.generic_error loc "Expected return type is not an option" ) @@ Ast_typed.get_t_option value_ty in
-      let expr = Ast_typed.(e_a_unpack (e_a_bytes bytes) value_ty) in
+      let value_ty = trace_option ~raise (Errors.generic_error loc "Expected return type is not an option" ) @@ Ast_aggregated.get_t_option value_ty in
+      let expr = Ast_aggregated.(e_a_unpack (e_a_bytes bytes) value_ty) in
       let mich = Michelson_backend.compile_value ~raise expr in
       let (ret_co, ret_ty) = Michelson_backend.run_expression_unwrap ~raise ~ctxt ~loc mich in
-      let ret = LT.V_Michelson (Ty_code (ret_co, ret_ty, Ast_typed.t_option value_ty)) in
-      let ret = Michelson_backend.val_to_ast ~raise ~loc ret (Ast_typed.t_option value_ty) in
+      let ret = LT.V_Michelson (Ty_code (ret_co, ret_ty, Ast_aggregated.t_option value_ty)) in
+      let ret = Michelson_backend.val_to_ast ~raise ~loc ret (Ast_aggregated.t_option value_ty) in
       (ret, ctxt)
     | Nth_bootstrap_contract (n) ->
       let contract = Tezos_state.get_bootstrapped_contract ~raise n in

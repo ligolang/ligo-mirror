@@ -166,8 +166,8 @@ let rec error_ppformat : display_format:string display_format ->
     | `Inference_tracer e -> Inference.Errors.error_ppformat ~display_format f e
     | `Checking_tracer e -> Checking.Errors.error_ppformat ~display_format f e
     | `Self_ast_typed_tracer e -> Self_ast_typed.Errors.error_ppformat ~display_format f e
-    | `Aggregation e -> Aggregation.Errors.error_ppformat ~display_format f e
-    | `Self_ast_aggregated e -> Self_ast_aggregated.Errors.error_ppformat ~display_format f e
+    | `Aggregation_tracer e -> Aggregation.Errors.error_ppformat ~display_format f e
+    | `Self_ast_aggregated_tracer e -> Self_ast_aggregated.Errors.error_ppformat ~display_format f e
     | `Self_mini_c_tracer e -> Self_mini_c.Errors.error_ppformat ~display_format f e
     | `Spilling_tracer e -> Spilling.Errors.error_ppformat ~display_format f  e
     | `Stacking_tracer e -> Stacking.Errors.error_ppformat ~display_format f e
@@ -393,8 +393,8 @@ let rec error_jsonformat : Types.all -> Yojson.Safe.t = fun a ->
   | `Inference_tracer e -> Inference.Errors.error_jsonformat e
   | `Checking_tracer e -> Checking.Errors.error_jsonformat e
   | `Self_ast_typed_tracer e -> Self_ast_typed.Errors.error_jsonformat e
-  | `Aggregation e -> Aggregation.Errors.error_jsonformat e
-  | `Self_ast_aggregated e -> Self_ast_aggregated.Errors.error_jsonformat e
+  | `Aggregation_tracer e -> Aggregation.Errors.error_jsonformat e
+  | `Self_ast_aggregated_tracer e -> Self_ast_aggregated.Errors.error_jsonformat e
   | `Spilling_tracer e -> Spilling.Errors.error_jsonformat e
   | `Self_mini_c_tracer e -> Self_mini_c.Errors.error_jsonformat e
   | `Stacking_tracer e -> Stacking.Errors.error_jsonformat e

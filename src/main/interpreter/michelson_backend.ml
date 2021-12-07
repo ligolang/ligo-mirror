@@ -257,8 +257,8 @@ let rec val_to_ast ~raise ~loc : Ligo_interpreter.Types.value ->
   | V_Func_val v ->
      make_ast_func ~raise ?name:v.rec_name v.env v.arg_binder v.body v.orig_lambda
   | V_Michelson (Ty_code (expr, expr_ty, _ty_exp)) ->
-    let mini_c = trace ~raise Main_errors.decompile_michelson @@ Stacking.Decompiler.decompile_value expr_ty expr in
-    let aggregated = trace ~raise Main_errors.decompile_mini_c @@ Spilling.decompile mini_c ty in
+    let mini_c = trace ~raise Main_errors.main_decompile_michelson @@ Stacking.Decompiler.decompile_value expr_ty expr in
+    let aggregated = trace ~raise Main_errors.main_decompile_mini_c @@ Spilling.decompile mini_c ty in
     aggregated
   | V_Record map when is_t_record ty ->
      let map_ty = trace_option ~raise (Errors.generic_error loc "Expected record") @@  get_t_record ty in
