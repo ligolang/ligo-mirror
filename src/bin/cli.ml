@@ -224,6 +224,16 @@ let generator =
   Clic.parameter @@
   fun _ s -> Proto_alpha_utils.Error_monad.return s
 
+let monomorphise =
+  let docv = "BOOL" in
+  let doc = "Indicates whether expression should be monomorphised" in
+  Clic.default_arg ~doc ~long:"monomorphise" ~placeholder:docv ~default:"false" @@
+  Clic.parameter @@
+  fun _ s -> match s with
+    | "true"  -> Proto_alpha_utils.Error_monad.return true
+    | "false" -> Proto_alpha_utils.Error_monad.return false
+    | _ -> failwith "todo"
+
 let global_options = Clic.no_options
 
 module Api = Ligo_api
@@ -638,9 +648,9 @@ let print_ast_typed =
     f
 
 let print_ast_aggregated =
-  let f (syntax, infer, protocol_version, display_format) source_file () =
+  let f (syntax, infer, protocol_version, display_format, monomorphise) source_file () =
     return_result @@
-    Api.Print.ast_aggregated source_file syntax infer protocol_version display_format
+    Api.Print.ast_aggregated source_file syntax infer protocol_version display_format monomorphise
   in
   let _cmdname = "print ast-aggregated" in
   let _doc = "Subcommand: Print the contract after aggregation.\n Warning: Intended for development of LIGO and can break at any time." in
@@ -649,7 +659,7 @@ let print_ast_aggregated =
   Clic.command
     ~group:print_group
     ~desc
-    Clic.(args4 syntax infer protocol_version display_format)
+    Clic.(args5 syntax infer protocol_version display_format monomorphise)
     Clic.(prefixes ["print";"ast-aggregated"] @@ source_file @@ stop)
     f
 

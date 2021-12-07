@@ -81,7 +81,7 @@ let ast_typed source_file syntax infer protocol_version display_format =
       let typed,_ = Build.type_contract ~raise ~add_warning ~options syntax Env source_file in
       typed
 
-let ast_aggregated  source_file syntax infer protocol_version display_format =
+let ast_aggregated source_file syntax infer protocol_version display_format monomorphise =
     Trace.warning_with @@ fun add_warning get_warnings ->
     format_result ~display_format (Ast_aggregated.Formatter.expression_format) get_warnings @@
     fun ~raise ->
@@ -92,7 +92,11 @@ let ast_aggregated  source_file syntax infer protocol_version display_format =
       let typed,_ = Build.combined_contract ~raise ~add_warning ~options syntax source_file in
       let aggregated = Compile.Of_typed.compile_program ~raise typed in
       let expr = Compile.Of_typed.compile_expression_in_context (Ast_typed.e_a_unit) aggregated in
-      expr
+      match monomorphise with
+        | false ->
+          expr
+        | true ->
+          Self_ast_aggregated.monomorphise_expression expr
 
 let ast_combined  source_file syntax infer protocol_version display_format =
   Trace.warning_with @@ fun add_warning get_warnings ->
