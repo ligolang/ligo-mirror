@@ -5,7 +5,6 @@ open Trace
 open Simple_utils.Runned_result
 
 let decompile_value ~raise (output_type:Ast_aggregated.type_expression) (ty, value) =
-  (* let output_type = trace ~raise decompile_aggregated @@ Aggregation.compile_type output_type in *)
   let mini_c     = trace ~raise decompile_michelson @@ Stacking.Decompiler.decompile_value ty value in
   let aggregated =  trace ~raise decompile_mini_c    @@ Spilling.decompile mini_c output_type in
   let typed      =  trace ~raise decompile_aggregated @@ Aggregation.decompile aggregated in

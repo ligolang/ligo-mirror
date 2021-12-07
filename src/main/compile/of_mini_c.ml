@@ -33,5 +33,5 @@ let compile_type = fun e ->
   let expr_ty = Scoping.translate_type e in
   dummy_locations expr_ty
 
-let pretty_print program = 
+let pretty_print program =
   Mini_c.PP.expression program

@@ -26,6 +26,13 @@ let pp_instance ppf { vid ; type_instances ; type_ } =
   Format.fprintf ppf "{ vid = %a ; type_ = %a ; type_instances = [ %a ] }"
     pp_longident vid PP.type_expression type_ (PP_helpers.list_sep_d PP.type_expression) type_instances
 
+let pp_instances ppf xs =
+  let f (lid, instances_of_lid) =
+    Format.fprintf ppf "{ lid = %a ~> %a }\n"
+    pp_longident lid (PP_helpers.list_sep_d pp_instance) instances_of_lid
+  in
+  List.iter xs ~f
+
 module LIMap = Map.Make(struct type t = longident let compare x y = compare_longident x y end)
 
 type data = { env : unit ; instances : (instance list) LIMap.t }
@@ -198,7 +205,7 @@ let rec mono_polymorphic_expression : _ -> data -> expression -> data * expressi
        | E_variable variable -> (
          (List.rev type_insts, { variable }))
        | _ -> failwith "Cannot resolve non-variables with instantiations" in
-     let type_instances, lid = aux [] [] expr in
+     let type_instances, lid = aux [] path expr in
      let type_ = expr.type_expression in
      let vid, data = match instance_lookup_opt lid type_instances type_ data with
        | Some (vid, _) -> vid, data
