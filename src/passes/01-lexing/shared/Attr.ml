@@ -20,4 +20,5 @@ let to_lexeme (key, value_opt) =
 let to_string (key, value_opt) =
   match value_opt with
     None -> Printf.sprintf "%S" key
-  | Some String value -> Printf.sprintf "(%S, %s)" key value
+  | Some String value ->
+      Printf.sprintf "(%S, Some (String %S))" key value

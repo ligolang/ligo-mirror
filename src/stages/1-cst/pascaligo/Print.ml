@@ -139,7 +139,7 @@ and print_D_Fun state (node : fun_decl reg) =
   let children = [
      Tree.mk_child_opt  print_recursive    node.kwd_recursive;
      Tree.mk_child      Tree.print_literal node.fun_name;
-     Tree.mk_child      print_parameters   node.param;
+     Tree.mk_child      print_parameters   node.parameters;
      Tree.mk_child_opt  print_ret_type     node.ret_type;
      Tree.mk_child      print_ret_expr     node.return;
      Tree.mk_child_list print_attributes   node.attributes]
@@ -935,7 +935,7 @@ and print_E_Div state (node : slash bin_op reg) =
 and print_E_Fun state (node : fun_expr reg) =
   let node = node.value in
   let children = [
-     Tree.mk_child     print_parameters node.param;
+     Tree.mk_child     print_parameters node.parameters;
      Tree.mk_child_opt print_ret_type   node.ret_type;
      Tree.mk_child     print_ret_expr   node.return]
   in Tree.print state "E_Fun" children

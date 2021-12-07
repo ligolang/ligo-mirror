@@ -33,7 +33,7 @@ type state = <
   pad      : int -> int -> state
 >
 
-let mk_state ?(buffer=Buffer.create 131) ~offsets mode  =
+let mk_state ?(buffer=Buffer.create 131) ~offsets mode =
   object
     method offsets  = offsets;
     method mode     = mode;

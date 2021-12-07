@@ -431,7 +431,7 @@ and patch = {
   patch      : expr
 }
 
-(* Removal from collections *)
+(* Removal from sets and maps *)
 
 and removal = {
   kwd_remove : kwd_remove;

@@ -15,19 +15,15 @@ module type SELF_TOKENS = Lexing_shared.Self_tokens.S
 module type PARSER      = ParserLib.API.PARSER
 
 module LexerMainGen = Lexing_shared.LexerMainGen
+module Tree         = Cst_shared.Tree
 
 (* The functor *)
 
-module type PRINTER =
+module type PRINT =
   sig
     type tree
-    type state
 
-    val mk_state :
-      offsets:bool -> mode:[`Point|`Byte] -> buffer:Buffer.t -> state
-
-    val print_tokens : state -> tree -> unit
-    val pp_cst       : state -> tree -> unit
+    val to_buffer : Tree.state -> tree -> Buffer.t
   end
 
 module type PRETTY =
@@ -50,7 +46,7 @@ module Make
          (CST         : sig type t end)
          (Parser      : PARSER with type token = Token.t
                                 and type tree = CST.t)
-         (Printer     : PRINTER with type tree = CST.t)
+         (Print       : PRINT with type tree = CST.t)
          (Pretty      : PRETTY with type tree = CST.t)
          (CLI         : ParserLib.CLI.S)
  =
@@ -103,11 +99,13 @@ module Make
 
     (* Main *)
 
-    module MainParser = ParserLib.API.Make (MainLexer) (Parser)
-                            (struct
-                                let error_recovery_tracing = CLI.trace_recovery
-                                let tracing_output         = CLI.trace_recovery_output
-                             end)
+    module Recovery =
+      struct
+        let error_recovery_tracing = CLI.trace_recovery
+        let tracing_output         = CLI.trace_recovery_output
+      end
+
+    module MainParser = ParserLib.API.Make (MainLexer) (Parser) (Recovery)
 
     let show_error_message : MainParser.message -> unit =
       function Region.{value; region} ->
@@ -128,22 +126,14 @@ module Make
         end
       else
         let buffer = Buffer.create 231 in
-        let state  = Printer.mk_state
+        let state  = Tree.mk_state
+                       ~buffer
                        ~offsets:Preprocessor_CLI.offsets
-                       ~mode:Lexer_CLI.mode
-                       ~buffer in
+                       Lexer_CLI.mode in
         if CLI.cst then
-            begin
-              Printer.pp_cst state tree;
-              Printf.printf "%s%!" (Buffer.contents buffer)
-            end
-        else
-          if CLI.cst_tokens then
-            begin
-              Printer.print_tokens state tree;
-              Printf.printf "%s%!" (Buffer.contents buffer);
-            end
-          else ();
+          let buffer = Print.to_buffer state tree
+          in Printf.printf "%s%!" (Buffer.contents buffer)
+        else ();
         flush_all ()
 
     let wrap =

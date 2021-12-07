@@ -37,11 +37,5 @@ let pretty_print_file ~raise buffer file_path =
 let pretty_print_cst ~raise buffer file_path =
   let cst = parse_file ~raise buffer file_path in
   let buffer = Buffer.create 59 in
-  let state =
-    Cst_reasonligo.Printer.mk_state
-      ~offsets:true
-      ~mode:`Point
-      ~buffer in
-  let apply tree =
-    Cst_reasonligo.Printer.pp_cst state tree; buffer
-  in apply cst
+  let state = Cst_shared.Tree.mk_state ~buffer ~offsets:true `Point
+  in Cst_reasonligo.Print.to_buffer state cst

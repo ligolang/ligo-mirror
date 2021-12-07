@@ -45,7 +45,7 @@ module Pretty =
 
 module Printer =
   struct
-    include Cst_pascaligo.Print
+    include Cst_pascaligo.Printer
     type tree = CST.t
   end
 
