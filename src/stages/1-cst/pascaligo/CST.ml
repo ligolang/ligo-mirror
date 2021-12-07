@@ -537,6 +537,7 @@ and expr =
 | E_Map       of binding reg compound reg      (* map [3 -> "x"]  *)
 | E_MapLookup of map_lookup reg                (* M.m [i]         *)
 | E_Mod       of kwd_mod bin_op reg            (* x mod n         *)
+| E_ModPath   of expr module_path reg          (* M.N.x           *)
 | E_Mult      of times bin_op reg              (* x * y           *)
 | E_Mutez     of (lexeme * Int64.t) wrap       (* 5mutez          *)
 | E_Nat       of (lexeme * Z.t) wrap           (* 4n              *)
@@ -555,8 +556,7 @@ and expr =
 | E_Typed     of typed_expr par reg            (* (1 : int)       *)
 | E_Update    of update reg                    (* x with y        *)
 | E_Verbatim  of lexeme wrap                   (* {|foo|}         *)
-| E_ModPath   of expr module_path reg          (* M.N.x           *)
-| E_Var       of lexeme wrap                   (* x               *)
+| E_Var       of variable                      (* x               *)
 | E_Proj      of projection reg                (* e.x.1           *)
 
 (* Map binding *)
