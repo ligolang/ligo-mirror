@@ -11,8 +11,7 @@ let test source_file syntax steps infer protocol_version display_format =
       let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
       let options = Compiler_options.make ~infer ~test:true ~protocol_version () in
       let typed,_ = Build.build_context ~raise ~add_warning ~options syntax source_file in
-      let aggregated = Ligo_compile.Of_typed.compile_program ~raise typed in
-      Interpreter.eval_test ~raise ~steps ~protocol_version typed aggregated
+      Interpreter.eval_test ~raise ~steps ~protocol_version typed
 
 let dry_run source_file entry_point input storage amount balance sender source now syntax infer protocol_version display_format werror =
     Trace.warning_with @@ fun add_warning get_warnings ->

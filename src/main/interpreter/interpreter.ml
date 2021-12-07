@@ -919,27 +919,45 @@ and eval_ligo ~raise ~steps ~protocol_version : Ast_aggregated.expression -> cal
 
 and try_eval ~raise ~steps ~protocol_version expr env state r = Monad.eval ~raise (eval_ligo ~raise ~steps ~protocol_version expr [] env) state r
 
-let eval_test ~raise ~steps ~protocol_version : Ast_typed.module_fully_typed -> _ -> ((string * value) list) =
-  fun _prg ctxt ->
-  let (Module_Fully_Typed decl_lst) = _prg in
-  let aux decl r : (_ list) = match decl.Location.wrap_content with
-    | Ast_typed.Declaration_constant { binder ; expr ; _ } ->
+let eval_test ~raise ~steps ~protocol_version : Ast_typed.module_fully_typed -> ((string * value) list) =
+  fun prg ->
+  let (Module_Fully_Typed decl_lst) = prg in
+  (* Pass over declarations, for each "test"-prefixed one, add a new
+     declaration and in the end, gather all of them together *)
+  let aux decl r =
+    let ds, defs = r in
+    match decl.Location.wrap_content with
+    | Ast_typed.Declaration_constant ({ binder ; expr ; _ } as d) ->
        let ev = binder.wrap_content in
        if not (Var.is_generated ev) && (Base.String.is_prefix (Var.to_name ev) ~prefix:"test") then
-         (Var.to_name ev, expr.type_expression) :: r
+         let expr = Ast_typed.e_a_variable binder expr.type_expression in
+         let ev' = Var.fresh_like ev in
+         let binder = Location.wrap ~loc:binder.location ev' in
+         let decl' = Location.wrap ~loc:decl.location  @@
+                       Ast_typed.Declaration_constant { d with expr ; binder } in
+         decl :: decl' :: ds, (ev', expr.type_expression) :: defs
        else
-         r
-    | _ -> r in
-  let lst = List.fold_right ~f:aux ~init:[] decl_lst in
+         decl :: ds, defs
+    | _ -> decl :: ds, defs in
+  let decl_lst, lst = List.fold_right ~f:aux ~init:([], []) decl_lst in
+  (* Compile new context *)
+  let ctxt = Ligo_compile.Of_typed.compile_program ~raise (Module_Fully_Typed decl_lst) in
   let initial_state = Tezos_state.init_ctxt ~raise protocol_version [] in
-  let map = List.mapi lst ~f:(fun i (n, t) -> (i, n, t)) in
-  let map = List.fold_right map ~f:(fun (i, n, t) r -> LMap.add (Label (string_of_int i)) (Ast_typed.e_a_variable (Location.wrap (Var.of_name n)) t) r) ~init:LMap.empty in
+  let f (n, t) r =
+    let s, _ = Var.internal_get_name_and_counter n in
+    LMap.add (Label s) (Ast_typed.e_a_variable (Location.wrap n) t) r in
+  let map = List.fold_right lst ~f ~init:LMap.empty in
   let expr = Ast_typed.e_a_record map in
   let expr = ctxt expr in
   let value, _ = try_eval ~raise ~steps ~protocol_version expr Env.empty_env initial_state None in
   match value with
   | V_Record m ->
-    List.fold_right ~f:(fun (Label i, v) r -> (fst (List.nth_exn lst (int_of_string i)), v) :: r) ~init:[] @@ LMap.to_kv_list m
-  | _ -> failwith "not a tuple?"
+    let f (n, _) r =
+      let s, _ = Var.internal_get_name_and_counter n in
+      match LMap.find_opt (Label s) m with
+      | None -> failwith "Cannot find"
+      | Some v -> (s, v) :: r in
+    List.fold_right ~f ~init:[] @@ lst
+  | _ -> failwith "Not a tuple?"
 
 let () = Printexc.record_backtrace true
