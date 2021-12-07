@@ -465,7 +465,7 @@ and pattern =
 | P_Nat     of (lexeme * Z.t) wrap
 | P_Nil     of kwd_nil
 | P_Par     of pattern par reg
-| P_Record  of record_pattern reg
+| P_Record  of record_pattern
 | P_String  of lexeme wrap
 | P_Tuple   of tuple_pattern
 | P_Typed   of typed_pattern reg
@@ -477,7 +477,7 @@ and tuple_pattern = (pattern, comma) nsepseq par reg
 
 (* Record pattern *)
 
-and record_pattern = field_pattern reg compound
+and record_pattern = field_pattern reg compound reg
 
 and field_pattern = (field_name, pattern) field
 

@@ -706,7 +706,7 @@ and print_P_Par state (node : pattern par reg) =
 
 (* Record patterns *)
 
-and print_P_Record state (node : record_pattern reg) =
+and print_P_Record state (node : record_pattern) =
   print_compound print_field_pattern "P_Record" state node
 
 and print_field_pattern state (node : field_pattern reg) =
