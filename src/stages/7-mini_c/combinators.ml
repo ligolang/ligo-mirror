@@ -95,6 +95,16 @@ let get_function (e : expression) =
   | E_closure f -> Some f
   | _ -> None
 
+let get_function_eta (e : expression) =
+  let in_ty, out_ty = match e.type_expression.type_content with
+    | T_function t -> t
+    | _ -> failwith "not function" in
+  match (e.content) with
+  | E_closure f -> Some f
+  | _ ->
+    let binder = Location.wrap @@ Var.fresh () in
+    Some { binder = binder ; body = { content = E_application (e, { content = E_variable binder ; type_expression = in_ty ; location = Location.generated }) ; type_expression = out_ty ; location = Location.generated } }
+
 let get_t_function tv = match tv.type_content with
   | T_function ty -> Some ty
   | _ -> None

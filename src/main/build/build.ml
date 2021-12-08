@@ -158,7 +158,7 @@ let build_expression ~raise ~add_warning : options:Compiler_options.t -> string 
 let build_contract ~raise ~add_warning : options:Compiler_options.t -> string -> string -> file_name -> Stacking.compiled_expression * Ast_typed.environment =
   fun ~options syntax entry_point file_name ->
     let typed_prg,env = build_typed ~raise ~add_warning ~options syntax (Ligo_compile.Of_core.Contract entry_point) file_name in
-    let aggregated = Ligo_compile.Of_typed.apply_to_entrypoint ~raise typed_prg entry_point in
+    let aggregated = Ligo_compile.Of_typed.apply_to_entrypoint ~raise (typed_prg, env) entry_point in
     let mini_c = Ligo_compile.Of_aggregated.compile_expression ~raise aggregated in
     let michelson  = Ligo_compile.Of_mini_c.compile_contract ~raise ~options mini_c in
     michelson,env
@@ -182,10 +182,10 @@ let build_views ~raise ~add_warning :
       )
     in
     let f view_name =
-      let typed_prg,_  = build_typed ~raise ~add_warning:(fun _ -> ()) ~options syntax (Ligo_compile.Of_core.View (main_name,view_name)) source_file in
-      let aggregated = Ligo_compile.Of_typed.apply_to_entrypoint ~raise typed_prg view_name in
+      let typed_prg,env  = build_typed ~raise ~add_warning:(fun _ -> ()) ~options syntax (Ligo_compile.Of_core.View (main_name,view_name)) source_file in
+      let aggregated = Ligo_compile.Of_typed.apply_to_entrypoint_view ~raise (typed_prg, env) view_name in
       let mini_c = Ligo_compile.Of_aggregated.compile_expression ~raise aggregated in
-      let michelson  = Ligo_compile.Of_mini_c.compile_contract ~raise ~options mini_c in
+      let michelson  = Ligo_compile.Of_mini_c.compile_view ~raise ~options mini_c in
       (view_name, michelson)
     in
     List.map ~f views

@@ -233,9 +233,9 @@ let expect_eq_core ~raise ?options program entry_point input expected =
     Ast_core.Misc.assert_value_eq (expected,result) in
   expect ~raise ?options program entry_point input expecter
 
-let expect_evaluate ~raise (program, env) entry_point expecter =
+let expect_evaluate ~raise ((program , env) : Ast_typed.module_fully_typed * Ast_typed.environment) entry_point expecter =
   trace ~raise (test_run_tracer entry_point) @@
-  let aggregated      = Ligo_compile.Of_typed.apply_to_entrypoint ~raise (program,env) entry_point in
+  let aggregated      = Ligo_compile.Of_typed.apply_to_entrypoint_view ~raise (program, env) entry_point in
   let mini_c          = Ligo_compile.Of_aggregated.compile_expression ~raise aggregated in
   let michelson_value = Ligo_compile.Of_mini_c.compile_expression ~raise ~options mini_c in
   let res_michelson   = Ligo_run.Of_michelson.run_no_failwith ~raise michelson_value.expr michelson_value.expr_ty in

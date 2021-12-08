@@ -31,6 +31,7 @@ val get_list : value -> value list option
 val get_set : value -> value list option
 val get_function_with_ty : expression -> ( anon_function * ( type_expression * type_expression) ) option
 val get_function : expression -> anon_function option
+val get_function_eta : expression -> anon_function option
 val get_t_function : type_expression -> ( type_expression * type_expression ) option
 val get_t_option : type_expression -> type_expression option
 val get_pair : value -> ( value * value ) option

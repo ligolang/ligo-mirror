@@ -8,10 +8,6 @@ type self_mini_c_error = [
   | `Self_mini_c_could_not_aggregate_entry
 ] [@@deriving poly_constructor { prefix = "self_mini_c_" }]
 
-let not_a_function : unit -> self_mini_c_error = fun () ->
-  let () = print_endline (Printexc.raw_backtrace_to_string (Printexc.get_callstack 10)) in
-  not_a_function ()
-
 let error_ppformat : display_format:string display_format ->
   Format.formatter -> self_mini_c_error -> unit =
   fun ~display_format f a ->

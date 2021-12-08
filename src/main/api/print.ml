@@ -125,6 +125,6 @@ let mini_c source_file syntax infer protocol_version display_format optimize =
           let mini_c = Compile.Of_aggregated.compile_expression ~raise expr in
           Mini_c.Formatter.Raw mini_c
         | Some entry_point ->
-          let expr = Compile.Of_typed.apply_to_entrypoint ~raise typed entry_point in
+          let expr = Compile.Of_typed.apply_to_entrypoint ~raise (typed,env) entry_point in
           let o = Compile.Of_aggregated.compile_expression ~raise expr in
           Mini_c.Formatter.Optimized o

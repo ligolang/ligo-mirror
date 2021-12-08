@@ -994,7 +994,7 @@ let%expect_test "self_mini_c" =
   let error e = human_readable_error (self_mini_c_tracer e) in
   error (`Self_mini_c_bad_self_address C_SELF_ADDRESS) ;
   [%expect {|"Tezos.self" must be used directly and cannot be used via another function. |}] ;
-  error `Self_mini_c_not_a_function ;
+  error (`Self_mini_c_not_a_function ()) ;
   [%expect {|
     Invalid type for entrypoint.
     An entrypoint must of type "parameter * storage -> operations list * storage". |}] ;

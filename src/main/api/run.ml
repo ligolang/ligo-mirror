@@ -20,7 +20,7 @@ let dry_run source_file entry_point input storage amount balance sender source n
       let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
       let options = Compiler_options.make ~infer ~protocol_version () in
       let typed_prg,env = Build.build_context ~raise ~add_warning ~options syntax source_file in
-      let aggregated_prg = Compile.Of_typed.apply_to_entrypoint ~raise typed_prg entry_point in
+      let aggregated_prg = Compile.Of_typed.apply_to_entrypoint ~raise (typed_prg, env) entry_point in
       let mini_c_prg = Compile.Of_aggregated.compile_expression ~raise aggregated_prg in
       let compile_exp = Compile.Of_mini_c.compile_contract ~raise ~options mini_c_prg in
       let parameter_ty =

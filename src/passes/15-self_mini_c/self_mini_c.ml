@@ -6,8 +6,9 @@ open Trace
 let get_t_function ~raise e =
   trace_option ~raise (not_a_function ()) @@ Mini_c.get_t_function e
 let get_function ~raise e =
-  print_endline (Format.asprintf "BLBALB%a" Mini_c.PP.type_expression e.type_expression);
   trace_option ~raise (not_a_function ()) @@ Mini_c.get_function e
+let get_function_eta ~raise e =
+  trace_option ~raise (not_a_function ()) @@ Mini_c.get_function_eta e
 
 (* TODO hack to specialize map_expression to identity monad *)
 let map_expression = Helpers.map_expression
