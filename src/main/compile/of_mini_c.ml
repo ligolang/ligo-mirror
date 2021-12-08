@@ -13,7 +13,7 @@ let compile_contract ~raise : options:Compiler_options.t -> expression -> Stacki
   let e = Self_mini_c.all_expression ~raise e in
   let (input_ty , _) = trace ~raise self_mini_c_tracer @@ Self_mini_c.get_t_function e.type_expression in
   let body : anon_function = trace ~raise self_mini_c_tracer @@ Self_mini_c.get_function_eta e in
-  let body = Scoping.translate_closed_function body input_ty in (* Binds (usages, [translate_type input_ty], body) *)
+  let body = Scoping.translate_closed_function body input_ty in
   let body = trace ~raise stacking_tracer @@ Stacking.Program.compile_function_body options.protocol_version body in
   let expr = Self_michelson.optimize options.protocol_version body in
   let expr_ty = Scoping.translate_type e.type_expression in
@@ -24,7 +24,7 @@ let compile_view ~raise : options:Compiler_options.t -> expression -> Stacking.c
   let e = Self_mini_c.all_expression ~raise e in
   let (input_ty , _) = trace ~raise self_mini_c_tracer @@ Self_mini_c.get_t_function e.type_expression in
   let body : anon_function = trace ~raise self_mini_c_tracer @@ Self_mini_c.get_function e in
-  let body = Scoping.translate_closed_function body input_ty in (* Binds (usages, [translate_type input_ty], body) *)
+  let body = Scoping.translate_closed_function body input_ty in
   let body = trace ~raise stacking_tracer @@ Stacking.Program.compile_function_body options.protocol_version body in
   let expr = Self_michelson.optimize options.protocol_version body in
   let expr_ty = Scoping.translate_type e.type_expression in
