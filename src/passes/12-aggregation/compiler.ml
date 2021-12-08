@@ -215,26 +215,42 @@ and compile_expression ~raise : Var_env.t -> Mod_env.t -> I.expression -> O.expr
       return @@ O.E_constant { cons_name ; arguments }
     )
     | I.E_module_accessor { module_name; element} -> (
-      let rec aux : string List.Ne.t -> (O.type_expression * O.type_expression) list -> I.expression -> string List.Ne.t * (O.type_expression * O.type_expression) list =
+      let rec aux : string List.Ne.t -> (O.type_expression * O.type_expression) list -> I.expression -> string List.Ne.t * (O.type_expression * O.type_expression) list * _ option =
         fun acc_path acc_types exp ->
           match exp.expression_content with
           | E_module_accessor {module_name ; element} ->
             let acc_path = Simple_utils.List.Ne.cons module_name acc_path in
             aux acc_path acc_types element
-          | E_variable v ->
-            let (name,_int_opt) = Var.internal_get_name_and_counter v.wrap_content in (* feels wrong *)
-            Simple_utils.List.Ne.cons name acc_path, acc_types
           | E_type_inst { forall ; type_ } ->
             let type_ = compile_type ~raise type_ in
             let exp_ty = compile_type ~raise exp.type_expression in
             aux acc_path ((type_, exp_ty) :: acc_types) forall
+          | E_variable v ->
+            let (name,_int_opt) = Var.internal_get_name_and_counter v.wrap_content in (* feels wrong *)
+            Simple_utils.List.Ne.cons name acc_path, acc_types, None
+          | E_record_accessor _ ->
+            let rec aux' (e : I.expression) acc_path = match e.expression_content with
+              | E_variable v ->
+                let (name,_int_opt) = Var.internal_get_name_and_counter v.wrap_content in (* feels wrong *)
+                name, acc_path
+              | E_record_accessor { record ; path } ->
+                aux' record ((path, compile_type ~raise e.type_expression) :: acc_path)
+              | _ -> failwith "oops" in
+            let name, path = aux' exp [] in
+            Simple_utils.List.Ne.cons name acc_path, acc_types, Some path
           | _ -> failwith "TODO: corner case, not allowed in the syntax"
       in
-      let path, types = aux (List.Ne.of_list [module_name]) [] element in
+      let path, types, record_path = aux (List.Ne.of_list [module_name]) [] element in
       let path = List.Ne.rev path in
-      (* module_access_to_record_access mod_env path types *)
-      let expr = O.e_a_variable (module_path_to_lident mod_env path) (compile_type ~raise expr.type_expression) in
-      List.fold_right ~f:(fun (t, u) e -> O.e_a_type_inst e t u) ~init:expr (List.rev types)
+      match record_path with
+      | None ->
+         (* module_access_to_record_access mod_env path types *)
+         let expr = O.e_a_variable (module_path_to_lident mod_env path) (compile_type ~raise expr.type_expression) in
+         List.fold_right ~f:(fun (t, u) e -> O.e_a_type_inst e t u) ~init:expr (List.rev types)
+      | Some record_path ->
+         let expr = O.e_a_variable (module_path_to_lident mod_env path) (compile_type ~raise expr.type_expression) in
+         let expr = List.fold_right ~f:(fun (l, t) r -> O.e_a_record_access r l t) ~init:expr record_path in
+         List.fold_right ~f:(fun (t, u) e -> O.e_a_type_inst e t u) ~init:expr (List.rev types)
     )
     | I.E_mod_in { module_binder ; rhs ; let_result } -> (
       let lst =
@@ -277,7 +293,7 @@ and chain_let_in = fun lst rest -> List.fold_right lst ~f:(fun (binder,expr,attr
 
 and known_attributes_for_modules : I.module_attribute option -> O.known_attributes = fun opt ->
   let default : O.known_attributes = (* This should be defined somewhere ? *)
-    { inline = false ; no_mutation = false ; view = false ; public = false ; }
+    { inline = false ; no_mutation = true ; view = false ; public = false ; }
   in
   Option.value_map opt ~default ~f:(fun {public} -> { default with public})
 
