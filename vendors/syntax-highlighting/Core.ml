@@ -83,7 +83,7 @@ and pattern = {
 
 and pattern_kind = 
   Begin_end of begin_end_pattern (* currently doesn't work well in EMacs *)
-| Match     of match_pattern (* preferred for now due to EMacs*)
+| Match     of match_pattern (* preferred for now due to EMacs *)
 
 and begin_end_pattern = {
   meta_name:      highlight_name option;
