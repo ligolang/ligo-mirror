@@ -92,10 +92,6 @@ module type S =
 
     val cst : bool  (* --cst *)
 
-    (* Reconstruct the tokens from the CST and print them .*)
-
-    val cst_tokens : bool  (* --cst-tokens *)
-
     (* Enable error recovery *)
 
     val recovery : bool (* --recovery *)
