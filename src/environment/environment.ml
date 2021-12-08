@@ -1,6 +1,17 @@
 open Ast_typed
 open Stage_common.Constant
 module Protocols = Protocols
+
+
+type t = module' 
+(* Environment records declarations in reverse orders. Use for different kind of processes *)
+
+let add_module ?public module_binder module_ env =
+  (Location.wrap @@ Declaration_module {module_binder;module_=Module_Fully_Typed module_;module_attr={public=Core.Option.is_some public}}) :: env
+
+let add_declaration decl env = decl :: env
+
+let append (Module_Fully_Typed module_) env = List.fold_left ~f:(fun l m -> m :: l ) ~init:env module_
 let star = ()
 (*
   Make sure all the type value laoded in the environment have a `Ast_core` value attached to them (`type_meta` field of `type_expression`)
@@ -66,10 +77,12 @@ let meta_ligo_types : (type_variable * type_expression) list -> (type_variable *
     (v_failure, t_constant failure_name []);
   ]
 
-let default : Protocols.t -> environment = function
-  | Protocols.Edo -> Environment.of_list_type edo_types
-  | Protocols.Hangzhou -> Environment.of_list_type hangzhou_types
+let of_list_type : (type_variable * type_expression) list -> t = List.map ~f:(fun (type_binder,type_expr) -> Location.wrap @@ Ast_typed.Declaration_type {type_binder;type_expr;type_attr={public=true}})
 
-let default_with_test : Protocols.t -> environment = function
-  | Protocols.Edo -> Environment.of_list_type (meta_ligo_types edo_types)
-  | Protocols.Hangzhou -> Environment.of_list_type (meta_ligo_types hangzhou_types)
+let default : Protocols.t -> t = function
+  | Protocols.Edo -> of_list_type edo_types
+  | Protocols.Hangzhou -> of_list_type hangzhou_types
+
+let default_with_test : Protocols.t -> t = function
+  | Protocols.Edo -> of_list_type (meta_ligo_types edo_types)
+  | Protocols.Hangzhou -> of_list_type (meta_ligo_types hangzhou_types)

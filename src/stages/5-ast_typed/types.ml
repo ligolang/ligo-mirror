@@ -243,54 +243,6 @@ and ascription = {
     type_annotation: type_expression ;
   }
 
-and environment_element_definition =
-  | ED_binder
-  | ED_declaration of environment_element_definition_declaration
-
-and environment_element_definition_declaration = {
-    expression: expression ;
-    free_variables: free_variables ;
-    attr : known_attributes ;
-  }
-
-and free_variables = expression_variable list
-
-and environment_element = {
-    type_value: type_expression ;
-    definition: environment_element_definition ;
-  }
-
-and expression_environment = environment_binding list
-
-and environment_binding = {
-    expr_var: expression_variable ;
-    env_elt: environment_element ;
-    public: bool;
-  }
-
-and type_environment = type_environment_binding list
-
-and type_or_kind = Ty of type_expression | Kind of unit
-
-and type_environment_binding = {
-    type_variable: type_variable ;
-    type_: type_or_kind ;
-    public: bool;
-  }
-
-and module_environment = module_environment_binding list
-
-and module_environment_binding = {
-  module_variable : module_variable ;
-  module_ : environment ;
-  public: bool;
-}
-and environment = {
-  expression_environment: expression_environment ;
-  type_environment: type_environment ;
-  module_environment : module_environment ;
-  }
-
 (* Solver types
 
 

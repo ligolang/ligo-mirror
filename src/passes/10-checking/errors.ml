@@ -9,13 +9,13 @@ type typer_error = [
   | `Typer_missing_funarg_annotation of Ast_typed.expression_variable
   | `Typer_michelson_comb_no_record of Location.t
   | `Typer_michelson_comb_no_variant of Location.t
-  | `Typer_unbound_module_variable of Ast_typed.Environment.t * Ast_typed.module_variable * Location.t
-  | `Typer_unbound_type_variable of Ast_typed.Environment.t * Ast_typed.type_variable * Location.t
-  | `Typer_unbound_variable of Ast_typed.Environment.t * Ast_typed.expression_variable * Location.t
+  | `Typer_unbound_module_variable of Context.t * Ast_typed.module_variable * Location.t
+  | `Typer_unbound_type_variable of Context.t * Ast_typed.type_variable * Location.t
+  | `Typer_unbound_variable of Context.t * Ast_typed.expression_variable * Location.t
   | `Typer_match_missing_case of Ast_core.label list * Ast_core.label list * Location.t
   | `Typer_match_extra_case of Ast_core.label list * Ast_core.label list * Location.t
-  | `Typer_unbound_constructor of Ast_typed.Environment.t * Ast_core.label * Location.t
-  | `Typer_redundant_constructor of Ast_typed.Environment.t * Ast_core.label * Location.t
+  | `Typer_unbound_constructor of Context.t * Ast_core.label * Location.t
+  | `Typer_redundant_constructor of Context.t * Ast_core.label * Location.t
   | `Typer_type_constant_wrong_number_of_arguments of Ast_core.type_variable option * int * int * Location.t
   | `Typer_michelson_or_no_annotation of Ast_core.label * Location.t
   | `Typer_module_tracer of Ast_core.module_ * typer_error
@@ -598,7 +598,7 @@ let rec error_jsonformat : typer_error -> Yojson.Safe.t = fun a ->
     let message = `String "unbound module" in
     let loc = Format.asprintf "%a" Location.pp loc in
     let value = Format.asprintf "%a" Ast_typed.PP.module_variable mv in
-    let env = Format.asprintf "%a" Ast_typed.Environment.PP.environment env in
+    let env = Format.asprintf "%a" Context.PP.context env in
     let content = `Assoc [
       ("message", message);
       ("location", `String loc);
@@ -610,7 +610,7 @@ let rec error_jsonformat : typer_error -> Yojson.Safe.t = fun a ->
     let message = `String "unbound type variable" in
     let loc = Format.asprintf "%a" Location.pp loc in
     let value = Format.asprintf "%a" Ast_typed.PP.type_variable tv in
-    let env = Format.asprintf "%a" Ast_typed.Environment.PP.environment env in
+    let env = Format.asprintf "%a" Context.PP.context env in
     let content = `Assoc [
       ("message", message);
       ("location", `String loc);
@@ -622,7 +622,7 @@ let rec error_jsonformat : typer_error -> Yojson.Safe.t = fun a ->
     let message = `String "unbound type variable" in
     let loc = Format.asprintf "%a" Location.pp loc in
     let value = Format.asprintf "%a" Ast_typed.PP.expression_variable v in
-    let env = Format.asprintf "%a" Ast_typed.Environment.PP.environment env in
+    let env = Format.asprintf "%a" Context.PP.context env in
     let content = `Assoc [
       ("message", message);
       ("location", `String loc);
@@ -673,7 +673,7 @@ let rec error_jsonformat : typer_error -> Yojson.Safe.t = fun a ->
     let message = `String "unbound type variable" in
     let loc = Format.asprintf "%a" Location.pp loc in
     let value = Format.asprintf "%a" Ast_core.PP.label c in
-    let env = Format.asprintf "%a" Ast_typed.Environment.PP.environment env in
+    let env = Format.asprintf "%a" Context.PP.context env in
     let content = `Assoc [
       ("message", message);
       ("location", `String loc);
@@ -685,7 +685,7 @@ let rec error_jsonformat : typer_error -> Yojson.Safe.t = fun a ->
     let message = `String "redundant constructor" in
     let loc = Format.asprintf "%a" Location.pp loc in
     let value = Format.asprintf "%a" Ast_core.PP.label c in
-    let env = Format.asprintf "%a" Ast_typed.Environment.PP.environment env in
+    let env = Format.asprintf "%a" Context.PP.context env in
     let content = `Assoc [
       ("message", message);
       ("location", `String loc);

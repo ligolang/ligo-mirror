@@ -3,7 +3,7 @@ open Misc
 
 module Formatter = Formatter
 
-type sub_module = { type_env : tenv  ; bindings : bindings_map }
+type sub_module = { type_env : Environment.t  ; bindings : bindings_map }
 
 let scopes : with_types:bool -> options:Compiler_options.t -> Ast_core.module_ -> (def_map * scopes) = fun ~with_types ~options core_prg ->
   let make_v_def_from_core = make_v_def_from_core ~with_types  in
@@ -127,15 +127,16 @@ let scopes : with_types:bool -> options:Compiler_options.t -> Ast_core.module_ -
 
   and declaration ~options i core_prg =
     let test = options.test in
-    let compile_declaration ~raise env decl () = Checking.type_declaration ~raise ~test ~protocol_version:options.protocol_version env decl in
+    let compile_declaration ~raise env decl () = Checking.type_declaration ~raise ~test ~protocol_version:options.protocol_version ~stdlib:env decl in
     let aux = fun (i,top_def_map,inner_def_map,scopes,partials) (decl : Ast_core.declaration Location.wrap) ->
       let typed_prg =
         if with_types then Simple_utils.Trace.to_option (compile_declaration partials.type_env decl ())
         else None
       in
       let partials = match typed_prg with
-        | Some (type_env,decl') ->
+        | Some (decl') ->
           let bindings = extract_variable_types partials.bindings decl'.wrap_content in
+          let type_env = Environment.add_declaration decl' partials.type_env in
           { type_env ; bindings }
         | None -> partials
       in

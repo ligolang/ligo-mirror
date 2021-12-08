@@ -271,61 +271,6 @@ and module_fully_typed (Module_Fully_Typed p) = list (Location.wrap_to_yojson de
 let module_with_unification_vars (Module_With_Unification_Vars p) = list (Location.wrap_to_yojson declaration) p
 
 
-(* Environment *)
-
-let environment_element_definition_declaration {expression=e; free_variables ; attr = _} =
-  `Assoc [
-    ("expression", expression e);
-    ("free_variables", list expression_variable_to_yojson free_variables);
-  ]
-
-let environment_element_definition = function
-  | ED_binder  -> `List [ `String "ED_binder"; `Null]
-  | ED_declaration ed -> `List [ `String "ED_declaration"; environment_element_definition_declaration ed]
-
-let rec environment_element {type_value;definition} =
-  `Assoc [
-    ("type_value", type_expression type_value);
-    ("definition", environment_element_definition definition);
-  ]
-
-and environment_binding {expr_var;env_elt;public} =
-  `Assoc [
-    ("expr_var", expression_variable_to_yojson expr_var);
-    ("env_elt", environment_element env_elt);
-    ("public", `Bool public)
-  ]
-and expression_environment e = list environment_binding e
-
-and type_or_kind x =
-  match x with
-  | Ty ty -> `List [ `String "Ty"; type_expression ty]
-  | Kind () -> `List [ `String "Kind"; `Null ]
-
-and type_environment_binding {type_variable;type_;public} =
-  `Assoc [
-    ("type_variable", type_variable_to_yojson type_variable);
-    ("type_", type_or_kind type_);
-    ("public", `Bool public)
-  ]
-and type_environment e = list type_environment_binding e
-
-and module_environment_binding {module_variable; module_; public} =
-  `Assoc [
-    ("module_name", module_variable_to_yojson module_variable);
-    ("module_", environment module_);
-    ("public", `Bool public)
-  ]
-
-and module_environment e = list module_environment_binding e
-
-and environment {expression_environment=ee;type_environment=te;module_environment=me} =
-  `Assoc [
-    ("expression_environment", expression_environment ee);
-    ("type_environment", type_environment te);
-    ("module_environment", module_environment me)
-  ]
-
 (* Solver types *)
 
 let constant_tag : constant_tag -> json = function

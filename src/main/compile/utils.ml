@@ -17,13 +17,13 @@ let to_core ~raise ~add_warning ~options ~meta (c_unit: Buffer.t) file_path =
   let core   = Of_sugar.compile sugar in
   core
 
-let type_file ~raise ~add_warning ~options f stx form : Ast_typed.module_fully_typed * Ast_typed.environment =
+let type_file ~raise ~add_warning ~options f stx form : Ast_typed.module_fully_typed * Environment.t =
   let meta          = Of_source.extract_meta ~raise stx f in
   let c_unit,_      = Of_source.compile ~raise ~options ~meta f in
   let core          = to_core ~raise ~add_warning ~options ~meta c_unit f in
   let inferred      = Of_core.infer ~raise ~options core in
-  let typed,e       = Of_core.typecheck ~raise ~add_warning ~options form inferred in
-  (typed,e)
+  let typed         = Of_core.typecheck ~raise ~add_warning ~options form inferred in
+  (typed,Environment.append typed options.init_env)
 
 let to_mini_c ~raise ~add_warning ~options f stx env =
   let typed,_  = type_file ~raise ~add_warning ~options f stx env in
@@ -43,8 +43,8 @@ let type_expression_string ~raise ~options syntax expression env =
   let imperative_exp    = Of_c_unit.compile_expression ~raise ~meta c_unit_exp in
   let sugar_exp         = Of_imperative.compile_expression ~raise imperative_exp in
   let core_exp          = Of_sugar.compile_expression sugar_exp in
-  let typed_exp,e       = Of_core.compile_expression ~raise ~options ~env core_exp in
-  (typed_exp,e)
+  let typed_exp         = Of_core.compile_expression ~raise ~options ~env core_exp in
+  typed_exp
 
 let type_contract_string ~raise ~add_warning ~options syntax expression env =
   let meta          = Of_source.make_meta_from_syntax syntax in
@@ -53,8 +53,8 @@ let type_contract_string ~raise ~add_warning ~options syntax expression env =
   let sugar         = Of_imperative.compile ~raise imperative in
   let core          = Of_sugar.compile sugar in
   let inferred      = Of_core.infer ~raise ~options:{options with init_env = env} core in
-  let typed,e       = Of_core.typecheck ~raise ~add_warning ~options:{options with init_env = env} Env inferred in
-  (typed,core,e)
+  let typed         = Of_core.typecheck ~raise ~add_warning ~options:{options with init_env = env} Env inferred in
+  (typed,core,Environment.append typed options.init_env)
 
 let type_expression ~raise ~options source_file syntax expression env =
   let meta              = Of_source.make_meta ~raise syntax source_file in (* TODO: should be computed outside *)
@@ -62,12 +62,12 @@ let type_expression ~raise ~options source_file syntax expression env =
   let imperative_exp    = Of_c_unit.compile_expression ~raise ~meta c_unit_exp in
   let sugar_exp         = Of_imperative.compile_expression ~raise imperative_exp in
   let core_exp          = Of_sugar.compile_expression sugar_exp in
-  let typed_exp,e       = Of_core.compile_expression ~raise ~options ~env core_exp in
-  (typed_exp,e)
+  let typed_exp         = Of_core.compile_expression ~raise ~options ~env core_exp in
+  typed_exp
 
 let expression_to_mini_c ~raise ~options source_file syntax expression env =
-  let (typed_exp,_)  = type_expression ~raise ~options source_file syntax expression env in
-  let mini_c_exp     = Of_typed.compile_expression ~raise typed_exp in
+  let typed_exp  = type_expression ~raise ~options source_file syntax expression env in
+  let mini_c_exp = Of_typed.compile_expression ~raise typed_exp in
   mini_c_exp
 
 let compile_expression ~raise ~options source_file syntax expression env =
@@ -86,7 +86,7 @@ let compile_storage ~raise ~options storage input source_file syntax env mini_c_
   let imperative = Of_c_unit.compile_contract_input ~raise ~meta storage input in
   let sugar      = Of_imperative.compile_expression ~raise imperative in
   let core       = Of_sugar.compile_expression sugar in
-  let typed,_    = Of_core.compile_expression ~raise ~options ~env core in
+  let typed      = Of_core.compile_expression ~raise ~options ~env core in
   let mini_c     = Of_typed.compile_expression ~raise typed in
   let compiled   = Of_mini_c.aggregate_and_compile_expression ~raise ~options mini_c_prg mini_c in
   compiled

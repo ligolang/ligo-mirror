@@ -13,8 +13,8 @@ let test source_file syntax steps infer protocol_version display_format =
       let options = Compiler_options.make ~infer ~test:true ~protocol_version () in
       let typed,_ = Build.combined_contract ~raise ~add_warning ~options syntax source_file in
       let typed   = Self_ast_typed.monomorphise_module typed in
-      let _,typed = trace ~raise Main_errors.self_ast_typed_tracer @@ Self_ast_typed.morph_module options.init_env typed in
-      let steps = int_of_string steps in
+      let typed   = trace ~raise Main_errors.self_ast_typed_tracer @@ Self_ast_typed.morph_program options.init_env typed in
+      let steps   = int_of_string steps in
       Interpreter.eval_test ~raise ~steps ~protocol_version typed
 
 let dry_run source_file entry_point input storage amount balance sender source now syntax infer protocol_version display_format werror =
@@ -67,7 +67,7 @@ let evaluate_call source_file entry_point parameter amount balance sender source
       let sugar_param      = Compile.Of_imperative.compile_expression ~raise imperative_param in
       let core_param       = Compile.Of_sugar.compile_expression sugar_param in
       let app              = Compile.Of_core.apply entry_point core_param in
-      let typed_app,_      = Compile.Of_core.compile_expression ~raise ~options ~env app in
+      let typed_app        = Compile.Of_core.compile_expression ~raise ~options ~env app in
       let _,typed_app      = trace ~raise Main_errors.self_ast_typed_tracer @@ Self_ast_typed.morph_expression env typed_app in
       let compiled_applied = Compile.Of_typed.compile_expression ~raise typed_app in
 

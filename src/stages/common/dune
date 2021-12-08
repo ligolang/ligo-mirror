@@ -5,7 +5,7 @@
   (backend bisect_ppx))
  (modules PP PP_enums ast_common backends constant debug enums fold_maps
    folds helpers maps of_yojson test to_yojson types)
- (libraries simple-utils zarith hex tezos-utils tezos-hacl-glue-unix
+ (libraries core simple-utils zarith hex tezos-utils tezos-hacl-glue-unix
    bls12-381-unix)
  (inline_tests)
  (preprocess
