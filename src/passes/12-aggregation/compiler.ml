@@ -9,80 +9,97 @@ type err = Errors.aggregation_error raise
   - transform modules to "top-level" definitions
 *)
 let prepend : string -> O.expression_variable -> string = fun str v ->
-  str ^ fst (Var.internal_get_name_and_counter v.wrap_content)
+  str ^ "_" ^ fst (Var.internal_get_name_and_counter v.wrap_content)
 let postpend : string -> string -> string = fun str1 str2 ->
   str1 ^ "_" ^ str2
+
 module Mod_env = struct
   module ModMap = Map.Make(struct type t = string let compare = String.compare end)
-  
+
   type t = {
-    prefixes : (O.expression_variable) ModMap.t ; 
+    prefixes : (O.expression_variable) ModMap.t ;
     current_mod : string ; (* prefix on the module currently being compiled *)
   }
 
   let add : t -> string -> O.expression_variable -> t = fun x k v -> { x with prefixes = ModMap.add k v x.prefixes }
-  let add_cur_path : t -> string -> t = fun x current_mod -> { x with current_mod }
+  let add_cur_path : t -> string -> t = fun x current_mod -> { x with current_mod = if x.current_mod = "" then current_mod else x.current_mod ^ "_" ^ current_mod }
   let empty = { prefixes = ModMap.empty ; current_mod = "" }
   let find s x = ModMap.find_opt s x.prefixes
-  let cur_mod : t -> string = fun data -> data.current_mod 
+  let cur_mod : t -> string = fun data -> data.current_mod
+end
+
+module Var_env = struct
+  module VarMap = Map.Make(struct type t = expression_variable let compare = compare_expression_variable end)
+
+  type t = { var_paths : string list VarMap.t ;
+             curr_path : string list }
+  let empty = { var_paths = VarMap.empty ; curr_path = [] }
+  let find v m = VarMap.find_opt v m.var_paths
+  let add : expression_variable -> string list -> t -> t = fun v s m -> { m with var_paths = VarMap.add v s m.var_paths }
+  let push_path : module_variable -> t -> t = fun s m -> { m with curr_path = m.curr_path @ [s] }
+  let print_env ppf m = Format.fprintf ppf "%a" (PP_helpers.list_sep_d (PP_helpers.pair Ast_typed.PP.expression_variable (PP_helpers.list_sep_d PP_helpers.string))) (VarMap.to_kv_list m.var_paths)
 end
 
 let rec compile ~raise : I.expression -> I.module_fully_typed -> O.expression =
   (*TODO*) ignore raise;
-  fun hole (Module_Fully_Typed module_) -> compile_declaration ~raise ~hole Mod_env.empty module_
+  fun hole (Module_Fully_Typed module_) -> compile_declaration ~raise ~hole Var_env.empty Mod_env.empty module_
 
-and compile_declaration ~raise : hole:I.expression -> Mod_env.t -> I.declaration_loc list -> O.expression =
-  fun ~hole mod_env lst ->
+and compile_declaration ~raise : hole:I.expression -> Var_env.t -> Mod_env.t -> I.declaration_loc list -> O.expression =
+  fun ~hole var_env mod_env lst ->
     match lst with
     | hd::tl -> (
-      let aggregate ?(new_env = mod_env) (binder, expr, attr) = O.e_a_let_in binder expr (compile_declaration ~raise ~hole new_env tl) attr in
-      let skip () = compile_declaration ~raise ~hole mod_env tl in
+      let aggregate ?(var_env = var_env) ?(new_env = mod_env) (binder, expr, attr) = O.e_a_let_in binder expr (compile_declaration ~raise ~hole var_env new_env tl) attr in
+      let skip () = compile_declaration ~raise ~hole var_env mod_env tl in
       match hd.wrap_content with
       | I.Declaration_type _ -> skip ()
       | I.Declaration_constant { name = _ ; binder ; expr ; attr } -> (
-        let expr = compile_expression ~raise mod_env expr in
-        aggregate (binder, expr, attr)
+        let expr = compile_expression ~raise var_env mod_env expr in
+        let var_env = Var_env.add binder var_env.curr_path var_env in
+        aggregate ~var_env (binder, expr, attr)
       )
       | I.Declaration_module { module_binder ; module_ ; module_attr = _ } -> (
         let (Module_Fully_Typed decls) = module_ in
         let lst =
           let mod_env = Mod_env.add_cur_path mod_env module_binder in
-          module_to_record ~raise mod_env decls
+          let var_env = Var_env.push_path module_binder var_env in
+          module_to_record ~raise var_env mod_env decls
         in
-        let rest = compile_declaration ~raise ~hole mod_env tl in
+        let rest = compile_declaration ~raise ~hole var_env mod_env tl in
         List.fold_right lst ~f:(fun (binder,expr,attr) acc -> O.e_a_let_in binder expr acc attr ) ~init:rest
       )
       | I.Module_alias { alias ; binders } -> (
         let env = Mod_env.add mod_env alias (module_path_to_lident mod_env binders) in
-        compile_declaration ~raise ~hole env tl
+        compile_declaration ~raise ~hole var_env env tl
       )
     )
-    | [] -> compile_expression ~raise mod_env hole
+    | [] -> compile_expression ~raise var_env mod_env hole
 
-and module_to_record ~raise : Mod_env.t -> I.declaration_loc list -> (O.expression_variable * O.expression * O.known_attributes) list =
-  fun mod_env lst ->
+and module_to_record ~raise : Var_env.t -> Mod_env.t -> I.declaration_loc list -> (O.expression_variable * O.expression * O.known_attributes) list =
+  fun var_env mod_env lst ->
     match lst with
     | hd::tl -> (
-      let skip mod_env () = module_to_record ~raise mod_env tl in
+      let skip var_env mod_env () = module_to_record ~raise var_env mod_env tl in
       match hd.wrap_content with
-      | I.Declaration_type _ -> skip mod_env ()
+      | I.Declaration_type _ -> skip var_env mod_env ()
       | I.Declaration_constant { name = _ ; binder ; expr ; attr } -> (
-        let expr = compile_expression ~raise mod_env expr in
+        let expr = compile_expression ~raise var_env mod_env expr in
+        let var_env = Var_env.add binder var_env.curr_path var_env in
         let binder = Location.wrap ~loc:hd.location @@ Var.of_name (prepend (Mod_env.cur_mod mod_env) binder) in
-        (binder,expr,attr)::(module_to_record ~raise mod_env tl)
+        (binder,expr,attr)::(module_to_record ~raise var_env mod_env tl)
       )
       | I.Declaration_module { module_binder ; module_ ; module_attr = _ } -> (
         let mod_as_record =
           let (Module_Fully_Typed decls) = module_ in
           let mod_env = Mod_env.add_cur_path mod_env module_binder in
-          module_to_record ~raise mod_env decls
+          let var_env = Var_env.push_path module_binder var_env in
+          module_to_record ~raise var_env mod_env decls
         in
-        mod_as_record @ (module_to_record ~raise mod_env tl)
+        mod_as_record @ (module_to_record ~raise var_env mod_env tl)
       )
       | I.Module_alias { alias ; binders } -> (
         let lident = module_path_to_lident mod_env binders in (* binders => module_path_to_lident binders *)
         let env = Mod_env.add mod_env alias lident in
-        module_to_record ~raise env tl
+        module_to_record ~raise var_env env tl
       )
     )
     | [] -> []
@@ -119,18 +136,22 @@ and compile_type ~raise : I.type_expression -> O.type_expression =
       let type_ = self type_ in
       return (T_for_all { ty_binder ; kind ; type_ })
 
-and compile_expression ~raise : Mod_env.t -> I.expression -> O.expression =
-  fun mod_env expr ->
-    let self = compile_expression ~raise mod_env in
-    let self_cases = compile_cases ~raise mod_env in
+and compile_expression ~raise : Var_env.t -> Mod_env.t -> I.expression -> O.expression =
+  fun var_env mod_env expr ->
+    let self ?(var_env = var_env) = compile_expression ~raise var_env mod_env in
+    let self_cases = compile_cases ~raise var_env mod_env in
     let return expression_content : O.expression =
       let type_expression = compile_type ~raise expr.type_expression in
       { expression_content ; type_expression ; location = expr.location } in
     match expr.expression_content with
     | I.E_literal l ->
       return (O.E_literal l)
-    | I.E_variable v ->
-      return (O.E_variable v)
+    | I.E_variable v -> (
+      match Var_env.find v var_env with
+      | None -> failwith (Format.asprintf "%a" Ast_typed.PP.expression_variable v)
+      | Some path -> let v = path_to_variable v path in
+                     return (O.E_variable v)
+    )
     | I.E_raw_code { language ; code } ->
       let code = self code in
       return (O.E_raw_code { language ; code })
@@ -163,7 +184,8 @@ and compile_expression ~raise : Mod_env.t -> I.expression -> O.expression =
     )
     | I.E_let_in { let_binder ; rhs ; let_result; attr } -> (
       let rhs = self rhs in
-      let let_result = self let_result in
+      let var_env = Var_env.add let_binder [] var_env in
+      let let_result = self ~var_env let_result in
       return @@ O.E_let_in { let_binder ; rhs ; let_result; attr }
     )
     | I.E_type_in {type_binder; rhs; let_result} -> (
@@ -172,7 +194,8 @@ and compile_expression ~raise : Mod_env.t -> I.expression -> O.expression =
       return @@ O.E_type_in {type_binder; rhs; let_result}
     )
     | I.E_lambda { binder ; result } -> (
-      let result = self result in
+      let var_env = Var_env.add binder [] var_env in
+      let result = self ~var_env result in
       return @@ O.E_lambda { binder ; result }
     )
     | I.E_type_inst { forall ; type_ } -> (
@@ -181,7 +204,9 @@ and compile_expression ~raise : Mod_env.t -> I.expression -> O.expression =
       return @@ O.E_type_inst { forall ; type_ }
     )
     | I.E_recursive { fun_name; fun_type; lambda = {binder;result}} -> (
-      let result = self result in
+      let var_env = Var_env.add binder [] var_env in
+      let var_env = Var_env.add fun_name [] var_env in
+      let result = self ~var_env result in
       let fun_type = compile_type ~raise fun_type in
       return @@ O.E_recursive { fun_name; fun_type; lambda = {binder;result}}
     )
@@ -209,28 +234,31 @@ and compile_expression ~raise : Mod_env.t -> I.expression -> O.expression =
       let path = List.Ne.rev path in
       (* module_access_to_record_access mod_env path types *)
       let expr = O.e_a_variable (module_path_to_lident mod_env path) (compile_type ~raise expr.type_expression) in
-      List.fold_right ~f:(fun (t, u) e -> O.e_a_type_inst e t u) ~init:expr (List.rev types) 
+      List.fold_right ~f:(fun (t, u) e -> O.e_a_type_inst e t u) ~init:expr (List.rev types)
     )
     | I.E_mod_in { module_binder ; rhs ; let_result } -> (
       let lst =
         let (Module_Fully_Typed decls) = rhs in
-        module_to_record ~raise mod_env decls
+        let mod_env = Mod_env.add_cur_path mod_env module_binder in
+        let var_env = Var_env.push_path module_binder var_env in
+        module_to_record ~raise var_env mod_env decls
       in
-      let mod_env = Mod_env.add_cur_path mod_env module_binder in
-      chain_let_in lst @@ compile_expression ~raise mod_env let_result
+      (* let mod_env = Mod_env.add_cur_path mod_env module_binder in *)
+      chain_let_in lst @@ compile_expression ~raise var_env mod_env let_result
     )
     | I.E_mod_alias { alias ; binders ; result } -> (
       let lident = module_path_to_lident mod_env binders in (* binders => module_path_to_lident binders *)
       let mod_env = Mod_env.add mod_env alias lident in
-      compile_expression ~raise mod_env result
+      compile_expression ~raise var_env mod_env result
     )
 
-and compile_cases ~raise : Mod_env.t -> I.matching_expr -> O.matching_expr =
-  fun mod_env m ->
+and compile_cases ~raise : Var_env.t -> Mod_env.t -> I.matching_expr -> O.matching_expr =
+  fun var_env mod_env m ->
     match m with
     | Match_variant {cases;tv} -> (
         let aux { I.constructor ; pattern ; body } =
-          let body = compile_expression  ~raise mod_env body in
+          let var_env = Var_env.add pattern [] var_env in
+          let body = compile_expression ~raise var_env mod_env body in
           {O.constructor;pattern;body}
         in
         let cases = List.map ~f:aux cases in
@@ -238,9 +266,11 @@ and compile_cases ~raise : Mod_env.t -> I.matching_expr -> O.matching_expr =
         Match_variant {cases ; tv}
       )
     | Match_record {fields; body; tv} ->
-      let body = compile_expression ~raise mod_env body in
-      let tv = compile_type ~raise tv in
       let fields = O.LMap.map (fun (v, t) -> (v, compile_type ~raise t)) fields in
+      let field_names = List.map ~f:fst @@ O.LMap.values fields in
+      let var_env = List.fold_right ~f:(fun v e -> Var_env.add v [] e) ~init:var_env field_names in
+      let body = compile_expression ~raise var_env mod_env body in
+      let tv = compile_type ~raise tv in
       Match_record {fields; body; tv}
 
 and chain_let_in = fun lst rest -> List.fold_right lst ~f:(fun (binder,expr,attr) acc -> O.e_a_let_in binder expr acc attr ) ~init:rest
@@ -257,5 +287,12 @@ and module_path_to_lident (mod_env : Mod_env.t) (l : module_variable Simple_util
     | None -> hd
     | Some l -> fst (Var.internal_get_name_and_counter l.wrap_content)
   in
-  let s = List.fold_left ~f:(fun r n -> r ^ "_" ^ n) ~init:prefix tl in
+  let s = List.fold_left ~f:(fun n r -> n ^ "_" ^ r) ~init:prefix tl in
   Location.wrap @@ Var.of_name s
+
+and path_to_variable (v : expression_variable) (l : module_variable list) : O.expression_variable =
+  if List.is_empty l then
+    v
+  else
+    let s = List.fold_right ~f:(fun n r -> n ^ "_" ^ r) ~init:(Format.asprintf "%a" Ast_typed.PP.expression_variable v) l in
+    Location.wrap @@ Var.of_name s
