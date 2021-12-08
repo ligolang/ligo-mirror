@@ -97,7 +97,7 @@ let add_ast_env ?(name = Location.wrap (Var.fresh ())) env binder body =
   let open Ast_aggregated in
   let aux (let_binder , expr) (e : expression) =
     if Var.compare let_binder.Location.wrap_content binder.Location.wrap_content <> 0 && Var.compare let_binder.wrap_content name.wrap_content <> 0 then
-      e_a_let_in let_binder expr e { inline = false ; no_mutation = false ; view = false ; public = false }
+      e_a_let_in let_binder expr e { inline = false ; no_mutation = true ; view = false ; public = false }
     else
       e in
   let typed_exp' = List.fold_right ~f:aux ~init:body env in
