@@ -7,9 +7,9 @@ let refile = "./contracts/basic_multisig/multisig.religo"
 let get_program f = get_program f (Contract "main")
 
 let compile_main ~raise ~add_warning f () =
-  let typed_prg,_ = get_program ~raise ~add_warning f () in
-  let mini_c_prg    = Ligo_compile.Of_typed.compile ~raise typed_prg in
-  let michelson_prg = Ligo_compile.Of_mini_c.aggregate_and_compile_contract ~raise ~options mini_c_prg "main" in
+  let agg = Ligo_compile.Of_typed.apply_to_entrypoint ~raise (get_program ~raise ~add_warning f ()) "main" in
+  let mini_c    = Ligo_compile.Of_aggregated.compile_expression ~raise agg in
+  let michelson_prg = Ligo_compile.Of_mini_c.compile_contract ~raise ~options mini_c in
   let _contract =
     (* fails if the given entry point is not a valid contract *)
     Ligo_compile.Of_michelson.build_contract michelson_prg in

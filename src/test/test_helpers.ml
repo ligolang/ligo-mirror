@@ -330,3 +330,12 @@ let expect_eq_n_int a b c =
 let expect_eq_b_bool a b c =
   let open Ast_imperative in
   expect_eq_b a b (fun bool -> e_bool (c bool))
+
+let compile_main ~raise ~add_warning f () =
+  let agg = Ligo_compile.Of_typed.apply_to_entrypoint ~raise (get_program ~raise ~add_warning f (Contract "main") ()) "main" in
+  let mini_c    = Ligo_compile.Of_aggregated.compile_expression ~raise agg in
+  let michelson_prg = Ligo_compile.Of_mini_c.compile_contract ~raise ~options mini_c in
+  let _contract : Location.t Tezos_utils.Michelson.michelson =
+    (* fails if the given entry point is not a valid contract *)
+    Ligo_compile.Of_michelson.build_contract ~raise michelson_prg [] in
+  ()
