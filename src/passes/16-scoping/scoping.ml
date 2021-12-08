@@ -364,3 +364,7 @@ and translate_constant (expr : I.constant) (ty : I.type_expression) env :
 and translate_closed_function ({ binder ; body } : I.anon_function) input_ty : _ O.binds =
   let (body, usages) = translate_expression body (Mini_c.Environment.add (binder, input_ty) []) in
   Binds (usages, [translate_type input_ty], body)
+
+
+and hello (body : I.expression)  =
+  translate_expression body Mini_c.Environment.empty

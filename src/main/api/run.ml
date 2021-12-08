@@ -20,7 +20,7 @@ let dry_run source_file entry_point input storage amount balance sender source n
       let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
       let options = Compiler_options.make ~infer ~protocol_version () in
       let typed_prg,env = Build.build_context ~raise ~add_warning ~options syntax source_file in
-      let aggregated_prg = Compile.Of_typed.apply_to_entrypoint ~raise (typed_prg,env) entry_point in
+      let aggregated_prg = Compile.Of_typed.apply_to_entrypoint ~raise typed_prg entry_point in
       let mini_c_prg = Compile.Of_aggregated.compile_expression ~raise aggregated_prg in
       let compile_exp = Compile.Of_mini_c.compile_contract ~raise ~options mini_c_prg in
       let parameter_ty =
@@ -57,7 +57,11 @@ let evaluate_call source_file entry_point parameter amount balance sender source
         let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
         Compiler_options.make ~infer ~protocol_version ()
       in
-      let _,env = Build.build_context ~raise ~add_warning ~options syntax source_file in
+      let arggregated_prg,env =
+        let (typed_prg,env) = Build.build_context ~raise ~add_warning ~options syntax source_file in
+        let agg_prg         = Compile.Of_typed.compile_program ~raise typed_prg in
+        (agg_prg,env)
+      in
       let meta             = Compile.Of_source.extract_meta ~raise syntax source_file in
       let c_unit_param,_   = Compile.Of_source.compile_string ~raise ~options ~meta parameter in
       let imperative_param = Compile.Of_c_unit.compile_expression ~raise ~meta c_unit_param in
@@ -65,7 +69,7 @@ let evaluate_call source_file entry_point parameter amount balance sender source
       let core_param       = Compile.Of_sugar.compile_expression sugar_param in
       let app              = Compile.Of_core.apply entry_point core_param in
       let typed_app,_      = Compile.Of_core.compile_expression ~raise ~options ~env app in
-      let app_aggregated   = Compile.Of_typed.compile_expression ~raise typed_app in
+      let app_aggregated   = Compile.Of_typed.compile_expression_in_context typed_app arggregated_prg in
       let app_mini_c       = Compile.Of_aggregated.compile_expression ~raise app_aggregated in
       let michelson        = Compile.Of_mini_c.compile_expression ~raise ~options app_mini_c in
       let options          = Run.make_dry_run_options ~raise {now ; amount ; balance ; sender ; source ; parameter_ty = None} in

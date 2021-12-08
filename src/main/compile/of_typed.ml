@@ -21,15 +21,15 @@ let compile_expression ~raise : Ast_typed.expression -> Ast_aggregated.expressio
 let compile_type ~raise : Ast_typed.type_expression -> Ast_aggregated.type_expression = fun e ->
   trace ~raise aggregation_tracer @@ compile_type e
 
-let apply_to_entrypoint ~raise : (Ast_typed.module_fully_typed * Ast_typed.environment) -> string -> Ast_aggregated.expression =
-    fun (prg,env) entrypoint ->
+let apply_to_entrypoint ~raise : Ast_typed.module_fully_typed -> string -> Ast_aggregated.expression =
+    fun prg entrypoint ->
   let aggregated_prg = compile_program ~raise prg in
   let v = Location.wrap (Var.of_name entrypoint) in
-  let ty =
-    match Ast_typed.Environment.get_opt v env with
-    | Some ty -> ty.type_value
-    | None -> failwith "REMITODO: find error ?"
+  (* MAYBE , it's better for fetch_contract_type to use env :) and to be defined in stages .. lol *)
+  let Self_ast_typed.Helpers.{parameter=p_ty ; storage=s_ty} =
+    trace ~raise self_ast_typed_tracer @@ Self_ast_typed.Helpers.fetch_contract_type entrypoint prg
   in
+  let ty = t_function (t_pair p_ty s_ty) (t_pair (t_list (t_operation ())) s_ty) () in
   let var_ep = Ast_typed.(e_a_variable v ty) in
   compile_expression_in_context var_ep aggregated_prg
 

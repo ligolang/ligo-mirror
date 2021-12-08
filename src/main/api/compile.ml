@@ -46,7 +46,7 @@ let parameter source_file entry_point expression syntax infer protocol_version a
         let typed_prg,env   = Build.combined_contract ~raise ~add_warning ~options syntax source_file in
         let aggregated_prg  = Ligo_compile.Of_typed.compile_program ~raise typed_prg in
         let _contract =
-          let aggregated_contract = Ligo_compile.Of_typed.apply_to_entrypoint ~raise (typed_prg,env) entry_point in
+          let aggregated_contract = Ligo_compile.Of_typed.apply_to_entrypoint ~raise typed_prg entry_point in
           let mini_c   = Ligo_compile.Of_aggregated.compile_expression ~raise aggregated_contract in
           let michelson = Ligo_compile.Of_mini_c.compile_contract ~raise ~options mini_c in
         (* fails if the given entry point is not a valid contract *)
@@ -69,7 +69,7 @@ let storage source_file entry_point expression syntax infer protocol_version amo
         let typed_prg,env   = Build.combined_contract ~raise ~add_warning ~options syntax source_file in
         let aggregated_prg  = Ligo_compile.Of_typed.compile_program ~raise typed_prg in
         let _contract =
-          let aggregated_contract = Ligo_compile.Of_typed.apply_to_entrypoint ~raise (typed_prg,env) entry_point in
+          let aggregated_contract = Ligo_compile.Of_typed.apply_to_entrypoint ~raise typed_prg entry_point in
           let mini_c   = Ligo_compile.Of_aggregated.compile_expression ~raise aggregated_contract in
           let michelson = Ligo_compile.Of_mini_c.compile_contract ~raise ~options mini_c in
          (* fails if the given entry point is not a valid contract *)

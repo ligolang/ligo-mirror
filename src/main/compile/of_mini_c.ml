@@ -10,11 +10,14 @@ let dummy_locations : 'l 'p. ('l, 'p) Micheline.node -> (Location.t, 'p) Micheli
   Micheline.(inject_locations (fun _ -> Location.dummy) (strip_locations e))
 
 let compile_contract ~raise : options:Compiler_options.t -> expression -> Stacking.compiled_expression  = fun ~options e ->
+  let () = Format.eprintf "ofminic bef : %a\n" PP.type_expression e.type_expression in
   let e = Self_mini_c.all_expression ~raise e in
+  let () = Format.eprintf "ofminic bef' : %a\n" PP.type_expression e.type_expression in
   let (input_ty , _) = trace ~raise self_mini_c_tracer @@ Self_mini_c.get_t_function e.type_expression in
-  let body = trace ~raise self_mini_c_tracer @@ Self_mini_c.get_function e in
-  let body = Scoping.translate_closed_function body input_ty in
-  let body = trace ~raise stacking_tracer @@ Stacking.Program.compile_function_body options.protocol_version body in
+  let () = Format.eprintf "ofminic aft : %a\n" PP.type_expression e.type_expression in
+  (* let body : anon_function = trace ~raise self_mini_c_tracer @@ Self_mini_c.get_function e in *)
+  let body = Scoping.hello e in (* Binds (usages, [translate_type input_ty], body) *)
+  let body = trace ~raise stacking_tracer @@ Stacking.Program.compile_expr options.protocol_version body in
   let expr = Self_michelson.optimize options.protocol_version body in
   let expr_ty = Scoping.translate_type e.type_expression in
   let expr_ty = dummy_locations expr_ty in
