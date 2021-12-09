@@ -80,9 +80,6 @@ module Path = struct
   (* [normalize] gets rid of ".." & "." from Path.t *)
   let normalize : t -> t = Option.map Fpath.normalize
 
-  (* [to_string_opt] convets Path.t to string option *)
-  let to_string_opt : t -> string option = Option.map Fpath.to_string
-
 end
 
 (* [clean_installation_json] converts installation.json to a string SMap.t option
