@@ -140,7 +140,19 @@ let clean_installation_json installation_json =
 
   For each dependency in inside "node" we are only interested in the "dependencies"
   field, we extract the necessary fields from the esy lock json and construct the 
-  record lock_file { root : string ; node : dependency_list SMap.t } *)
+  record lock_file { root : string ; node : dependency_list SMap.t } 
+  
+  in this case 
+  { 
+    root = "ligo-main@link-dev:./esy.json" ;
+    node = SMap.t ({ "ligo-main@link-dev:./esy.json" = [
+      "temp-ligo-bin@0.30.1@d41d8cd9", 
+      "ligo_test_1@1.0.0@d41d8cd9",
+      "ligo-test_2@1.0.0@d41d8cd9", 
+      "ligo-list-helpers@1.0.1@d41d8cd9",
+      "ligo-foo@1.0.5@d41d8cd9"
+    ]; ... })
+  } *)
 let clean_lock_file_json lock_json =
   match lock_json with
     None -> None
