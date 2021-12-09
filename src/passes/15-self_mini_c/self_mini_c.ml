@@ -361,7 +361,7 @@ let eta ~raise:_ : bool ref -> expression -> expression =
 let etas ~raise : bool ref -> expression -> expression =
   fun changed ->
   map_expression ~raise (eta changed)
-let contract_check ~raise init =
+let contract_check ~raise (init: anon_function) : anon_function=
   let all = [Michelson_restrictions.self_in_lambdas] in
   let all_e = List.map ~f:(Helpers.map_sub_level_expression ~raise) all in
   List.fold ~f:(|>) all_e ~init

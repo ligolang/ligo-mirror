@@ -154,10 +154,7 @@ let rec map_expression ~raise : 'err mapper -> expression -> expression = fun f 
       let update = self update in
       return @@ E_update (expr, i, update, n)
 
-let map_sub_level_expression ~raise : 'err mapper -> expression -> expression = fun f e ->
-  match e.content with
-  | E_closure {binder ; body} ->
-    let body = map_expression ~raise f body in
-    let content = E_closure {binder; body} in
-    { e with content }
-  | _ -> e
+let map_sub_level_expression ~raise : 'err mapper -> anon_function -> anon_function = fun f e ->
+  let {binder ; body} : anon_function = e in
+  let body = map_expression ~raise f body in
+  {binder; body}

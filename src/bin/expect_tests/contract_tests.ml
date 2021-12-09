@@ -1228,29 +1228,6 @@ let%expect_test _ =
 let%expect_test _ =
   run_ligo_bad [ "compile" ; "contract" ; bad_contract "self_in_lambda.mligo" ] ;
   [%expect {|
-    File "../../test/contracts/negative/self_in_lambda.mligo", line 4, characters 6-11:
-      3 | let main (ps: unit * address): (operation list * address) =
-      4 |   let dummy = foo () in (* force not to inline foo *)
-      5 |   ( ([] : operation list) , foo ())
-    :
-    Warning: unused variable "dummy".
-    Hint: replace it by "_dummy" to prevent this warning.
-
-    File "../../test/contracts/negative/self_in_lambda.mligo", line 3, characters 9-29:
-      2 |
-      3 | let main (ps: unit * address): (operation list * address) =
-      4 |   let dummy = foo () in (* force not to inline foo *)
-    :
-    Warning: unused variable "ps".
-    Hint: replace it by "_ps" to prevent this warning.
-
-    File "../../test/contracts/negative/self_in_lambda.mligo", line 1, characters 8-18:
-      1 | let foo (u : unit) : address = Tezos.address (Tezos.self "%default" : unit contract)
-      2 |
-    :
-    Warning: unused variable "u".
-    Hint: replace it by "_u" to prevent this warning.
-
     "Tezos.self" must be used directly and cannot be used via another function. |}]
 
 let%expect_test _ =
@@ -2248,5 +2225,5 @@ let%expect_test _ =
 let%expect_test _ =
   run_ligo_good [ "print" ; "mini-c" ; contract "modules_env.mligo" ] ;
   [%expect {|
-    let Foo = let x = L(54)[@inline] in x
-    let Foo = let y = Foo[@inline] in y |}]
+    let Foo_x = L(54) in let Foo_y = Foo_x in L(unit) |}]
+    

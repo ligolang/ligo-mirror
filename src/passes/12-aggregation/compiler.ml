@@ -70,7 +70,7 @@ and compile_declaration ~raise : hole:I.expression -> Var_env.t -> I.declaration
         let (Module_Fully_Typed decls) = module_ in
         let lst =
           let var_env = Var_env.push_path module_binder var_env in
-          module_to_record ~raise var_env decls
+          compile_mod_decl ~raise var_env decls
         in
         let rest = compile_declaration ~raise ~hole var_env tl in
         List.fold_right lst ~f:(fun (binder,expr,attr) acc -> O.e_a_let_in binder expr acc attr ) ~init:rest
@@ -82,31 +82,31 @@ and compile_declaration ~raise : hole:I.expression -> Var_env.t -> I.declaration
     )
     | [] -> compile_expression ~raise var_env hole
 
-and module_to_record ~raise : Var_env.t -> I.declaration_loc list -> (O.expression_variable * O.expression * O.known_attributes) list =
+and compile_mod_decl ~raise : Var_env.t -> I.declaration_loc list -> (O.expression_variable * O.expression * O.known_attributes) list =
   fun var_env lst ->
     match lst with
     | hd::tl -> (
-      let skip var_env () = module_to_record ~raise var_env tl in
+      let skip var_env () = compile_mod_decl ~raise var_env tl in
       match hd.wrap_content with
       | I.Declaration_type _ -> skip var_env ()
       | I.Declaration_constant { name = _ ; binder ; expr ; attr } -> (
         let expr = compile_expression ~raise var_env expr in
         let var_env = Var_env.add binder var_env.curr_path var_env in
         let binder = Location.wrap ~loc:hd.location @@ Var.of_name (prepend (Var_env.cur_mod var_env) binder) in
-        (binder,expr,attr)::(module_to_record ~raise var_env tl)
+        (binder,expr,attr)::(compile_mod_decl ~raise var_env tl)
       )
       | I.Declaration_module { module_binder ; module_ ; module_attr = _ } -> (
         let mod_as_record =
           let (Module_Fully_Typed decls) = module_ in
           let var_env = Var_env.push_path module_binder var_env in
-          module_to_record ~raise var_env decls
+          compile_mod_decl ~raise var_env decls
         in
-        mod_as_record @ (module_to_record ~raise var_env tl)
+        mod_as_record @ (compile_mod_decl ~raise var_env tl)
       )
       | I.Module_alias { alias ; binders } -> (
         let lident = module_path_to_lident var_env binders in (* binders => module_path_to_lident binders *)
         let var_env = Var_env.add_mod var_env alias lident in
-        module_to_record ~raise var_env tl
+        compile_mod_decl ~raise var_env tl
       )
     )
     | [] -> []
@@ -263,7 +263,7 @@ and compile_expression ~raise : Var_env.t -> I.expression -> O.expression =
       let lst =
         let (Module_Fully_Typed decls) = rhs in
         let var_env = Var_env.push_path module_binder var_env in
-        module_to_record ~raise var_env decls
+        compile_mod_decl ~raise var_env decls
       in
       (* let mod_env = Mod_env.add_cur_path mod_env module_binder in *)
       chain_let_in lst @@ compile_expression ~raise var_env let_result
