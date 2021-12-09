@@ -1,6 +1,5 @@
 (* This wrapper exists to avoid vendored transitive dependencies in
-   the coq extraction, in order to work around a dune/coq race
-   condition bug *)
+   the coq extraction, in order to work around a dune/coq bug *)
 
 module M1 = Micheline (* from extraction *)
 module M2 = Tezos_micheline.Micheline (* from Tezos dependency *)
