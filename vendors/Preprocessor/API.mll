@@ -62,6 +62,8 @@ type trace = cond list
        current input file;
      * the field [import] is a list of (filename, module) imports
        (#import);
+     * the field [parent] points to the parent file when processing
+       nested #include;
      *)
 
 type line_comment  = string (* Opening of a line comment *)
@@ -76,7 +78,9 @@ type config = <
   input              : file_path option;
   offsets            : bool;
   dirs               : file_path list; (* Directories to search for #include files *)
-  module_resolutions : ModuleResolutions.t option
+
+  (* Data structure used for resolving path to external packages/modules *)
+  module_resolutions : ModuleResolutions.t option; 
 >
 
 type state = {
@@ -227,7 +231,7 @@ let rec last_mode = function
 | (If mode | Elif mode)::_ -> mode
 |                 _::trace -> last_mode trace
 
-(* Finding a file to #include *)
+(* Finding a file to #include & #import *)
 
 let rec find file_path = function
          [] -> None
@@ -238,6 +242,11 @@ let rec find file_path = function
     try Some (path, open_in path) with
       Sys_error _ -> find file_path dirs
 
+(* The [find] function looks for [file] in [dir] if the file does not
+   exist then we look for the file in directoris provided in [dirs] (
+   passed by the -I flag) if the file is still not found we try to
+   search for the file using the [inclusion_list] with the help of
+   ModuleResolutions *)
 let find dir file dirs inclusion_list =
   let path =
     if dir = "." || dir = "" then file

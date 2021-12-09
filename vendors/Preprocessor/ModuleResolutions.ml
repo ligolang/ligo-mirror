@@ -14,27 +14,30 @@ type t = {
   resolutions : (string * inclusion_list) list ;
 }
 
-let traverse xs =
-  List.fold_left
-    (fun acc x -> 
-      Option.bind acc 
-        (fun acc -> Option.map (fun x -> x :: acc) x))
-    (Some [])
-    xs
+let traverse : 'a option list -> 'a list option
+  = fun xs ->List.fold_left
+      (fun acc x -> 
+        Option.bind acc 
+          (fun acc -> Option.map (fun x -> x :: acc) x))
+      (Some [])
+      xs
 
 (* Wrapper over yojson helpers *)
 module JsonHelpers = struct
-  let string json = 
+  (* [string] tries to extract the `String contents from Yojson.t *)
+  let string (json : Yojson.Basic.t) = 
     match json with
       `String s -> Some s
     | _         -> None
 
-  let list json = 
+  (* [list] tries to extract the `List from Yojson.t *)
+  let list (json : Yojson.Basic.t) = 
     match json with
       `List l -> Some l
     | _       -> None
 
-  let string_list json = 
+  (* [string_list] tries to extract the `List [`String _] from Yojson.t *)
+  let string_list (json : Yojson.Basic.t) = 
     let l = list json in
     match l with
       Some l ->
@@ -42,7 +45,8 @@ module JsonHelpers = struct
         traverse strings
     | None -> None
 
-  let from_file_opt file =
+  (* [from_file_opt] tries to read the file as json (Yojson.t) *)
+  let from_file_opt (file : string) : Yojson.Basic.t option =
     try Some (Yojson.Basic.from_file file) with _ -> None
 end
 
@@ -50,34 +54,49 @@ end
 module Path = struct
   type t = Fpath.t option
 
+  (* function for string to Path.t *)
   let v : string -> t = fun s -> try Some (Fpath.v s) with _ -> None
 
-  let dir_sep = Fpath.dir_sep
+  (* alias to Filename.dir_sep *)
+  let dir_sep = Filename.dir_sep
 
+  (* [segs] splits the segments in a path 
+     e.g /a/b/c.ligo -> ["a";"b";"c.ligo"] *)
   let segs : t -> string list option = fun t -> Option.map Fpath.segs t
 
+  (* [is_prefix] checks if [prefix] is a prefix of [p] 
+     eg. prefix = /a/b/c/ , p = /a/b/c/d/e.ligo 
+         is_prefix prefix p = true *)
   let is_prefix : t -> t -> bool = 
     fun prefix p ->
       match prefix, p with
         Some prefix, Some p -> 
           Fpath.is_prefix prefix p
       | _ -> false 
-
+  
+  (* [is_abs] checks if path is absolute path *)
   let is_abs : t -> bool = function Some p -> Fpath.is_abs p | None -> false
 
+  (* [normalize] gets rid of ".." & "." from Path.t *)
   let normalize : t -> t = Option.map Fpath.normalize
 
+  (* [to_string_opt] convets Path.t to string option *)
   let to_string_opt : t -> string option = Option.map Fpath.to_string
 
 end
 
-(* The esy installation.json is of the form
-   {
-     "{package_name}@{version}@{hash}": path/to/package
-     ...
-   }
-
-   [clean_installation_json] converts installation.json to a {string SMap.t}
+(* [clean_installation_json] converts installation.json to a string SMap.t option
+   
+  e.g. esy installation.json
+  {
+    "ligo-set-helpers@1.0.2@d41d8cd9":
+      "/path/to/.esy/source/i/ligo_set_helpers__1.0.2__5cd724a1",
+    "ligo-list-helpers@1.0.1@d41d8cd9":
+      "/path/to/.esy/source/i/ligo_list_helpers__1.0.1__6233bebd",
+    "ligo-main@link-dev:./esy.json":
+      "/home/melwyn95/projects/ligo-pkg-mgmnt/ligo-main"
+  }
+   
 *)
 let clean_installation_json installation_json =
   match installation_json with
@@ -95,21 +114,33 @@ let clean_installation_json installation_json =
       (Some SMap.empty) 
       keys values
 
-(* The esy lock file is of the form
-   {
-     "checksum": "<some hash>"
-     "root": "{package_name}@link-dev:./package.json",
-     "node": {
-       "{package_name1}@{version}@hash": {
-          ...
-          "dependencies": [..., "{package_name2}@{version}@hash", ...]
-          ...
-       } 
-     }
-   }
-  
-   [clean_lock_file_json] converts the esy lock file to a record {lock_file}
-*)
+(* [clean_lock_file_json] converts the esy lock file to a record of type lock_file 
+
+  e.g. esy lock file
+  {
+    "checksum": "<some hash>"
+    "root": "ligo-main@link-dev:./esy.json",
+    "node": {
+      "ligo-main@link-dev:./esy.json": {
+        "id": "ligo-main@link-dev:./esy.json",
+        "name": "ligo-main",
+        "version": "link-dev:./esy.json",
+        "source": { "type": "link-dev", "path": ".", "manifest": "esy.json" },
+        "overrides": [],
+        "dependencies": [
+          "temp-ligo-bin@0.30.1@d41d8cd9", "ligo_test_1@1.0.0@d41d8cd9",
+          "ligo-test_2@1.0.0@d41d8cd9", "ligo-list-helpers@1.0.1@d41d8cd9",
+          "ligo-foo@1.0.5@d41d8cd9"
+        ],
+        "devDependencies": []
+      },
+      ...
+    }
+  }
+
+  For each dependency in inside "node" we are only interested in the "dependencies"
+  field, we extract the necessary fields from the esy lock json and construct the 
+  record lock_file { root : string ; node : dependency_list SMap.t } *)
 let clean_lock_file_json lock_json =
   match lock_json with
     None -> None
