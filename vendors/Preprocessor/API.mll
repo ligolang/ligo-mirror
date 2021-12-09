@@ -243,7 +243,7 @@ let rec find file_path = function
       Sys_error _ -> find file_path dirs
 
 (* The [find] function looks for [file] in [dir] if the file does not
-   exist then we look for the file in the directorie [dirs] (
+   exist then we look for the file in the directories [dirs] (
    passed by the -I flag) if the file is still not found we try to
    search for the file using the [inclusion_list] with the help of
    ModuleResolutions *)
