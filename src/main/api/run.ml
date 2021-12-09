@@ -28,9 +28,8 @@ let dry_run source_file entry_point input storage amount balance sender source n
         let _contract = Compile.Of_michelson.build_contract ~raise compile_exp in
         Option.map ~f:fst @@ Self_michelson.fetch_contract_ty_inputs compile_exp.expr_ty
       in
-      let compiled_params   = Compile.Utils.compile_contract_input ~raise ~options input storage source_file syntax env in
+      let compiled_params   = Compile.Utils.compile_contract_input ~raise ~options input storage source_file syntax typed_prg env in
       let args_michelson    = Run.evaluate_expression ~raise compiled_params.expr compiled_params.expr_ty in
-
       let options           = Run.make_dry_run_options ~raise {now ; amount ; balance ; sender ; source ; parameter_ty } in
       let runres  = Run.run_contract ~raise ~options compile_exp.expr compile_exp.expr_ty args_michelson in
       Decompile.Of_michelson.decompile_value_from_contract_execution ~raise aggregated_prg.type_expression runres

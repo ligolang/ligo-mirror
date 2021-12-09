@@ -81,14 +81,15 @@ let compile_expression ~raise ~options source_file syntax expression env =
   compiled
 
 
-let compile_contract_input ~raise ~options storage input source_file syntax env =
+let compile_contract_input ~raise ~options storage input source_file syntax typed_prg env =
   let meta       = Of_source.extract_meta ~raise syntax source_file in
   let (storage,_),(input,_) = Of_source.compile_contract_input ~raise ~options ~meta storage input in
+  let aggregated_prg = Of_typed.compile_program ~raise typed_prg in
   let imperative = Of_c_unit.compile_contract_input ~raise ~meta storage input in
   let sugar      = Of_imperative.compile_expression ~raise imperative in
   let core       = Of_sugar.compile_expression sugar in
   let typed,_    = Of_core.compile_expression ~raise ~options ~env core in
-  let aggregated = Of_typed.compile_expression ~raise typed in
+  let aggregated = Of_typed.compile_expression_in_context typed aggregated_prg  in
   let mini_c     = Of_aggregated.compile_expression ~raise aggregated in
   let compiled   = Of_mini_c.compile_expression ~raise ~options mini_c in
   compiled
