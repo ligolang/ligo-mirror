@@ -10,6 +10,7 @@ let dummy_locations : 'l 'p. ('l, 'p) Micheline.node -> (Location.t, 'p) Micheli
   Micheline.(inject_locations (fun _ -> Location.dummy) (strip_locations e))
 
 let compile_contract ~raise : options:Compiler_options.t -> expression -> Stacking.compiled_expression  = fun ~options e ->
+  let e = trace ~raise self_mini_c_tracer @@ Self_mini_c.contract_check e in
   let e = Self_mini_c.all_expression ~raise e in
   let (input_ty , _) = trace ~raise self_mini_c_tracer @@ Self_mini_c.get_t_function e.type_expression in
   let body : anon_function = trace ~raise self_mini_c_tracer @@ Self_mini_c.get_function_eta e in
