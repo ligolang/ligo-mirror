@@ -109,7 +109,7 @@ Fixpoint compile_expr
   (env : list (node A string)) (outer : splitting)
   (e : expr) {struct e} : list (node A string) :=
   match e with
-  | E_var n => compile_splitting outer
+  | E_var _ => compile_splitting outer
   | E_let_in _ inner e1 e2 =>
     let (env1, env2) := split inner env in
     let (outer, inner) := assoc_splitting outer inner in
