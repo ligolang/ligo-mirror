@@ -9,7 +9,7 @@ let measure_contract source_file entry_point declared_views syntax infer protoco
       let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
       let options = Compiler_options.make ~infer ~protocol_version () in
       let michelson,e =  Build.build_contract ~raise ~add_warning ~options syntax entry_point source_file in
-      let views = Build.build_views ~raise ~add_warning ~options syntax entry_point (declared_views,e) source_file in
+      let views = Build.build_views ~raise ~add_warning ~options syntax entry_point (declared_views,Module_Fully_Typed e) source_file in
       let contract = Compile.Of_michelson.build_contract ~raise michelson views in
       Compile.Of_michelson.measure ~raise contract
 

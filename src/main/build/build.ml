@@ -117,9 +117,9 @@ let combined_contract ~raise ~add_warning : options:Compiler_options.t -> _ -> f
       let add_warning = add_warning
       let options = options
     end)) in
-    let contract,env = trace ~raise build_error_tracer @@ from_result (compile_combined file_name) in
+    let contract,_ = trace ~raise build_error_tracer @@ from_result (compile_combined file_name) in
     let contract = Ligo_compile.Of_core.typecheck ~raise ~add_warning ~options Env contract in
-    contract,Environment.append (Module_Fully_Typed env) options.init_env
+    contract,Environment.append contract options.init_env
 
 let build_mini_c ~raise ~add_warning : options:Compiler_options.t -> _ -> _ -> file_name -> Mini_c.toplevel_statement list * Environment.t =
   fun ~options _syntax entry_point file_name ->
@@ -128,7 +128,7 @@ let build_mini_c ~raise ~add_warning : options:Compiler_options.t -> _ -> _ -> f
       let add_warning = add_warning
       let options = options
     end) in
-    let contract,_ = combined_contract ~raise ~add_warning ~options _syntax file_name in 
+    let contract,env = combined_contract ~raise ~add_warning ~options _syntax file_name in 
     let applied = match entry_point with
     | Ligo_compile.Of_core.Contract entrypoint ->
       trace ~raise self_ast_typed_tracer @@ Self_ast_typed.all_contract entrypoint contract
@@ -138,7 +138,7 @@ let build_mini_c ~raise ~add_warning : options:Compiler_options.t -> _ -> _ -> f
     let applied = Self_ast_typed.monomorphise_module applied in
     let Module_Fully_Typed applied = trace ~raise self_ast_typed_tracer @@ Self_ast_typed.morph_program options.init_env applied in
     let mini_c       = Ligo_compile.Of_typed.compile ~raise @@ Module_Fully_Typed applied in
-    (mini_c,applied)
+    mini_c,env
 
 let build_expression ~raise ~add_warning : options:Compiler_options.t -> string -> string -> file_name option -> _ =
   fun ~options syntax expression file_name ->
@@ -159,15 +159,15 @@ let build_expression ~raise ~add_warning : options:Compiler_options.t -> string 
 (* TODO: this function could be called build_michelson_code since it does not really reflect a "contract" (no views, parameter/storage types) *)
 let build_contract ~raise ~add_warning : options:Compiler_options.t -> string -> _ -> file_name -> (Stacking.compiled_expression * Environment.t) =
   fun ~options syntax entry_point file_name ->
-    let mini_c,e   = build_mini_c ~raise ~add_warning ~options syntax (Ligo_compile.Of_core.Contract entry_point) file_name in
+    let mini_c,env = build_mini_c ~raise ~add_warning ~options syntax (Ligo_compile.Of_core.Contract entry_point) file_name in
     let michelson  = Ligo_compile.Of_mini_c.aggregate_and_compile_contract ~raise ~options mini_c entry_point in
-    michelson,e
+    michelson,env
 
 let build_views ~raise ~add_warning :
-  options:Compiler_options.t -> string -> string -> string list * Environment.t -> file_name -> (string * Stacking.compiled_expression) list =
-  fun ~options syntax main_name (declared_views,env) source_file ->
+  options:Compiler_options.t -> string -> string -> string list * Ast_typed.module_fully_typed -> file_name -> (string * Stacking.compiled_expression) list =
+  fun ~options syntax main_name (declared_views,program) source_file ->
     let views =
-      let annotated_views = Ligo_compile.Of_typed.get_views @@ Module_Fully_Typed env in
+      let annotated_views = Ligo_compile.Of_typed.get_views @@ program in
       match declared_views with
       | [] -> List.map annotated_views ~f:fst
       | _ -> (
