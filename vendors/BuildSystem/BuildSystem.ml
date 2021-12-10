@@ -148,22 +148,17 @@ module Make (M : M) =
       let deps = dependency_graph main_file_name in
       match solve_graph deps main_file_name with
         Ok (ordered_deps) ->
-      (* This assumes that there are no dependency cycles involving the main file.
-          Dependency cycles are not supported anyway. *)
-        let mains, ordered_deps_only = List.partition_tf ~f:(fun (this_file_name, _) -> String.equal this_file_name main_file_name) ordered_deps in
-        let main = assert (List.length mains == 1); List.hd_exn mains in
-        let asts_typed = List.fold ~f:(compile_file_with_deps) ~init:(SMap.empty) ordered_deps_only in
-        let asts_typed = compile_file_with_deps asts_typed main in
+        let asts_typed = List.fold ~f:(compile_file_with_deps) ~init:(SMap.empty) ordered_deps in
         Ok (SMap.find main_file_name asts_typed)
       | Error e -> Error e
 
-  let compile_combined : file_name -> (M.AST.declaration list * env) build_error =
+  let compile_combined : file_name -> (ast * env) build_error =
     fun file_name ->
       let deps = dependency_graph file_name in
       match solve_graph deps file_name with
-        Ok (order_deps) ->
-        let asts_typed = List.fold ~f:(compile_file_with_deps) ~init:(SMap.empty) order_deps in
-        let contract = aggregate_dependencies_as_headers order_deps asts_typed in
+        Ok (ordered_deps) ->
+        let asts_typed = List.fold ~f:(compile_file_with_deps) ~init:(SMap.empty) ordered_deps in
+        let contract = aggregate_dependencies_as_headers ordered_deps asts_typed in
         Ok(contract, snd @@ SMap.find file_name asts_typed)
       | Error e -> Error e
   end    

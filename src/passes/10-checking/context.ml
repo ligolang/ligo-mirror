@@ -73,7 +73,7 @@ let get_type (e:t)   = List.Assoc.find ~equal:Var.equal e.types
 let get_module (e:t) = List.Assoc.find ~equal:String.equal e.modules
 
 (* Load context from the outside declarations *)
-let rec add_ez_module : Ast_typed.module_variable -> Ast_typed.module_fully_typed ->t -> t = fun mv (Module_Fully_Typed mft) e ->
+let rec add_ez_module : Ast_typed.module_variable -> Ast_typed.module_fully_typed ->t -> t = fun mv (Module_Fully_Typed mft) c ->
   let f c d = match Location.unwrap d with
     Ast_typed.Declaration_constant {name=_;binder;expr;attr={public;_}}  -> if public then add_value binder expr.type_expression c else c
   | Declaration_type {type_binder;type_expr;type_attr={public}} -> if public then add_type  type_binder type_expr c else c
@@ -83,9 +83,9 @@ let rec add_ez_module : Ast_typed.module_variable -> Ast_typed.module_fully_type
     let c' = Option.map ~f:(fun m -> add_module alias m c) m in
     Option.value ~default:c c'
   in
-  let context = List.fold ~f ~init:empty @@ mft in
-  let modules = (mv,context)::e.modules in
-  {e with modules}
+  let context = List.fold ~f ~init:c @@ mft in
+  let modules = (mv,context)::c.modules in
+  {c with modules}
 
 let init ?(env:Environment.t option) () = 
   match env with None -> empty

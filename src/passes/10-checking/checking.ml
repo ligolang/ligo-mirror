@@ -136,31 +136,31 @@ let rec type_module ~raise ~test ~init_context ~protocol_version (p:I.module_) :
 
 
 and type_declaration' : raise: typer_error raise -> protocol_version:protocol_version -> test: bool -> context -> I.declaration Location.wrap -> context * O.declaration Location.wrap =
-fun ~raise ~protocol_version ~test env d ->
-let return ?(loc = d.location) e (d : O.declaration) = e,Location.wrap ~loc d in
+fun ~raise ~protocol_version ~test c d ->
+let return ?(loc = d.location) c (d : O.declaration) = c,Location.wrap ~loc d in
 match Location.unwrap d with
   | Declaration_type {type_binder ; _} when Ast_core.Helpers.is_generalizable_variable type_binder ->
     raise.raise (wrong_generalizable d.location type_binder)
   | Declaration_type {type_binder ; type_expr; type_attr={public}} -> (
     let type_binder = Var.todo_cast type_binder in
-    let tv = evaluate_type ~raise env type_expr in
-    let env' = Context.add_type type_binder tv env in
+    let tv = evaluate_type ~raise c type_expr in
+    let env' = Context.add_type type_binder tv c in
     return env' @@ Declaration_type { type_binder ; type_expr = tv; type_attr={public} }
   )
   | Declaration_constant {name ; binder = { ascr = None ; var ; attributes=_ } ; attr  ; expr} -> (
     let expr =
       trace ~raise (constant_declaration_tracer var expr None) @@
-      type_expression' ~test ~protocol_version env expr in
+      type_expression' ~test ~protocol_version c expr in
     let binder : O.expression_variable = cast_var var in
-    let post_env = Context.add_value binder expr.type_expression env in
+    let post_env = Context.add_value binder expr.type_expression c in
     return post_env @@ Declaration_constant { name ; binder ; expr ; attr }
   )
   | Declaration_constant {name ; binder = { ascr = Some tv ; var ; attributes=_ } ; attr ; expr } ->
-    let type_env = fst @@ List.unzip env.types in
+    let type_env = fst @@ List.unzip c.types in
     let tv = Ast_core.Helpers.generalize_free_vars type_env tv in
     let av, tv = Ast_core.Helpers.destruct_for_alls tv in
-    let pre_env = env in
-    let env = List.fold_right av ~f:(fun v env -> Context.add_type_var v () env) ~init:env in
+    let pre_env = c in
+    let env = List.fold_right av ~f:(fun v env -> Context.add_type_var v () env) ~init:c in
     let tv = evaluate_type ~raise env tv in
     let expr =
       trace ~raise (constant_declaration_tracer var expr (Some tv)) @@
@@ -174,8 +174,8 @@ match Location.unwrap d with
     let post_env = Context.add_value binder expr.type_expression  pre_env in
     return post_env @@ Declaration_constant { name ; binder ; expr ; attr }
   | Declaration_module {module_binder;module_; module_attr = {public}} -> (
-    let module_ = type_module ~raise ~test ~protocol_version ~init_context:env module_ in
-    let post_env = Context.add_ez_module module_binder module_ env in
+    let module_ = type_module ~raise ~test ~protocol_version ~init_context:c module_ in
+    let post_env = Context.add_ez_module module_binder module_ c in
     return post_env @@ Declaration_module { module_binder; module_; module_attr = {public}}
   )
   | Module_alias {alias;binders} -> (
@@ -184,8 +184,8 @@ match Location.unwrap d with
       @@ Context.get_module context binder 
     in
     let (hd, tl) = binders in
-    let e = List.fold_left ~f ~init:(f env hd) tl in
-    let post_env = Context.add_module alias e env in
+    let e = List.fold_left ~f ~init:(f c hd) tl in
+    let post_env = Context.add_module alias e c in
     return post_env @@ Module_alias { alias; binders}
   )
 
