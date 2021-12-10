@@ -9,8 +9,8 @@ open Simple_utils.Trace
 (* This should not escape the typechecker but is currently use by the module morphing because morphing to record requires typing the module_record *)
 module Context = Context
 
-val type_program     : raise:typer_error raise -> test:bool -> protocol_version:Environment.Protocols.t -> stdlib:Environment.t -> I.module_ -> O.module_fully_typed
-val type_declaration : raise:typer_error raise -> test:bool -> protocol_version:Environment.Protocols.t -> stdlib:Environment.t -> I.declaration Location.wrap -> O.declaration Location.wrap
+val type_program     : raise:typer_error raise -> test:bool -> protocol_version:Environment.Protocols.t -> ?env:Environment.t -> I.module_ -> O.module_fully_typed
+val type_declaration : raise:typer_error raise -> test:bool -> protocol_version:Environment.Protocols.t -> ?env:Environment.t -> I.declaration Location.wrap -> O.declaration Location.wrap
 val type_expression  : raise:typer_error raise -> test:bool -> protocol_version:Environment.Protocols.t -> ?env:Environment.t -> ?tv_opt:O.type_expression -> I.expression -> O.expression
 
 

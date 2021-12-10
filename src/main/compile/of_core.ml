@@ -14,7 +14,7 @@ let infer ~raise:_ ~(options: Compiler_options.t) (m : Ast_core.module_) =
     | false -> m
 
 let typecheck ~raise ~add_warning ~(options: Compiler_options.t) (cform : form) (m : Ast_core.module_) : Ast_typed.module_fully_typed = 
-  let typed = trace ~raise checking_tracer @@ Checking.type_program ~test:options.test ~stdlib:options.init_env ~protocol_version:options.protocol_version m in
+  let typed = trace ~raise checking_tracer @@ Checking.type_program ~test:options.test ~env:options.init_env ~protocol_version:options.protocol_version m in
   let applied = trace ~raise self_ast_typed_tracer @@
     fun ~raise ->
     let selfed = Self_ast_typed.all_module ~raise ~add_warning typed in

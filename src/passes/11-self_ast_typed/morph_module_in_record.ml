@@ -140,4 +140,4 @@ let peephole_module ~raise : Context.t -> module_fully_typed -> Context.t * modu
   let e,m = List.fold_map ~f:(peephole_declaration ~raise) ~init:e m in
   e,Module_Fully_Typed m
 
-let peephole_program ~raise : Environment.t -> module_fully_typed -> module_fully_typed = fun e m -> snd @@ peephole_module ~raise (Context.init ~with_stdlib:e ()) m
+let peephole_program ~raise : Environment.t -> module_fully_typed -> module_fully_typed = fun e m -> snd @@ peephole_module ~raise (Context.init ~env:e ()) m

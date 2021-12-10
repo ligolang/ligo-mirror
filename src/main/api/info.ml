@@ -29,7 +29,7 @@ let get_scope source_file syntax infer protocol_version libs display_format with
     format_result ~display_format Scopes.Formatter.scope_format get_warnings @@
       fun ~raise ->
       let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
-      let options = Compiler_options.make ~infer ~protocol_version ~libs () in
+      let options  = Compiler_options.make ~infer ~protocol_version ~libs () in
       let meta     = Compile.Of_source.extract_meta ~raise syntax source_file in
       let c_unit,_ = Compile.Utils.to_c_unit ~raise ~options ~meta source_file in
       let core_prg = Compile.Utils.to_core ~raise ~add_warning ~options ~meta c_unit source_file in

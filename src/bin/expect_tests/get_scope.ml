@@ -314,11 +314,13 @@ let%expect_test _ =
       File "../../test/contracts/get_scope_tests/records.mligo", line 6, characters 40-41 ,
       File "../../test/contracts/get_scope_tests/records.mligo", line 16, characters 23-24 ,
       File "../../test/contracts/get_scope_tests/records.mligo", line 16, characters 40-41
-    (b#4 -> b) File "../../test/contracts/get_scope_tests/records.mligo", line 6, characters 4-5 |resolved: myrec|
+    (b#4 -> b) File "../../test/contracts/get_scope_tests/records.mligo", line 6, characters 4-5 |resolved:
+    record[bar -> int , foo -> int]|
     references:
       File "../../test/contracts/get_scope_tests/records.mligo", line 16, characters 3-4 ,
       File "../../test/contracts/get_scope_tests/records.mligo", line 16, characters 32-33
-    (e#6 -> e) File "../../test/contracts/get_scope_tests/records.mligo", line 15, characters 4-5 |resolved: myrec|
+    (e#6 -> e) File "../../test/contracts/get_scope_tests/records.mligo", line 15, characters 4-5 |resolved:
+    record[bar -> int , foo -> int]|
     references: []
     (g#5 -> g) File "../../test/contracts/get_scope_tests/records.mligo", line 16, characters 19-20 |resolved: int|
     references:
@@ -474,7 +476,8 @@ let%expect_test _ =
     references: []
     (b#5 -> b) File "../../test/contracts/get_scope_tests/bad_field_record.mligo", line 12, characters 4-5 |unresolved|
     references: []
-    (c#1 -> c) File "../../test/contracts/get_scope_tests/bad_field_record.mligo", line 3, characters 4-5 |resolved: foo_record|
+    (c#1 -> c) File "../../test/contracts/get_scope_tests/bad_field_record.mligo", line 3, characters 4-5 |resolved:
+    record[bar -> int , foo -> int]|
     references:
       File "../../test/contracts/get_scope_tests/bad_field_record.mligo", line 9, characters 10-11 ,
       File "../../test/contracts/get_scope_tests/bad_field_record.mligo", line 13, characters 10-11
@@ -499,13 +502,16 @@ let%expect_test _ =
     [ foo_record#1 foo_variant#0 ] File "../../test/contracts/get_scope_tests/nominal_types.mligo", line 4, characters 12-13
 
     Variable definitions:
-    (a#2 -> a) File "../../test/contracts/get_scope_tests/nominal_types.mligo", line 4, characters 4-5 |resolved: foo_variant|
+    (a#2 -> a) File "../../test/contracts/get_scope_tests/nominal_types.mligo", line 4, characters 4-5 |resolved:
+    sum[Bar -> string , Foo -> int]|
     references:
       File "../../test/contracts/get_scope_tests/nominal_types.mligo", line 9, characters 8-9
-    (b#3 -> b) File "../../test/contracts/get_scope_tests/nominal_types.mligo", line 6, characters 4-5 |resolved: foo_variant|
+    (b#3 -> b) File "../../test/contracts/get_scope_tests/nominal_types.mligo", line 6, characters 4-5 |resolved:
+    sum[Bar -> string , Foo -> int]|
     references:
       File "../../test/contracts/get_scope_tests/nominal_types.mligo", line 10, characters 8-9
-    (c#4 -> c) File "../../test/contracts/get_scope_tests/nominal_types.mligo", line 8, characters 4-5 |resolved: foo_record|
+    (c#4 -> c) File "../../test/contracts/get_scope_tests/nominal_types.mligo", line 8, characters 4-5 |resolved:
+    record[bar -> sum[Bar -> string , Foo -> int] , foo -> sum[Bar -> string , Foo -> int]]|
     references: []
     (main#6 -> main) File "../../test/contracts/get_scope_tests/nominal_types.mligo", line 13, characters 4-8 |core: foo_record -> foo_variant|
     references: []

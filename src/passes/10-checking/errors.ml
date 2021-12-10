@@ -598,7 +598,7 @@ let rec error_jsonformat : typer_error -> Yojson.Safe.t = fun a ->
     let message = `String "unbound module" in
     let loc = Format.asprintf "%a" Location.pp loc in
     let value = Format.asprintf "%a" Ast_typed.PP.module_variable mv in
-    let env = Format.asprintf "%a" Context.PP.context env in
+    let env = Format.asprintf "%a" Context.pp env in
     let content = `Assoc [
       ("message", message);
       ("location", `String loc);
@@ -610,7 +610,7 @@ let rec error_jsonformat : typer_error -> Yojson.Safe.t = fun a ->
     let message = `String "unbound type variable" in
     let loc = Format.asprintf "%a" Location.pp loc in
     let value = Format.asprintf "%a" Ast_typed.PP.type_variable tv in
-    let env = Format.asprintf "%a" Context.PP.context env in
+    let env = Format.asprintf "%a" Context.pp env in
     let content = `Assoc [
       ("message", message);
       ("location", `String loc);
@@ -622,7 +622,7 @@ let rec error_jsonformat : typer_error -> Yojson.Safe.t = fun a ->
     let message = `String "unbound type variable" in
     let loc = Format.asprintf "%a" Location.pp loc in
     let value = Format.asprintf "%a" Ast_typed.PP.expression_variable v in
-    let env = Format.asprintf "%a" Context.PP.context env in
+    let env = Format.asprintf "%a" Context.pp env in
     let content = `Assoc [
       ("message", message);
       ("location", `String loc);
@@ -673,7 +673,7 @@ let rec error_jsonformat : typer_error -> Yojson.Safe.t = fun a ->
     let message = `String "unbound type variable" in
     let loc = Format.asprintf "%a" Location.pp loc in
     let value = Format.asprintf "%a" Ast_core.PP.label c in
-    let env = Format.asprintf "%a" Context.PP.context env in
+    let env = Format.asprintf "%a" Context.pp env in
     let content = `Assoc [
       ("message", message);
       ("location", `String loc);
@@ -685,7 +685,7 @@ let rec error_jsonformat : typer_error -> Yojson.Safe.t = fun a ->
     let message = `String "redundant constructor" in
     let loc = Format.asprintf "%a" Location.pp loc in
     let value = Format.asprintf "%a" Ast_core.PP.label c in
-    let env = Format.asprintf "%a" Context.PP.context env in
+    let env = Format.asprintf "%a" Context.pp env in
     let content = `Assoc [
       ("message", message);
       ("location", `String loc);
