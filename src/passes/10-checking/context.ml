@@ -1,22 +1,15 @@
-open Core
+(* This file represente the context which give the association of values to types *)
+module Location = Simple_utils.Location
+module Var      = Simple_utils.Var
 module Types = struct 
   open Ast_typed 
-  module EVar = struct
-    type t = expression_variable [@@deriving compare,sexp_of]
-  end
-  module VComp = struct include EVar include Comparator.Make(EVar) end (* TODO : make type structure*) 
-  module TVar = struct
-    type t = type_variable [@@deriving compare,sexp_of]
-  end
-  module TComp = struct include TVar include Comparator.Make(TVar) end (* TODO : make type structure*)
-  module MVar = struct
-    type t = module_variable [@@deriving compare,sexp_of]
-  end
-  module MComp = struct include MVar include Comparator.Make(MVar) end (* TODO : make type structure*)
 
-  type values  = (expression_variable, type_expression, VComp.comparator_witness) Map.t
-  type types   = (type_variable      , type_expression, TComp.comparator_witness) Map.t
-  type modules = (module_variable    , context,         MComp.comparator_witness) Map.t
+  (* Use of list to allow type shadowing, which is weird *)
+  (* We should use data structure that are better for lookup but we first need 
+   to agree on typechecker property *)
+  type values  = (expression_variable * type_expression) List.t
+  type types   = (type_variable       * type_expression) List.t
+  type modules = (module_variable     * context        ) List.t
   and  context = { (* TODO : move to sets, requires new architecture *)
     values  : values  ;
     types   : types   ;
@@ -25,6 +18,7 @@ module Types = struct
 end
 
 type t = Types.context
+let empty : t = { values = []; types = [] ; modules = [] }
 
 module PP = struct
   open Format
@@ -43,13 +37,13 @@ module PP = struct
 
   and context ppf {values;types;modules} =
     fprintf ppf "{[ %a; @; %a; %a; ]}"
-      (list_sep_scope value_binding ) (Map.to_alist values )
-      (list_sep_scope type_binding  ) (Map.to_alist types  )
-      (list_sep_scope module_binding) (Map.to_alist modules)
+      (list_sep_scope value_binding ) values
+      (list_sep_scope type_binding  ) types
+      (list_sep_scope module_binding) modules
 
 end
+let pp =  PP.context
 
-let empty : t = { values = Map.empty (module Types.VComp); types = Map.empty (module Types.TComp) ; modules = Map.empty (module Types.MComp) }
 
 let get_values : t -> Types.values = fun { values ; types=_ ; modules=_ } -> values
 (* TODO: generate *)
@@ -60,30 +54,37 @@ let get_modules : t -> Types.modules = fun { values=_ ; types=_ ; modules } -> m
 
 (* TODO: generate : these are now messy, clean them up. *)
 let add_value : Ast_typed.expression_variable -> Ast_typed.type_expression -> t -> t = fun ev te e -> 
-  let values = Map.update e.values ~f:(fun _ -> te) ev in
+  let values = (ev,te)::e.values in
   {e with values}
 
 let add_type : Ast_typed.type_variable -> Ast_typed.type_expression -> t -> t = fun tv te e -> 
-  let types = Map.update e.types ~f:(fun _ -> te) tv in
+  let types = (tv,te)::e.types in
   {e with types}
+
+(* Im not super happy with the representation of for_all types.. *)
+let add_type_var : Ast_typed.type_variable -> unit -> t -> t = fun tv () e -> 
+  add_type tv (Ast_typed.t_variable tv) e
 let add_module : Ast_typed.module_variable -> t -> t -> t = fun mv te e -> 
-  let modules = Map.update e.modules ~f:(fun _ -> te) mv in
+  let modules = (mv,te)::e.modules in
   {e with modules}
 
-let get_value (e:t) = Map.find e.values
-let get_type (e:t) = Map.find e.types
-let get_module (e:t) = Map.find e.modules
+let get_value (e:t)  = List.Assoc.find ~equal:(Location.equal_content ~equal:Var.equal) e.values
+let get_type (e:t)   = List.Assoc.find ~equal:Var.equal e.types
+let get_module (e:t) = List.Assoc.find ~equal:String.equal e.modules
 
+(* Load context from the outside declarations *)
 let init ?(with_stdlib:Environment.t option) () = 
   match with_stdlib with None -> empty
   | Some (env) ->
     let rec f c d = match Simple_utils.Location.unwrap d with
       Ast_typed.Declaration_constant {binder;expr;_} -> add_value binder expr.type_expression c
     | Declaration_type {type_binder;type_expr;_}     -> add_type  type_binder type_expr c
-    | Declaration_module {module_binder;module_=Ast_typed.Module_Fully_Typed m; module_attr=_}     -> add_module module_binder (List.fold ~f ~init:empty m) c
-    | _ -> failwith "gnagnagna"
+    | Declaration_module {module_binder;module_=Ast_typed.Module_Fully_Typed m; module_attr=_} -> add_module module_binder (List.fold ~f ~init:empty m) c
+    | Module_alias {alias;binders} -> 
+      (* value_exn is ok since the env as pass the typer or is written by us *)
+      add_module alias (Simple_utils.List.Ne.fold_left ~f:(fun c b -> Option.value_exn (get_module c b)) ~init:c binders) c
     in
-    List.fold ~f ~init:empty env
+    List.fold ~f ~init:empty @@ List.rev env
 
 
 type label = Stage_common.Types.label
@@ -92,7 +93,7 @@ open Ast_typed.Types
 
 let get_constructor : label -> t -> (type_expression * type_expression) option = fun k x -> (* Left is the constructor, right is the sum type *)
   let rec rec_aux e =
-    let aux = fun type_ ->
+    let aux = fun (_,type_) ->
     match type_.type_content with
     | T_sum m ->
       (match LMap.find_opt k m.content with
@@ -100,39 +101,39 @@ let get_constructor : label -> t -> (type_expression * type_expression) option =
         | None -> None)
     | _ -> None
     in
-    match List.find_map ~f:aux @@ Map.data @@ get_types e with
+    match List.find_map ~f:aux @@ get_types e with
       Some _ as s -> s
     | None ->
       let modules = get_modules e in
-      List.fold_left ~f:(fun res module_ ->
+      List.fold_left ~f:(fun res (_,module_) ->
         match res with Some _ as s -> s | None -> rec_aux module_
-      ) ~init:None @@ Map.data modules
+      ) ~init:None modules
   in rec_aux x
 
 let get_constructor_parametric : label -> t -> (type_variable list * type_expression * type_expression) option = fun k x -> (* Left is the constructor, right is the sum type *)
   let rec rec_aux e =
-    let rec aux av = fun type_ ->
+    let rec aux av = fun (_t,type_) ->
       match type_.type_content with
       | T_sum m ->
          (match LMap.find_opt k m.content with
             Some {associated_type ; _} -> Some (av, associated_type , type_)
           | None -> None)
       | T_abstraction { ty_binder ; kind = _ ; type_ } ->
-         aux (Location.unwrap ty_binder :: av) type_
+         aux (Location.unwrap ty_binder :: av) (_t,type_)
       | _ -> None in
     let aux = aux []in
-    match List.find_map ~f:aux @@ Map.data (get_types e) with
+    match List.find_map ~f:aux (get_types e) with
       Some _ as s -> s
     | None ->
       let modules = get_modules e in
-      List.fold_left ~f:(fun res module_ ->
+      List.fold_left ~f:(fun res (_,module_) ->
         match res with Some _ as s -> s | None -> rec_aux module_
-      ) ~init:None @@ Map.data modules
+      ) ~init:None modules
   in rec_aux x
 
 let get_record : _ label_map -> t -> (type_variable option * rows) option = fun lmap e ->
   let rec rec_aux e =
-    let aux = fun type_ ->
+    let aux = fun (_,type_) ->
     match type_.type_content with
     | T_record m -> Simple_utils.Option.(
       let lst_kv  = LMap.to_kv_list_rev lmap in
@@ -148,19 +149,19 @@ let get_record : _ label_map -> t -> (type_variable option * rows) option = fun 
     )
     | _ -> None
     in
-    match List.find_map ~f:aux @@ Map.data (get_types e) with
+    match List.find_map ~f:aux (get_types e) with
       Some _ as s -> s
     | None ->
       let modules = get_modules e in
-      List.fold_left ~f:(fun res module_ ->
+      List.fold_left ~f:(fun res (__,module_) ->
         match res with Some _ as s -> s | None -> rec_aux module_
-      ) ~init:None @@ Map.data modules
+      ) ~init:None modules
   in rec_aux e
 
 
 let get_sum : _ label_map -> t -> rows option = fun lmap e ->
   let rec rec_aux e =
-    let aux = fun type_ ->
+    let aux = fun (_,type_) ->
     match type_.type_content with
     | T_sum m -> Simple_utils.Option.(
       let lst_kv  = LMap.to_kv_list_rev lmap in
@@ -175,12 +176,12 @@ let get_sum : _ label_map -> t -> rows option = fun lmap e ->
     )
     | _ -> None
     in
-    match List.find_map ~f:aux @@ Map.data (get_types e) with
+    match List.find_map ~f:aux @@ (get_types e) with
       Some _ as s -> s
     | None ->
       let modules = get_modules e in
-      List.fold_left ~f:(fun res module_ ->
+      List.fold_left ~f:(fun res (_,module_) ->
         match res with Some _ as s -> s | None -> rec_aux module_
-      ) ~init:None @@ Map.data modules
+      ) ~init:None modules
   in rec_aux e
 

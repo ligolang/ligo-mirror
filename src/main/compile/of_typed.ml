@@ -7,12 +7,8 @@ module Var = Simple_utils.Var
 
 module SMap = Map.Make(String)
 
-let compile_with_modules ~raise : Ast_typed.module_fully_typed -> Mini_c.program = fun p ->
-  trace ~raise spilling_tracer @@ compile_module p
-
 let compile ~raise : Ast_typed.module_fully_typed -> Mini_c.program = fun p ->
-  let mini_c = compile_with_modules ~raise p in
-  mini_c
+  trace ~raise spilling_tracer @@ compile_module p
 
 let compile_expression ~raise : expression -> Mini_c.expression = fun e ->
   trace ~raise spilling_tracer @@ compile_expression e

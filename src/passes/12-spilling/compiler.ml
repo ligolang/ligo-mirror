@@ -886,6 +886,7 @@ and compile_declaration ~raise env (d:AST.declaration) : toplevel_statement opti
 
 
 
+(* This doesn't make sense, there is no module when we compile to mini-c *)
 and compile_module ~raise ((AST.Module_Fully_Typed lst) : AST.module_fully_typed) : program =
   let aux (prev:toplevel_statement list * Environment.t) cur =
     let (hds, env) = prev in

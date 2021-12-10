@@ -144,7 +144,7 @@ let rec type_declaration ~raise env state : I.declaration Location.wrap -> envir
     let aux env binder =
       trace_option ~raise (unbound_module_variable env binder d.location)
       @@ Environment.get_module_opt binder env in
-    let e = List.Ne.fold_left aux env binders in
+    let e = List.Ne.fold_left ~f:aux ~init:env binders in
     let post_env = Environment.add_module alias e env in
     return (Module_alias { alias; binders}) (t_unit ()) post_env state @@ Wrap.mod_al ()
   )
@@ -503,7 +503,7 @@ and type_expression' ~raise : ?tv_opt:O.type_expression -> environment -> _ O'.t
     let aux e binder =
       trace_option ~raise (unbound_module_variable e binder ae.location) @@
       Environment.get_module_opt binder e in
-    let env = List.Ne.fold_left aux e binders in
+    let env = List.Ne.fold_left ~f:aux ~init:e binders in
     let e = Environment.add_module alias env e in
     let (e,state,result,t),constraints = self e state result in
     let wrapped =
@@ -705,10 +705,10 @@ let decompile_env (env : Ast_typed.declaration_loc list) =
       I.Environment.add_module module_binder (module_) env
   | Module_alias {alias;binders} -> 
       let module_ = 
-        List.Ne.fold_left (fun env binder -> 
+        List.Ne.fold_left ~f:(fun env binder -> 
           Option.value_exn
           (Environment.get_module_opt binder env))
-        env binders
+        ~init:env binders
       in
       I.Environment.add_module alias module_ env
   in

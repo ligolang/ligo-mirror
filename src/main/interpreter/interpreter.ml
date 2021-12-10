@@ -960,7 +960,7 @@ and resolve_module_path ~raise ~loc binders env =
     match List.Assoc.find (Ligo_interpreter.Environment.modules e) ~equal:String.equal m with
     | None -> raise.raise @@ Errors.generic_error loc "Error resolving module path"
     | Some e -> e in
-  List.Ne.fold_left aux env binders
+  List.Ne.fold_left ~f:aux ~init:env binders
 
 and eval_module ~raise ~steps ~protocol_version : Ast_typed.module_fully_typed * Tezos_state.context * env -> env * Tezos_state.context =
   fun (Module_Fully_Typed prg, initial_state, env) ->

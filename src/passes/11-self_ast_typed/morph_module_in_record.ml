@@ -1,29 +1,34 @@
+(* This file morph a module into a record for compilation to backends that doesn't support module 
+  This lead to bad michelson code as accessing module is expensive. Consider namespacing the value instead *)
 open Helpers
 open Simple_utils.Trace
 open Ast_typed
+
+(* This is used only because we haven't found a proper typed for module yet. and we need
+to type the record that we morp the module into *)
 module Context = Checking.Context
 
-let rec declaration_to_expression ~raise : Context.t -> declaration_loc list -> (string * expression) list = fun env decl ->
+let rec declaration_to_expression ~raise : Context.t -> declaration_loc list -> (string * expression) list = fun context decl ->
   let self = declaration_to_expression ~raise in
   match decl with
     [] -> []
   | (hd: declaration_loc) :: tl -> 
     match hd.wrap_content with
       Declaration_constant {name=_;binder;expr;attr=_} -> 
-      let _,expr = fold_map_expression (peephole_expression ~raise) env expr in
-      let env = Context.add_value binder expr.type_expression env in
+      let _,expr = fold_map_expression (peephole_expression ~raise) context expr in
+      let env = Context.add_value binder expr.type_expression context in
       let binder = Var.to_name binder.wrap_content in
       (binder,expr) :: self env tl
-    | Declaration_type _ -> self env tl
+    | Declaration_type _ -> self context tl
     | Declaration_module {module_binder;module_;module_attr=_} ->
-      let expr = module_to_record ~raise env module_ in
+      let expr = module_to_record ~raise context module_ in
       let env = Context.add_value 
-        (Location.wrap @@ Var.of_name module_binder) expr.type_expression env in
+        (Location.wrap @@ Var.of_name module_binder) expr.type_expression context in
       (module_binder,expr) :: self env tl
     | Module_alias {alias;binders} ->
       let let_binder = Location.wrap @@ Var.of_name alias in
       let (init,nexts) = binders in
-      (match Context.get_value env (Location.wrap @@ Var.of_name init) with None -> raise.raise @@ Errors.corner_case "The module shouldn't type"
+      (match Context.get_value context (Location.wrap @@ Var.of_name init) with None -> raise.raise @@ Errors.corner_case "The module shouldn't type"
         | Some (record_type) ->
           let rhs = List.fold ~f:(fun record path -> 
             let record_type = Option.value_exn (get_t_record record.type_expression) in
@@ -31,13 +36,13 @@ let rec declaration_to_expression ~raise : Context.t -> declaration_loc list -> 
               | Some (r) -> r.associated_type in
             {expression_content = E_record_accessor {record;path}; type_expression;location=hd.location}) 
             ~init:(e_a_variable (Location.wrap @@ Var.of_name init) @@ record_type) @@ List.map ~f:(fun x -> Label x) nexts in
-          let env = Context.add_value let_binder rhs.type_expression env in
+          let env = Context.add_value let_binder rhs.type_expression context in
           (alias, rhs) :: self env tl
       )
     
-and module_to_record ~raise : Context.t -> module_fully_typed -> expression = fun e m ->
+and module_to_record ~raise : Context.t -> module_fully_typed -> expression = fun c m ->
   let Module_Fully_Typed lst = m in
-  let lst = declaration_to_expression ~raise e lst in
+  let lst = declaration_to_expression ~raise c lst in
   let f = fun expr (binder,ex) ->
     let var = Location.wrap @@ Var.of_name binder in
     let attr = {inline=true; no_mutation=false;view=false;public=true} in
@@ -49,17 +54,17 @@ and module_to_record ~raise : Context.t -> module_fully_typed -> expression = fu
   let expr, record = List.fold_map ~f ~init:(fun e -> e) lst in
   expr @@ e_a_record ~layout:L_comb @@ LMap.of_list record
 
-and peephole_expression ~raise : Context.t -> expression -> bool * Context.t * expression = fun e expr ->
+and peephole_expression ~raise : Context.t -> expression -> bool * Context.t * expression = fun c expr ->
   match expr.expression_content with
     E_mod_in {module_binder; rhs; let_result} ->
     let let_binder = Location.wrap @@ Var.of_name module_binder in
-    let rhs = module_to_record ~raise e rhs in
-    let e = Context.add_value let_binder rhs.type_expression e in
-    true,e,{ expr with expression_content=E_let_in {let_binder; rhs;let_result; attr={inline=true;no_mutation=false;view=false;public=false}}}
+    let rhs = module_to_record ~raise c rhs in
+    let c = Context.add_value let_binder rhs.type_expression c in
+    true,c,{ expr with expression_content=E_let_in {let_binder; rhs;let_result; attr={inline=true;no_mutation=false;view=false;public=false}}}
   | E_mod_alias {alias;binders;result} ->
     let let_binder = Location.wrap @@ Var.of_name alias in
     let (init,nexts) = binders in
-    (match Context.get_value e (Location.wrap @@ Var.of_name init) with None -> raise.raise @@ Errors.corner_case "The module shouldn't type"
+    (match Context.get_value c (Location.wrap @@ Var.of_name init) with None -> raise.raise @@ Errors.corner_case "The module shouldn't type"
       | Some (record_type) ->
         let rhs = List.fold ~f:(fun record path -> 
           let record_type = Option.value_exn (get_t_record record.type_expression) in
@@ -68,12 +73,12 @@ and peephole_expression ~raise : Context.t -> expression -> bool * Context.t * e
           { expr with expression_content = E_record_accessor {record;path}; type_expression}) 
           ~init:(e_a_variable (Location.wrap @@ Var.of_name init) @@ record_type) @@ List.map ~f:(fun x -> Label x) nexts in
         let attr = { inline = true;no_mutation=false;view=false;public=false } in
-        let e = Context.add_value let_binder rhs.type_expression e in
-        true,e,{expr with expression_content=E_let_in {let_binder;rhs;let_result=result;attr}}
+        let c = Context.add_value let_binder rhs.type_expression c in
+        true,c,{expr with expression_content=E_let_in {let_binder;rhs;let_result=result;attr}}
     )
   | E_module_accessor {module_name; element} ->
     let module_var = Location.wrap @@ Var.of_name module_name in
-    (match Context.get_value e module_var with None -> raise.raise @@ Errors.corner_case "The module shouldn't type"
+    (match Context.get_value c module_var with None -> raise.raise @@ Errors.corner_case "The module shouldn't type"
       | Some (record_type) ->
       let module_var = e_a_variable module_var record_type in
       let rec aux (element : expression) = 
@@ -92,10 +97,10 @@ and peephole_expression ~raise : Context.t -> expression -> bool * Context.t * e
           | Some (r) -> r.associated_type in
         { expr with expression_content = E_record_accessor {record;path}; type_expression }) 
         ~init:module_var acces_list in
-      true,e,expr
+      true,c,expr
     )
   | E_type_inst _ -> raise.raise @@ Errors.corner_case "Monomorphisation should run before Module Morphing"
-  | _ -> true,e,expr
+  | _ -> true,c,expr
 
 let peephole_declaration ~raise : Context.t -> declaration_loc -> Context.t * declaration_loc = fun e m ->
   match m.wrap_content with

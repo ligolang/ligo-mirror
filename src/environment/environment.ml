@@ -3,9 +3,11 @@ open Stage_common.Constant
 module Protocols = Protocols
 
 
+(* Environment records declarations already seen in reverse orders. Use for different kind of processes *)
 type t = module' 
-(* Environment records declarations in reverse orders. Use for different kind of processes *)
 
+
+let pp ppf m = PP.module_fully_typed ppf @@ Module_Fully_Typed m
 let add_module ?public module_binder module_ env =
   (Location.wrap @@ Declaration_module {module_binder;module_=Module_Fully_Typed module_;module_attr={public=Core.Option.is_some public}}) :: env
 

@@ -199,5 +199,5 @@ let build_contract_use ~raise ~add_warning : options:Compiler_options.t -> strin
     let contract = Ast_typed.Module_Fully_Typed contract in
     let contract = Self_ast_typed.monomorphise_module contract in
     let contract = trace ~raise self_ast_typed_tracer @@ Self_ast_typed.morph_program options.init_env contract in
-    let mini_c   = Ligo_compile.Of_typed.compile_with_modules ~raise contract in
+    let mini_c   = Ligo_compile.Of_typed.compile ~raise contract in
     (mini_c, contract, env)

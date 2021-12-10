@@ -111,7 +111,8 @@ let try_contract ~raise state s =
       let applied =
         trace ~raise Main_errors.self_ast_typed_tracer @@ Self_ast_typed.morph_program state.env typed_prg in
       let mini_c =
-        Ligo_compile.Of_typed.compile_with_modules ~raise applied in
+        Ligo_compile.Of_typed.compile ~raise applied in
+      let env = Environment.append applied env in
       let state = { state with env;
                                decl_list = state.decl_list @ mini_c;
                                } in
@@ -132,10 +133,11 @@ let import_file ~raise state file_name module_name =
   let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol () in
   let options = {options with init_env = state.env } in
   let module_,env = Build.combined_contract ~raise ~add_warning ~options (variant_to_syntax state.syntax) file_name in
-  let env = Environment.add_module ~public:() module_name env state.env in
   let module_ = Ast_typed.(Module_Fully_Typed [Simple_utils.Location.wrap @@ Declaration_module {module_binder=module_name;module_;module_attr={public=true}}]) in
   let contract = trace ~raise Main_errors.self_ast_typed_tracer @@ Self_ast_typed.morph_program env module_ in
-  let mini_c = Ligo_compile.Of_typed.compile_with_modules ~raise contract in
+  let env = Environment.append module_ state.env in
+  let env = Environment.append contract env in
+  let mini_c = Ligo_compile.Of_typed.compile ~raise contract in
   let state = { state with env; decl_list = state.decl_list @ mini_c } in
   (state, Just_ok)
 
