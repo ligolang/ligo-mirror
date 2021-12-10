@@ -147,7 +147,7 @@ let build_expression ~raise ~add_warning : options:Compiler_options.t -> string 
          let contract, env = combined_contract ~raise ~add_warning ~options syntax init_file in
          (contract,env)
       | None -> (Module_Fully_Typed [],options.init_env) in
-    let typed_exp       = Ligo_compile.Utils.type_expression ~raise ~options file_name syntax expression options.init_env in
+    let typed_exp       = Ligo_compile.Utils.type_expression ~raise ~options file_name syntax expression env in
     let data, typed_exp = Self_ast_typed.monomorphise_expression typed_exp in
     let _, module_      = Self_ast_typed.monomorphise_module_data data module_ in
     let module_         = trace ~raise self_ast_typed_tracer @@ Self_ast_typed.morph_program options.init_env module_ in
