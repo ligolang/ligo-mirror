@@ -127,6 +127,7 @@ let scopes : with_types:bool -> options:Compiler_options.t -> Ast_core.module_ -
 
   and declaration ~options i core_prg =
     let test = options.test in
+    (* Note : Why do we need to compile here ? Is it just about handling the environment ? *)
     let compile_declaration ~raise env decl () = Checking.type_declaration ~raise ~test ~protocol_version:options.protocol_version ~env decl in
     let aux = fun (i,top_def_map,inner_def_map,scopes,partials) (decl : Ast_core.declaration Location.wrap) ->
       let typed_prg =

@@ -270,34 +270,3 @@ and declaration = function
 and module_fully_typed (Module_Fully_Typed p) = list (Location.wrap_to_yojson declaration) p
 let module_with_unification_vars (Module_With_Unification_Vars p) = list (Location.wrap_to_yojson declaration) p
 
-
-(* Solver types *)
-
-let constant_tag : constant_tag -> json = function
-  | C_arrow        -> `List [`String "C_arrow"; `Null]
-  | C_option       -> `List [`String "C_option"; `Null]
-  | C_map          -> `List [`String "C_map"; `Null]
-  | C_big_map      -> `List [`String "C_big_map"; `Null]
-  | C_list         -> `List [`String "C_list"; `Null]
-  | C_set          -> `List [`String "C_set"; `Null]
-  | C_unit         -> `List [`String "C_unit"; `Null]
-  | C_string       -> `List [`String "C_string"; `Null]
-  | C_nat          -> `List [`String "C_nat"; `Null]
-  | C_mutez        -> `List [`String "C_mutez"; `Null]
-  | C_timestamp    -> `List [`String "C_timestamp"; `Null]
-  | C_int          -> `List [`String "C_int"; `Null]
-  | C_address      -> `List [`String "C_address"; `Null]
-  | C_bytes        -> `List [`String "C_bytes"; `Null]
-  | C_key_hash     -> `List [`String "C_key_hash"; `Null]
-  | C_key          -> `List [`String "C_key"; `Null]
-  | C_signature    -> `List [`String "C_signature"; `Null]
-  | C_operation    -> `List [`String "C_operation"; `Null]
-  | C_contract     -> `List [`String "C_contract"; `Null]
-  | C_chain_id     -> `List [`String "C_chain_id"; `Null]
-  | C_bls12_381_g1 -> `List [`String "C_bls12_381_g1"; `Null]
-  | C_bls12_381_g2 -> `List [`String "C_bls12_381_g2"; `Null]
-  | C_bls12_381_fr -> `List [`String "C_bls12_381_fr"; `Null]
-
-let row_tag = function
-  | C_record  -> `List [`String "C_record"; `Null]
-  | C_variant -> `List [`String "C_variant"; `Null]

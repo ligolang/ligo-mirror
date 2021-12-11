@@ -60,33 +60,8 @@ let type_expression_tag ty_cont =
   | T_abstraction     _ -> 8
   | T_for_all         _ -> 9
 
-let rec constant_tag (ct : constant_tag) =
-  match ct with
-    C_arrow        ->  1
-  | C_option       ->  2
-  | C_map          ->  3
-  | C_big_map      ->  4
-  | C_list         ->  5
-  | C_set          ->  6
-  | C_unit         ->  8
-  | C_string       ->  7
-  | C_nat          ->  9
-  | C_mutez        -> 10
-  | C_timestamp    -> 11
-  | C_int          -> 12
-  | C_address      -> 13
-  | C_bytes        -> 14
-  | C_key_hash     -> 15
-  | C_key          -> 16
-  | C_signature    -> 17
-  | C_operation    -> 18
-  | C_contract     -> 19
-  | C_chain_id     -> 20
-  | C_bls12_381_g1 -> 21
-  | C_bls12_381_g2 -> 22
-  | C_bls12_381_fr -> 23
 
-and type_expression a b =
+let rec type_expression a b =
   type_content a.type_content b.type_content
 
 and type_content a b =
@@ -115,11 +90,6 @@ and rows {content=ca; layout=la} {content=cb; layout=lb} =
     (label_map ~compare:row_element) ca cb
     layout la lb
 
-and constraint_identifier (ConstraintIdentifier.T a) (ConstraintIdentifier.T b) =
-  cmp2
-    Int64.compare a b
-    (List.compare type_expression) [] []
-
 and row_element {associated_type=aa;michelson_annotation=ma;decl_pos=da} {associated_type=ab;michelson_annotation=mb;decl_pos=db} =
   cmp3
     type_expression aa ab
@@ -136,15 +106,7 @@ and for_all {ty_binder = ba ; kind = _ ; type_ = ta } {ty_binder = bb ; kind = _
     type_expression ta tb
     type_variable ba.wrap_content bb.wrap_content
 
-let constant_tag (ct : constant_tag) (ct2 : constant_tag) =
-  Int.compare (constant_tag ct ) (constant_tag ct2 )
-
-let option f oa ob =
-  match oa,ob with
-  | None, None -> 0
-  | Some _, None -> 1
-  | None, Some _ -> -1
-  | Some a, Some b -> f a b
+let option = Option.compare
 
 let binder ty_expr {var=va;ascr=aa;_} {var=vb;ascr=ab;_} =
   cmp2

@@ -5,15 +5,13 @@ module Protocols = Protocols
 
 (* Environment records declarations already seen in reverse orders. Use for different kind of processes *)
 type t = module' 
-
-
 let pp ppf m = PP.module_fully_typed ppf @@ Module_Fully_Typed m
 let add_module ?public module_binder module_ env =
   (Location.wrap @@ Declaration_module {module_binder;module_=Module_Fully_Typed module_;module_attr={public=Core.Option.is_some public}}) :: env
 
 let add_declaration decl env = decl :: env
-
 let append (Module_Fully_Typed module_) env = List.fold_left ~f:(fun l m -> m :: l ) ~init:env module_
+let init p = append p []
 let star = ()
 (*
   Make sure all the type value laoded in the environment have a `Ast_core` value attached to them (`type_meta` field of `type_expression`)

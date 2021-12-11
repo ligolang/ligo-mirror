@@ -22,23 +22,16 @@ let expression_variable_to_yojson var = Location.wrap_to_yojson (Var.to_yojson) 
 let expression_variable_of_yojson var = Location.wrap_of_yojson (Var.of_yojson) var
 let equal_expression_variable t1 t2 = Location.equal_content ~equal:Var.equal t1 t2
 let compare_expression_variable t1 t2 = Location.compare_content ~compare:Var.compare t1 t2
-let sexp_of_expression_variable (a : expression_variable) = Core.Sexp.Atom (Var.to_name @@ a.wrap_content)
 
 type type_
 and type_variable = type_ Var.t
 let type_variable_to_yojson var = Var.to_yojson var
 let type_variable_of_yojson var = Var.of_yojson var
-let compare_type_variable t1 t2 = Var.compare t1 t2
-let sexp_of_type_variable (a : type_variable) = Core.Sexp.Atom (Var.to_name @@ a)
-
-
 type module_variable = string
 let module_variable_to_yojson var = `String var
 let module_variable_of_yojson var = `String var
 let compare_module_variable = String.compare
 let equal_module_variable = String.equal
-let sexp_of_module_variable (a : module_variable) = Core.Sexp.Atom (a)
-
 type kind = unit
 let equal_kind = Unit.equal
 let compare_kind = Unit.compare

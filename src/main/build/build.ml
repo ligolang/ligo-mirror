@@ -24,7 +24,6 @@ module M (Params : Params) =
       let c_unit, deps = Ligo_compile.Helpers.preprocess_file ~raise ~meta ~options file_name in
       c_unit,meta,deps
     module AST = struct
-      module Context = Checking.Context
       type declaration = Ast_typed.declaration_loc
       type t = declaration list
       type environment = Environment.t
@@ -147,7 +146,7 @@ let build_expression ~raise ~add_warning : options:Compiler_options.t -> string 
          let contract, env = combined_contract ~raise ~add_warning ~options syntax init_file in
          (contract,env)
       | None -> (Module_Fully_Typed [],options.init_env) in
-    let typed_exp       = Ligo_compile.Utils.type_expression ~raise ~options file_name syntax expression env in
+    let typed_exp       = Ligo_compile.Utils.type_expression ~raise ~options file_name syntax expression module_ in
     let data, typed_exp = Self_ast_typed.monomorphise_expression typed_exp in
     let _, module_      = Self_ast_typed.monomorphise_module_data data module_ in
     let module_         = trace ~raise self_ast_typed_tracer @@ Self_ast_typed.morph_program options.init_env module_ in
@@ -188,16 +187,16 @@ let build_views ~raise ~add_warning :
     in
     List.map ~f views
 
-let build_contract_use ~raise ~add_warning : options:Compiler_options.t -> string -> file_name -> Mini_c.program * _ * _ =
+let build_contract_use ~raise ~add_warning : options:Compiler_options.t -> string -> file_name -> Mini_c.program * _ =
   fun ~options _syntax file_name ->
     let open Build(struct
       let raise = raise
       let add_warning = add_warning
       let options = options
     end) in
-    let contract,env = trace ~raise build_error_tracer @@ Trace.from_result (compile_combined file_name) in
+    let contract,_ = trace ~raise build_error_tracer @@ Trace.from_result (compile_combined file_name) in
     let contract = Ast_typed.Module_Fully_Typed contract in
     let contract = Self_ast_typed.monomorphise_module contract in
     let contract = trace ~raise self_ast_typed_tracer @@ Self_ast_typed.morph_program options.init_env contract in
     let mini_c   = Ligo_compile.Of_typed.compile ~raise contract in
-    (mini_c, contract, env)
+    (mini_c, contract)

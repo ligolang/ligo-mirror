@@ -24,12 +24,13 @@ let typecheck ~raise ~add_warning ~(options: Compiler_options.t) (cform : form) 
     | Env -> selfed in
   applied
 
-let compile_expression ~raise ~(options: Compiler_options.t) ~(env : Environment.t) (expr : Ast_core.expression)
+let compile_expression ~raise ~(options: Compiler_options.t) ~(init_prog : Ast_typed.module_fully_typed) (expr : Ast_core.expression)
     : Ast_typed.expression =
   let inferred = match options.infer with
     | true  -> expr
     | false -> expr
   in
+  let env = Environment.append init_prog options.init_env in
   let typed = trace ~raise checking_tracer @@ Checking.type_expression ~test:false ~protocol_version:options.protocol_version ~env inferred in
   let applied = trace ~raise self_ast_typed_tracer @@ Self_ast_typed.all_expression typed in
   applied
