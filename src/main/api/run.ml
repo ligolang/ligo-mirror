@@ -11,7 +11,7 @@ let test source_file syntax steps infer protocol_version display_format =
       fun ~raise ->
       let protocol_version = Helpers.protocol_to_variant ~raise protocol_version in
       let options = Compiler_options.make ~infer ~test:true ~protocol_version () in
-      let typed,_ = Build.combined_contract ~raise ~add_warning ~options syntax source_file in
+      let typed   = Build.combined_contract ~raise ~add_warning ~options syntax source_file in
       let typed   = Self_ast_typed.monomorphise_module typed in
       let typed   = trace ~raise Main_errors.self_ast_typed_tracer @@ Self_ast_typed.morph_program options.init_env typed in
       let steps   = int_of_string steps in

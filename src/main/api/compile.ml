@@ -17,7 +17,7 @@ let contract ?werror source_file entry_point declared_views syntax infer protoco
       in
       let code,env = Build.build_contract ~raise ~add_warning ~options syntax entry_point source_file in
       let views =
-        Build.build_views ~raise ~add_warning ~options syntax entry_point (declared_views,Module_Fully_Typed env) source_file
+        Build.build_views ~raise ~add_warning ~options syntax entry_point (declared_views,env) source_file
       in
       Ligo_compile.Of_michelson.build_contract ~raise ~disable_typecheck code views
 
