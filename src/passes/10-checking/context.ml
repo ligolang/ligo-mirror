@@ -45,7 +45,7 @@ end
 let pp =  PP.context
 
 
-let get_values : t -> Types.values = fun { values ; types=_ ; modules=_ } -> values
+let _get_values : t -> Types.values = fun { values ; types=_ ; modules=_ } -> values
 (* TODO: generate *)
 let get_types  : t -> Types.types  = fun { values=_ ; types ; modules=_ } -> types
 (* TODO: generate *)
@@ -71,6 +71,8 @@ let add_module : Ast_typed.module_variable -> t -> t -> t = fun mv te e ->
 let get_value (e:t)  = List.Assoc.find ~equal:(Location.equal_content ~equal:Var.equal) e.values
 let get_type (e:t)   = List.Assoc.find ~equal:Var.equal e.types
 let get_module (e:t) = List.Assoc.find ~equal:String.equal e.modules
+
+let get_type_vars : t -> Ast_typed.type_variable list  = fun { values=_ ; types ; modules=_ } -> fst @@ List.unzip types
 
 (* Load context from the outside declarations *)
 let rec add_ez_module : Ast_typed.module_variable -> Ast_typed.module_fully_typed ->t -> t = fun mv (Module_Fully_Typed mft) c ->
@@ -100,7 +102,6 @@ let init ?(env:Environment.t option) () =
     in
     List.fold ~f ~init:empty @@ List.rev env
   
-type label = Stage_common.Types.label
 open Ast_typed.Types
 
 

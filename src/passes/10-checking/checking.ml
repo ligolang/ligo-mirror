@@ -156,7 +156,7 @@ match Location.unwrap d with
     return post_env @@ Declaration_constant { name ; binder ; expr ; attr }
   )
   | Declaration_constant {name ; binder = { ascr = Some tv ; var ; attributes=_ } ; attr ; expr } ->
-    let type_env = fst @@ List.unzip c.types in
+    let type_env = Context.get_type_vars c in
     let tv = Ast_core.Helpers.generalize_free_vars type_env tv in
     let av, tv = Ast_core.Helpers.destruct_for_alls tv in
     let pre_env = c in
@@ -705,7 +705,7 @@ and type_expression' ~raise ~test ~protocol_version ?(args = []) ?last : context
      let let_result = type_expression' ~raise ~protocol_version ~test e' let_result in
      return (E_let_in {let_binder = binder; rhs; let_result; attr }) let_result.type_expression
   | E_let_in {let_binder = {var ; ascr = Some tv ; attributes=_} ; rhs ; let_result; attr } ->
-    let type_env = fst @@ List.unzip context.types in
+    let type_env = Context.get_type_vars context in
     let tv = Ast_core.Helpers.generalize_free_vars type_env tv in
     let av, tv = Ast_core.Helpers.destruct_for_alls tv in
     let pre_context = context in
@@ -749,7 +749,7 @@ and type_expression' ~raise ~test ~protocol_version ?(args = []) ?last : context
     let code = {code with type_expression} in
     return (E_raw_code {language;code}) code.type_expression
   | E_recursive {fun_name; fun_type; lambda} ->
-    let type_env = fst @@ List.unzip context.types in
+    let type_env = Context.get_type_vars context in
     let av = Ast_core.Helpers.Free_type_variables.type_expression type_env fun_type in
     let fun_name = cast_var fun_name in
     let fun_type = evaluate_type ~raise context fun_type in
