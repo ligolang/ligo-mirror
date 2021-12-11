@@ -345,9 +345,9 @@ and assignment = {
 
 and call = (expr * arguments) reg
 
-and arguments = tuple_expr
+and arguments = expr tuple
 
-and tuple_expr = (expr, comma) nsepseq par reg
+and 'a tuple = ('a, comma) nsepseq par reg
 
 (* Case *)
 
@@ -392,7 +392,7 @@ and 'branch conditional = {
   if_not   : (kwd_else * 'branch) option
 }
 
-(* Interation over integer intervals *)
+(* Iteration over integer intervals *)
 
 and for_int = {
   kwd_for : kwd_for;
@@ -405,7 +405,7 @@ and for_int = {
   block   : block reg
 }
 
-(* Iteration over collections *)
+(* Iteration over maps and sets *)
 
 and for_in = {
   kwd_for    : kwd_for;
@@ -454,7 +454,7 @@ and while_loop = {
    add or modify some, please make sure they remain in order. *)
 
 and pattern =
-  P_App     of (pattern * tuple_pattern option) reg
+  P_App     of (pattern * pattern tuple option) reg
 | P_Bytes   of (lexeme * Hex.t) wrap
 | P_Cons    of (pattern * sharp * pattern) reg
 | P_Ctor    of ctor
@@ -467,13 +467,9 @@ and pattern =
 | P_Par     of pattern par reg
 | P_Record  of record_pattern
 | P_String  of lexeme wrap
-| P_Tuple   of tuple_pattern
+| P_Tuple   of pattern tuple
 | P_Typed   of typed_pattern reg
 | P_Var     of variable
-
-(* Tuple pattern *)
-
-and tuple_pattern = (pattern, comma) nsepseq par reg
 
 (* Record pattern *)
 
@@ -552,7 +548,7 @@ and expr =
 | E_SetMem    of set_membership reg            (* x contains y    *)
 | E_String    of lexeme wrap                   (* "string"        *)
 | E_Sub       of minus bin_op reg              (* a - b           *)
-| E_Tuple     of tuple_expr                    (* (1, 2)          *)
+| E_Tuple     of expr tuple                    (* (1, 2)          *)
 | E_Typed     of typed_expr par reg            (* (1 : int)       *)
 | E_Update    of update reg                    (* x with y        *)
 | E_Verbatim  of lexeme wrap                   (* {|foo|}         *)
@@ -736,8 +732,6 @@ let expr_to_region = function
 | E_Update    {region; _} -> region
 | E_Var       t
 | E_Verbatim  t -> t#region
-
-and tuple_expr_to_region x = x.Region.region
 
 and typed_expr_to_region x = x.Region.region
 

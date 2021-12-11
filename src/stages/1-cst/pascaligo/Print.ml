@@ -635,7 +635,7 @@ and print_pattern state = function
 
 (* A constructor application (or constant constructor) in patterns *)
 
-and print_P_App state (node : (pattern * tuple_pattern option) reg) =
+and print_P_App state (node : (pattern * pattern tuple option) reg) =
   let Region.{value; region} = node in
   let pattern, tuple_opt = value in
   let children = [
@@ -743,7 +743,7 @@ and print_P_String state (node : lexeme wrap) =
 
 (* The pattern matching a tuple *)
 
-and print_P_Tuple state (node : tuple_pattern) =
+and print_P_Tuple state (node : pattern tuple) =
   let Region.{value; region} = node in
   print_nsepseq state ~region "P_Tuple" print_pattern value.inside
 
@@ -1097,7 +1097,7 @@ and print_E_Sub state (node : minus bin_op reg) =
 
 (* Tuples of expressions *)
 
-and print_E_Tuple state (node : tuple_expr) =
+and print_E_Tuple state (node : expr tuple) =
   print_nsepseq state "E_Tuple" print_expr node.value.inside
 
 (* Expressions annotated with a type *)

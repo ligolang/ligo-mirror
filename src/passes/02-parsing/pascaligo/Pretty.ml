@@ -624,7 +624,7 @@ and print_pattern (node : pattern) =
 
 (* Pattern for the application of a data constructor *)
 
-and print_P_App (node : (pattern * tuple_pattern option) reg) =
+and print_P_App (node : (pattern * pattern tuple option) reg) =
   match node.value with
     ctor, None -> print_pattern ctor
   | ctor, Some tuple ->
@@ -714,7 +714,7 @@ and print_P_String (node : lexeme wrap) = print_string node
 
 (* Tuple patterns *)
 
-and print_P_Tuple (node : tuple_pattern) = print_tuple print_pattern node
+and print_P_Tuple (node : pattern tuple) = print_tuple print_pattern node
 
 (* Typed patterns *)
 
@@ -1022,7 +1022,7 @@ and print_E_Sub (node : minus bin_op reg) = print_bin_op node
 
 (* Tuple expression *)
 
-and print_E_Tuple (node : tuple_expr) = print_tuple print_expr node
+and print_E_Tuple (node : expr tuple) = print_tuple print_expr node
 
 (* Typed expression *)
 
