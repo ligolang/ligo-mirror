@@ -27,24 +27,26 @@ module M (Params : Params) =
       type declaration = Ast_typed.declaration_loc
       type t = declaration list
       type environment = Environment.t
-      let add_to_env : environment -> module_name -> environment -> environment =
-        fun env module_name ast_typed_env ->
-          Environment.add_module ~public:() module_name ast_typed_env env
+      let add_ast_to_env : t -> environment -> environment = fun ast env ->
+        Environment.append ast env
+      let add_module_to_env : module_name -> environment -> environment -> environment =
+        fun module_name ast_typed_env env ->
+          Environment.add_module ~public:() module_name (Environment.to_program ast_typed_env) env
       let init_env : environment = options.init_env
       let make_module_declaration : module_name -> t -> declaration =
         fun module_binder ast_typed ->
-        (Location.wrap @@ (Ast_typed.Declaration_module {module_binder;module_=Ast_typed.Module_Fully_Typed ast_typed;module_attr={public=true}}: Ast_typed.declaration))
+        (Location.wrap @@ (Ast_typed.Declaration_module {module_binder;module_=ast_typed;module_attr={public=true}}: Ast_typed.declaration))
       let make_module_alias : module_name -> file_name -> declaration =
         fun module_name file_name ->
         Location.wrap @@ (Ast_typed.Module_alias {alias=module_name;binders=file_name,[]}: Ast_typed.declaration)
     end
-    let compile : Environment.t -> file_name -> meta_data -> compilation_unit -> (AST.t * Environment.t) =
+    let compile : AST.environment -> file_name -> meta_data -> compilation_unit -> AST.t =
       fun env file_name meta c_unit ->
       let options = {options with init_env = env } in
       let ast_core = Ligo_compile.Utils.to_core ~raise ~add_warning ~options ~meta c_unit file_name in
       let inferred = Ligo_compile.Of_core.infer ~raise ~options ast_core in
-      let Ast_typed.Module_Fully_Typed ast_typed = Ligo_compile.Of_core.typecheck ~raise ~add_warning ~options Ligo_compile.Of_core.Env inferred in
-      (ast_typed,Environment.append (Module_Fully_Typed ast_typed) env)
+      let ast_typed = Ligo_compile.Of_core.typecheck ~raise ~add_warning ~options Ligo_compile.Of_core.Env inferred in
+      ast_typed
 
   end
 
@@ -54,11 +56,13 @@ module Infer (Params : Params) = struct
     include AST
     type declaration = Ast_core.declaration Location.wrap
     type t = declaration list
-      type environment = Environment.t
-      let add_to_env : environment -> module_name -> environment -> environment =
-        fun env module_name ast_typed_env ->
-          Environment.add_module ~public:() module_name ast_typed_env env
-      let get_env : unit -> environment = fun () -> options.init_env
+      type environment = Environment.core
+      let add_ast_to_env : t -> environment -> environment = fun ast env ->
+        Environment.append_core ast env
+      let add_module_to_env : module_name -> environment -> environment -> environment =
+        fun module_name ast_typed_env env ->
+          Environment.add_core_module ~public:() module_name (Environment.to_core_program ast_typed_env) env
+      let init_env : environment = Environment.init_core @@ Checking.untype_program @@ Environment.to_program @@ options.init_env
       let make_module_declaration : module_name -> t -> declaration =
         fun module_binder ast_typed ->
         (Location.wrap @@ (Ast_core.Declaration_module {module_binder;module_=ast_typed;module_attr={public=true}}: Ast_core.declaration))
@@ -67,12 +71,10 @@ module Infer (Params : Params) = struct
         Location.wrap @@ (Ast_core.Module_alias {alias=module_name;binders=file_name,[]}: Ast_core.declaration)
   end
 
-  let compile : Environment.t -> file_name -> meta_data -> compilation_unit -> (AST.t * AST.environment) =
-    fun env file_name meta c_unit ->
-    let options = {options with init_env = env } in
+  let compile : AST.environment -> file_name -> meta_data -> compilation_unit -> AST.t =
+    fun _ file_name meta c_unit ->
     let ast_core = Ligo_compile.Utils.to_core ~raise ~add_warning ~options ~meta c_unit file_name in
-    let inferred = Ligo_compile.Of_core.infer ~raise ~options ast_core in
-    (inferred,env)
+    Ligo_compile.Of_core.infer ~raise ~options ast_core
 
 end
 
@@ -96,8 +98,7 @@ let infer_contract ~raise ~add_warning : options:Compiler_options.t -> string ->
       let add_warning = add_warning
       let options = options
     end)) in
-    let infered,_ = trace ~raise build_error_tracer @@ from_result (compile_separate main_file_name) in
-    infered
+    trace ~raise build_error_tracer @@ from_result (compile_separate main_file_name)
 
 let type_contract ~raise ~add_warning : options:Compiler_options.t -> string -> Ligo_compile.Of_core.form -> file_name -> _ =
   fun ~options _syntax _entry_point file_name ->
@@ -106,27 +107,21 @@ let type_contract ~raise ~add_warning : options:Compiler_options.t -> string -> 
       let add_warning = add_warning
       let options = options
     end) in
-    let contract,env = trace ~raise build_error_tracer @@ from_result (compile_separate file_name) in
-    Ast_typed.Module_Fully_Typed contract, env
+    trace ~raise build_error_tracer @@ from_result (compile_separate file_name)
 
-let combined_contract ~raise ~add_warning : options:Compiler_options.t -> _ -> file_name -> Ast_typed.module_fully_typed =
+let combined_contract ~raise ~add_warning : options:Compiler_options.t -> _ -> file_name -> Ast_typed.program =
   fun ~options _syntax file_name ->
     let open BuildSystem.Make(Infer(struct
       let raise = raise
       let add_warning = add_warning
       let options = options
     end)) in
-    let contract,_ = trace ~raise build_error_tracer @@ from_result (compile_combined file_name) in
+    let contract = trace ~raise build_error_tracer @@ from_result (compile_combined file_name) in
     let contract = Ligo_compile.Of_core.typecheck ~raise ~add_warning ~options Env contract in
     contract
 
-let build_mini_c ~raise ~add_warning : options:Compiler_options.t -> _ -> _ -> file_name -> Mini_c.toplevel_statement list * Ast_typed.module_fully_typed =
+let build_mini_c ~raise ~add_warning : options:Compiler_options.t -> _ -> _ -> file_name -> Mini_c.toplevel_statement list * Ast_typed.program =
   fun ~options _syntax entry_point file_name ->
-    let open Build(struct
-      let raise = raise
-      let add_warning = add_warning
-      let options = options
-    end) in
     let contract = combined_contract ~raise ~add_warning ~options _syntax file_name in 
     let applied = match entry_point with
     | Ligo_compile.Of_core.Contract entrypoint ->
@@ -135,15 +130,15 @@ let build_mini_c ~raise ~add_warning : options:Compiler_options.t -> _ -> _ -> f
       trace ~raise self_ast_typed_tracer @@ Self_ast_typed.all_view view_name main_name contract
     | Env -> contract in
     let applied = Self_ast_typed.monomorphise_module applied in
-    let Module_Fully_Typed applied = trace ~raise self_ast_typed_tracer @@ Self_ast_typed.morph_program options.init_env applied in
-    let mini_c       = Ligo_compile.Of_typed.compile ~raise @@ Module_Fully_Typed applied in
+    let applied = trace ~raise self_ast_typed_tracer @@ Self_ast_typed.morph_program options.init_env applied in
+    let mini_c  = Ligo_compile.Of_typed.compile ~raise @@ applied in
     mini_c,contract
 
 let build_expression ~raise ~add_warning : options:Compiler_options.t -> string -> string -> file_name option -> _ =
   fun ~options syntax expression file_name ->
     let contract = match file_name with
       | Some init_file -> combined_contract ~raise ~add_warning ~options syntax init_file
-      | None -> Module_Fully_Typed [] in
+      | None -> [] in
     let typed_exp       = Ligo_compile.Utils.type_expression ~raise ~options file_name syntax expression contract in
     let data, typed_exp = Self_ast_typed.monomorphise_expression typed_exp in
     let _, module_      = Self_ast_typed.monomorphise_module_data data contract in
@@ -155,14 +150,14 @@ let build_expression ~raise ~add_warning : options:Compiler_options.t -> string 
     (mini_c_exp ,typed_exp) ,module_, decl_list
 
 (* TODO: this function could be called build_michelson_code since it does not really reflect a "contract" (no views, parameter/storage types) *)
-let build_contract ~raise ~add_warning : options:Compiler_options.t -> string -> _ -> file_name -> (Stacking.compiled_expression * Ast_typed.module_fully_typed) =
+let build_contract ~raise ~add_warning : options:Compiler_options.t -> string -> _ -> file_name -> (Stacking.compiled_expression * Ast_typed.program) =
   fun ~options syntax entry_point file_name ->
     let mini_c,program = build_mini_c ~raise ~add_warning ~options syntax (Ligo_compile.Of_core.Contract entry_point) file_name in
     let michelson      = Ligo_compile.Of_mini_c.aggregate_and_compile_contract ~raise ~options mini_c entry_point in
     michelson,program
 
 let build_views ~raise ~add_warning :
-  options:Compiler_options.t -> string -> string -> string list * Ast_typed.module_fully_typed -> file_name -> (string * Stacking.compiled_expression) list =
+  options:Compiler_options.t -> string -> string -> string list * Ast_typed.program -> file_name -> (string * Stacking.compiled_expression) list =
   fun ~options syntax main_name (declared_views,program) source_file ->
     let views =
       let annotated_views = Ligo_compile.Of_typed.get_views @@ program in
@@ -193,8 +188,7 @@ let build_contract_use ~raise ~add_warning : options:Compiler_options.t -> strin
       let add_warning = add_warning
       let options = options
     end) in
-    let contract,_ = trace ~raise build_error_tracer @@ Trace.from_result (compile_combined file_name) in
-    let contract = Ast_typed.Module_Fully_Typed contract in
+    let contract = trace ~raise build_error_tracer @@ Trace.from_result (compile_combined file_name) in
     let contract = Self_ast_typed.monomorphise_module contract in
     let contract = trace ~raise self_ast_typed_tracer @@ Self_ast_typed.morph_program options.init_env contract in
     let mini_c   = Ligo_compile.Of_typed.compile ~raise contract in

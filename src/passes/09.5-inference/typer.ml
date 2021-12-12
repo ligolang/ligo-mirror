@@ -700,7 +700,7 @@ let decompile_env (env : Ast_typed.declaration_loc list) =
   | Declaration_type {type_binder;type_expr;_} -> 
       let type_expr = Checking.untype_type_expression type_expr in
       I.Environment.add_type type_binder type_expr env
-  | Declaration_module {module_binder;module_ = Module_Fully_Typed module_;_} ->
+  | Declaration_module {module_binder;module_;_} ->
       let module_ = List.fold_left ~f ~init:Ast_core.Environment.empty module_ in
       I.Environment.add_module module_binder (module_) env
   | Module_alias {alias;binders} -> 

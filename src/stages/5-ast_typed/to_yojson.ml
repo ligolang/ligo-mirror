@@ -173,7 +173,7 @@ and type_in {type_binder;rhs;let_result} =
 and mod_in {module_binder;rhs;let_result} =
   `Assoc [
     ("module_binder", module_variable_to_yojson module_binder);
-    ("rhs", module_fully_typed rhs);
+    ("rhs", module' rhs);
     ("let_result", expression let_result);
   ]
 
@@ -252,7 +252,7 @@ and declaration_constant {name; binder;expr;attr} =
 and declaration_module {module_binder;module_; module_attr} =
   `Assoc [
     ("module_binder",module_variable_to_yojson module_binder);
-    ("module_", module_fully_typed module_);
+    ("module_", module' module_);
     ("module_attr", module_attribute module_attr)
   ]
 
@@ -267,6 +267,6 @@ and declaration = function
   | Declaration_module   dm -> `List [ `String "Declaration_module";   declaration_module dm]
   | Module_alias         ma -> `List [ `String "Module_alias";         module_alias ma]
 
-and module_fully_typed (Module_Fully_Typed p) = list (Location.wrap_to_yojson declaration) p
-let module_with_unification_vars (Module_With_Unification_Vars p) = list (Location.wrap_to_yojson declaration) p
+and module' m = list (Location.wrap_to_yojson declaration) m
+and program p = module' p
 

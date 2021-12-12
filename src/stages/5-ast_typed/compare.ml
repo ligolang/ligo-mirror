@@ -207,7 +207,7 @@ and type_in {type_binder=ba;rhs=ra;let_result=la} {type_binder=bb;rhs=rb;let_res
     type_expression ra rb
     expression la lb
 
-and mod_in {module_binder=ba;rhs= Module_Fully_Typed ra;let_result=la} {module_binder=bb;rhs= Module_Fully_Typed rb;let_result=lb} =
+and mod_in {module_binder=ba;rhs=ra;let_result=la} {module_binder=bb;rhs=rb;let_result=lb} =
   cmp3
     module_variable ba bb
     module_ ra rb
@@ -303,7 +303,7 @@ and declaration_type {type_binder=tba;type_expr=tea;type_attr={public=pua}} {typ
     type_expression tea teb
     bool pua pub
 
-and declaration_module {module_binder=mba;module_= Module_Fully_Typed ma; module_attr={public=pua}} {module_binder=mbb;module_= Module_Fully_Typed mb; module_attr={public=pub}} =
+and declaration_module {module_binder=mba;module_= ma; module_attr={public=pua}} {module_binder=mbb;module_= mb; module_attr={public=pub}} =
  cmp3
     module_variable mba mbb
     module_ ma mb

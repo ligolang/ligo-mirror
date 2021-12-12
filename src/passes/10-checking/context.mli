@@ -16,7 +16,7 @@ val get_module : t -> module_variable     -> t option
 
 val get_type_vars : t -> type_variable list
 
-val add_ez_module : module_variable -> module_fully_typed ->t -> t
+val add_ez_module : module_variable -> module' ->t -> t
 
 val init : ?env:Environment.t -> unit -> t
 

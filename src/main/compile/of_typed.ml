@@ -7,8 +7,8 @@ module Var = Simple_utils.Var
 
 module SMap = Map.Make(String)
 
-let compile ~raise : Ast_typed.module_fully_typed -> Mini_c.program = fun p ->
-  trace ~raise spilling_tracer @@ compile_module p
+let compile ~raise : Ast_typed.program -> Mini_c.program = fun p ->
+  trace ~raise spilling_tracer @@ compile_program p
 
 let compile_expression ~raise : expression -> Mini_c.expression = fun e ->
   trace ~raise spilling_tracer @@ compile_expression e
@@ -16,7 +16,7 @@ let compile_expression ~raise : expression -> Mini_c.expression = fun e ->
 let compile_type ~raise : type_expression -> Mini_c.type_expression = fun e ->
   trace ~raise spilling_tracer @@ compile_type e
 
-let assert_equal_contract_type ~raise : Simple_utils.Runned_result.check_type -> string -> Ast_typed.module_fully_typed -> Ast_typed.expression -> unit  =
+let assert_equal_contract_type ~raise : Simple_utils.Runned_result.check_type -> string -> Ast_typed.program -> Ast_typed.expression -> unit  =
     fun c entry contract param ->
   let entry_point = trace_option ~raise main_entrypoint_not_found (Ast_typed.get_entry contract entry) in
   trace ~raise (check_typed_arguments_tracer c) (
@@ -35,7 +35,7 @@ let assert_equal_contract_type ~raise : Simple_utils.Runned_result.check_type ->
     | _ -> raise.raise @@ main_entrypoint_not_a_function
   )
 
-let rec get_views : Ast_typed.module_fully_typed -> (string * location) list = fun (Module_Fully_Typed m) ->
+let rec get_views : Ast_typed.program -> (string * location) list = fun p ->
   let f : (string * location) list -> declaration_loc -> (string * location) list =
     fun acc {wrap_content=decl ; location=_ } ->
       match decl with
@@ -43,7 +43,7 @@ let rec get_views : Ast_typed.module_fully_typed -> (string * location) list = f
       | Declaration_module { module_binder=_ ; module_ ; module_attr=_} -> get_views module_ @ acc
       | _ -> acc
   in 
-  List.fold ~init:[] ~f m
+  List.fold ~init:[] ~f p
 
 let list_declarations (m : Ast_typed.module') : string list =
   List.fold_left

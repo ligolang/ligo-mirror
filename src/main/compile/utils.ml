@@ -17,7 +17,7 @@ let to_core ~raise ~add_warning ~options ~meta (c_unit: Buffer.t) file_path =
   let core   = Of_sugar.compile sugar in
   core
 
-let type_file ~raise ~add_warning ~options f stx form : Ast_typed.module_fully_typed =
+let type_file ~raise ~add_warning ~options f stx form : Ast_typed.program =
   let meta          = Of_source.extract_meta ~raise stx f in
   let c_unit,_      = Of_source.compile ~raise ~options ~meta f in
   let core          = to_core ~raise ~add_warning ~options ~meta c_unit f in

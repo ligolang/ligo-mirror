@@ -76,7 +76,7 @@ let repl_result_format : 'a format = {
 
 module Run = Ligo_run.Of_michelson
 
-type state = { env : Environment.t;
+type state = { env : Environment.t; (* The repl should have its own notion of environment *)
                syntax : Ligo_compile.Helpers.v_syntax;
                infer : bool ;
                protocol : Environment.Protocols.t;
@@ -87,7 +87,7 @@ type state = { env : Environment.t;
 let try_eval ~raise state s =
   let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol () in
   let options = {options with init_env = state.env } in
-  let typed_exp  = Ligo_compile.Utils.type_expression_string ~raise ~options:options state.syntax s @@ Module_Fully_Typed (List.rev state.env) in
+  let typed_exp  = Ligo_compile.Utils.type_expression_string ~raise ~options:options state.syntax s @@ Environment.to_program state.env in
   let _,applied  = trace ~raise Main_errors.self_ast_typed_tracer @@ Self_ast_typed.morph_expression state.env typed_exp in
   let mini_c_exp = Ligo_compile.Of_typed.compile_expression ~raise applied in
   let compiled_exp = Ligo_compile.Of_mini_c.aggregate_and_compile_expression ~raise ~options:options state.decl_list mini_c_exp in
@@ -134,7 +134,7 @@ let import_file ~raise state file_name module_name =
   let options = Compiler_options.make ~infer:state.infer ~protocol_version:state.protocol () in
   let options = {options with init_env = state.env } in
   let module_ = Build.combined_contract ~raise ~add_warning ~options (variant_to_syntax state.syntax) file_name in
-  let module_ = Ast_typed.(Module_Fully_Typed [Simple_utils.Location.wrap @@ Declaration_module {module_binder=module_name;module_;module_attr={public=true}}]) in
+  let module_ = [Simple_utils.Location.wrap @@ Ast_typed.Declaration_module {module_binder=module_name;module_;module_attr={public=true}}] in
   let env     = Environment.append module_ state.env in
   let contract = trace ~raise Main_errors.self_ast_typed_tracer @@ Self_ast_typed.morph_program env module_ in
   let env = Environment.append contract env in
@@ -151,7 +151,6 @@ let use_file ~raise state s =
   let state = { state with env = env;
                            decl_list = state.decl_list @ mini_c;
                           } in
-  let Ast_typed.Module_Fully_Typed module' = module' in
   (state, Defined_values_typed module')
 
 (* REPL "parsing" *)

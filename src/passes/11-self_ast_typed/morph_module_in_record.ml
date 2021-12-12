@@ -40,9 +40,8 @@ let rec declaration_to_expression ~raise : Context.t -> declaration_loc list -> 
           (alias, rhs) :: self env tl
       )
     
-and module_to_record ~raise : Context.t -> module_fully_typed -> expression = fun c m ->
-  let Module_Fully_Typed lst = m in
-  let lst = declaration_to_expression ~raise c lst in
+and module_to_record ~raise : Context.t -> module' -> expression = fun c m ->
+  let lst = declaration_to_expression ~raise c m in
   let f = fun expr (binder,ex) ->
     let var = Location.wrap @@ Var.of_name binder in
     let attr = {inline=true; no_mutation=false;view=false;public=true} in
@@ -135,9 +134,7 @@ let peephole_declaration ~raise : Context.t -> declaration_loc -> Context.t * de
 
   | Declaration_type _ -> e,m
 
-let peephole_module ~raise : Context.t -> module_fully_typed -> Context.t * module_fully_typed = fun e m ->
-  let Module_Fully_Typed m = m in
-  let e,m = List.fold_map ~f:(peephole_declaration ~raise) ~init:e m in
-  e,Module_Fully_Typed m
+let peephole_module ~raise : Context.t -> module' -> Context.t * module' = fun e m ->
+  List.fold_map ~f:(peephole_declaration ~raise) ~init:e m
 
-let peephole_program ~raise : Environment.t -> module_fully_typed -> module_fully_typed = fun e m -> snd @@ peephole_module ~raise (Context.init ~env:e ()) m
+let peephole_program ~raise : Environment.t -> program -> program = fun e p -> snd @@ peephole_module ~raise (Context.init ~env:e ()) p

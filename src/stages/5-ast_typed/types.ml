@@ -89,9 +89,7 @@ and declaration_loc = declaration location_wrap
 
 and module' = declaration_loc list
 
-and module_with_unification_vars = Module_With_Unification_Vars of module'
-
-and module_fully_typed = Module_Fully_Typed of module'
+and program = module'
 
 and type_attribute = { public : bool }
 
@@ -117,7 +115,7 @@ and declaration_type = {
 
 and declaration_module = {
     module_binder : module_variable ;
-    module_       : module_fully_typed ;
+    module_       : program ;
     module_attr   : module_attribute
   }
 
@@ -202,7 +200,7 @@ and let_in = {
 
 and mod_in = {
     module_binder: module_variable ;
-    rhs: module_fully_typed ;
+    rhs: program ;
     let_result: expression ;
   }
 

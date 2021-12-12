@@ -75,7 +75,7 @@ let get_module (e:t) = List.Assoc.find ~equal:String.equal e.modules
 let get_type_vars : t -> Ast_typed.type_variable list  = fun { values=_ ; types ; modules=_ } -> fst @@ List.unzip types
 
 (* Load context from the outside declarations *)
-let rec add_ez_module : Ast_typed.module_variable -> Ast_typed.module_fully_typed ->t -> t = fun mv (Module_Fully_Typed mft) c ->
+let rec add_ez_module : Ast_typed.module_variable -> Ast_typed.module' ->t -> t = fun mv m c ->
   let f c d = match Location.unwrap d with
     Ast_typed.Declaration_constant {name=_;binder;expr;attr={public;_}}  -> if public then add_value binder expr.type_expression c else c
   | Declaration_type {type_binder;type_expr;type_attr={public}} -> if public then add_type  type_binder type_expr c else c
@@ -85,11 +85,11 @@ let rec add_ez_module : Ast_typed.module_variable -> Ast_typed.module_fully_type
     let c' = Option.map ~f:(fun m -> add_module alias m c) m in
     Option.value ~default:c c'
   in
-  let context = List.fold ~f ~init:c @@ mft in
+  let context = List.fold ~f ~init:c @@ m in
   let modules = (mv,context)::c.modules in
   {c with modules}
 
-let init ?(env:Environment.t option) () = 
+let init ?env () = 
   match env with None -> empty
   | Some (env) ->
     let f c d = match Location.unwrap d with
@@ -100,7 +100,7 @@ let init ?(env:Environment.t option) () =
       (* value_exn is ok since the env as pass the typer or is written by us *)
       add_module alias (Simple_utils.List.Ne.fold_left ~f:(fun c b -> Option.value_exn (get_module c b)) ~init:c binders) c
     in
-    List.fold ~f ~init:empty @@ List.rev env
+    Environment.fold ~f ~init:empty @@ env
   
 open Ast_typed.Types
 

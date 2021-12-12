@@ -962,8 +962,8 @@ and resolve_module_path ~raise ~loc binders env =
     | Some e -> e in
   List.Ne.fold_left ~f:aux ~init:env binders
 
-and eval_module ~raise ~steps ~protocol_version : Ast_typed.module_fully_typed * Tezos_state.context * env -> env * Tezos_state.context =
-  fun (Module_Fully_Typed prg, initial_state, env) ->
+and eval_module ~raise ~steps ~protocol_version : Ast_typed.module' * Tezos_state.context * env -> env * Tezos_state.context =
+  fun (prg, initial_state, env) ->
     let aux : env * env * Tezos_state.context -> declaration location_wrap -> env * env * Tezos_state.context =
       fun (top_env,curr_env,state) el ->
         match Location.unwrap el with
@@ -988,7 +988,7 @@ and eval_module ~raise ~steps ~protocol_version : Ast_typed.module_fully_typed *
     let (_, curr_env, state) = List.fold ~f:aux ~init:(env,[], initial_state) prg in
     (curr_env, state)
 
-let eval_test ~raise ~steps ~protocol_version : Ast_typed.module_fully_typed -> (env * (string * value) list) =
+let eval_test ~raise ~steps ~protocol_version : Ast_typed.module' -> (env * (string * value) list) =
   fun prg ->
     let initial_state = Tezos_state.init_ctxt ~raise protocol_version [] in
     let (env, _state) = eval_module ~raise ~steps ~protocol_version (prg, initial_state, Env.empty_env) in

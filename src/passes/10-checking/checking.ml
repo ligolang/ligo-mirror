@@ -121,7 +121,7 @@ let build_type_insts ~raise ~loc (forall : O.expression) table bound_variables =
        build_type_insts (make_e (E_type_inst {forall ; type_ }) (Ast_typed.Helpers.subst_type av type_ t)) avs' in
   build_type_insts forall bound_variables
 
-let rec type_module ~raise ~test ~init_context ~protocol_version (p:I.module_) : O.module_fully_typed =
+let rec type_module ~raise ~test ~init_context ~protocol_version (p:I.module_) : O.module' =
   let aux (c, acc:(context * O.declaration Location.wrap list)) (d:I.declaration Location.wrap) =
     let (c, d') = type_declaration' ~raise ~test ~protocol_version c d in
     (c, d' :: acc)
@@ -129,10 +129,7 @@ let rec type_module ~raise ~test ~init_context ~protocol_version (p:I.module_) :
   (* This context use all the declaration so you can use private declaration to type the module. It should not be returned*)
   let (_c, lst) =
       List.fold ~f:aux ~init:(init_context, []) p in
-  let p = List.rev lst in
-  (* the typer currently in use doesn't use unification variables, so there is no need to check for their absence. *)
-  let p = O.Module_Fully_Typed p in
-  p
+  List.rev lst
 
 
 and type_declaration' : raise: typer_error raise -> protocol_version:protocol_version -> test: bool -> context -> I.declaration Location.wrap -> context * O.declaration Location.wrap =
@@ -959,7 +956,7 @@ and untype_expression_content ty (ec:O.expression_content) : I.expression =
       let let_result = untype_expression let_result in
       return @@ make_e @@ E_type_in {type_binder; rhs; let_result }
   | E_mod_in {module_binder;rhs;let_result} ->
-      let rhs = untype_module_fully_typed rhs in
+      let rhs = untype_module rhs in
       let result = untype_expression let_result in
       return @@ e_mod_in module_binder rhs result
   | E_mod_alias ma ->
@@ -998,10 +995,11 @@ function
   let expr = untype_expression expr in
   return @@ Declaration_constant {name; binder={var;ascr=Some ty;attributes = Stage_common.Helpers.empty_attribute};expr;attr={inline;no_mutation;view;public}}
 | Declaration_module {module_binder;module_;module_attr={public}} ->
-  let module_ = untype_module_fully_typed module_ in
+  let module_ = untype_module module_ in
   return @@ Declaration_module {module_binder;module_; module_attr={public}}
 | Module_alias ma ->
   return @@ Module_alias ma
 
-and untype_module_fully_typed : O.module_fully_typed -> I.module_ = fun (Module_Fully_Typed m) ->
-  List.map ~f:(Location.map untype_declaration) m
+and untype_module : O.module' -> I.module_ = fun p -> List.map ~f:(Location.map untype_declaration) p
+
+let untype_program = untype_module

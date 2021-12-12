@@ -129,7 +129,7 @@ let expression_to_core ~raise expression =
   let core  = Ligo_compile.Of_sugar.compile_expression sugar in
   core
 
-let pack_payload ~raise (program:Ast_typed.module_fully_typed) (payload:Ast_imperative.expression) : bytes =
+let pack_payload ~raise (program:Ast_typed.program) (payload:Ast_imperative.expression) : bytes =
   let code =
     let sugar  = Ligo_compile.Of_imperative.compile_expression ~raise payload in
     let core   = Ligo_compile.Of_sugar.compile_expression sugar in
@@ -141,7 +141,7 @@ let pack_payload ~raise (program:Ast_typed.module_fully_typed) (payload:Ast_impe
     Ligo_run.Of_michelson.evaluate_expression ~raise code.expr code.expr_ty in
   Ligo_run.Of_michelson.pack_payload ~raise payload payload_ty
 
-let sign_message ~raise (program:Ast_typed.module_fully_typed) (payload : Ast_imperative.expression) sk : string =
+let sign_message ~raise (program:Ast_typed.program) (payload : Ast_imperative.expression) sk : string =
   let open Tezos_crypto in
   let packed_payload = pack_payload ~raise program payload in
   let signed_data = Signature.sign sk packed_payload in
@@ -179,7 +179,7 @@ let typed_program_to_michelson ~raise program entry_point =
   let michelson = Ligo_compile.Of_michelson.build_contract ~disable_typecheck:false michelson in
   michelson
 
-let typed_program_with_imperative_input_to_michelson ~raise (program: Ast_typed.module_fully_typed) (entry_point: string) (input: Ast_imperative.expression) : Stacking.compiled_expression =
+let typed_program_with_imperative_input_to_michelson ~raise (program: Ast_typed.program) (entry_point: string) (input: Ast_imperative.expression) : Stacking.compiled_expression =
   Printexc.record_backtrace true;
   let sugar            = Ligo_compile.Of_imperative.compile_expression ~raise input in
   let core             = Ligo_compile.Of_sugar.compile_expression sugar in
@@ -189,7 +189,7 @@ let typed_program_with_imperative_input_to_michelson ~raise (program: Ast_typed.
   let mini_c_prg       = Ligo_compile.Of_typed.compile ~raise program in
   Ligo_compile.Of_mini_c.aggregate_and_compile_expression ~raise ~options mini_c_prg compiled_applied
 
-let run_typed_program_with_imperative_input ~raise ?options (program : Ast_typed.module_fully_typed) (entry_point: string) (input: Ast_imperative.expression) : Ast_core.expression =
+let run_typed_program_with_imperative_input ~raise ?options (program : Ast_typed.program) (entry_point: string) (input: Ast_imperative.expression) : Ast_core.expression =
   let michelson_program = typed_program_with_imperative_input_to_michelson ~raise program entry_point input in
   let michelson_output  = Ligo_run.Of_michelson.run_no_failwith ~raise ?options michelson_program.expr michelson_program.expr_ty in
   let res =  Decompile.Of_michelson.decompile_typed_program_entry_function_result ~raise program entry_point (Runned_result.Success michelson_output) in
@@ -241,7 +241,7 @@ let expect_evaluate ~raise program entry_point expecter =
   | Runned_result.Fail _ -> raise.raise test_not_expected_to_fail in
   expecter res'
 
-let expect_eq_evaluate ~raise (program : Ast_typed.module_fully_typed) entry_point expected =
+let expect_eq_evaluate ~raise (program : Ast_typed.program) entry_point expected =
   let expected  = expression_to_core ~raise expected in
   let expecter = fun result ~raise ->
     trace_option ~raise (test_expect_tracer expected result) @@

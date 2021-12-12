@@ -3,7 +3,6 @@ module PP = PP
 module PP_annotated = PP_annotated
 module Yojson = To_yojson
 module Formatter = Formatter
-module Reasons = Reasons
 module Combinators = Combinators
 module Misc = Misc
 (* Helpers should not be exported *)
