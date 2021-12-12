@@ -141,6 +141,7 @@ match Location.unwrap d with
   | Declaration_type {type_binder ; type_expr; type_attr={public}} -> (
     let type_binder = Var.todo_cast type_binder in
     let tv = evaluate_type ~raise c type_expr in
+    let tv = {tv with orig_var = Some type_binder} in
     let env' = Context.add_type type_binder tv c in
     return env' @@ Declaration_type { type_binder ; type_expr = tv; type_attr={public} }
   )
