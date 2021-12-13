@@ -1,7 +1,7 @@
 module Errors = Errors
 
 let compile_expression ~raise : Ast_typed.expression -> Ast_aggregated.expression =
-  fun x -> Compiler.compile_expression ~raise Compiler.Var_env.empty x
+  fun x -> Compiler.compile_expression ~raise Compiler.Data.empty x
 
 
 (* compile_expression_in_context [filler] [context] : let .. = .. in let .. = .. in [filler'] *)

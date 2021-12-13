@@ -1,6 +1,17 @@
 open Base
 include List
 
+let rec fold_right_one ~f ~default = function
+  | [] -> default
+  | [x] -> x
+  | x :: xs -> f x (fold_right_one ~f ~default xs)
+
+let rec update_first ~f = function
+  | [] -> []
+  | (x :: xs) -> match f x with
+    | None -> x :: update_first ~f xs
+    | Some b -> b :: xs
+
 let rec remove n = function
   | [] -> raise (Failure "List.remove")
   | _  :: tl when n = 0 -> tl
