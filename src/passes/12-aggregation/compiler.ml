@@ -98,6 +98,26 @@ module Data = struct
       | [] -> data.env
       | _ -> resolve_module_path (List.Ne.of_list data.curr_path) data.env in
       List.find_map res_env ~f
+
+  let resolve_variable_in_path : t -> module_variable list -> module_variable list -> expression_variable -> expression_variable option =
+    fun data curr_path path v ->
+      print_endline (Format.asprintf "data: %a" pp_data data);
+      let f = function
+        | Expression { name ; _ } when Var.equal name.wrap_content v.wrap_content ->
+          Some (prefix_var path name)
+        | (Module _ | Expression _) -> None
+      in
+      let res_env = match path with
+      | [] -> data.env
+      | _ -> resolve_module_path (List.Ne.of_list path) data.env in
+      match List.find_map res_env ~f with
+      | None ->
+         let path = curr_path @ path in
+         let res_env = match path with
+           | [] -> data.env
+           | _ -> resolve_module_path (List.Ne.of_list path) data.env in
+         List.find_map res_env ~f
+      | Some v -> Some v
 end
 
 type result =
@@ -297,16 +317,20 @@ and compile_expression ~raise : Data.t -> I.expression -> O.expression =
       in
       let v, path, types, record_path = aux (List.Ne.of_list [module_name]) [] element in
       let path = List.Ne.rev path in
-      let path = data.curr_path @ List.Ne.to_list path in
-      match record_path with
-      | None ->
-         (* module_access_to_record_access mod_env path types *)
-         let expr = O.e_a_variable (Data.prefix_var path v) (compile_type ~raise expr.type_expression) in
-         List.fold_right ~f:(fun (t, u) e -> O.e_a_type_inst e t u) ~init:expr (List.rev types)
-      | Some record_path ->
-         let expr = O.e_a_variable (Data.prefix_var path v) (compile_type ~raise expr.type_expression) in
-         let expr = List.fold_right ~f:(fun (l, t) r -> O.e_a_record_access r l t) ~init:expr record_path in
-         List.fold_right ~f:(fun (t, u) e -> O.e_a_type_inst e t u) ~init:expr (List.rev types)
+      let path = List.Ne.to_list path in
+      print_endline (Format.asprintf "%a" I.PP.expression expr);
+      match Data.resolve_variable_in_path data data.curr_path path v with
+      | None -> failwith (Format.asprintf "%a | %a | %a" (PP_helpers.list_sep_d PP_helpers.string) data.curr_path (PP_helpers.list_sep_d PP_helpers.string) path O.PP.expression_variable v);
+      | Some v ->
+         match record_path with
+         | None ->
+            (* module_access_to_record_access mod_env path types *)
+            let expr = O.e_a_variable v (compile_type ~raise expr.type_expression) in
+            List.fold_right ~f:(fun (t, u) e -> O.e_a_type_inst e t u) ~init:expr (List.rev types)
+         | Some record_path ->
+            let expr = O.e_a_variable v (compile_type ~raise expr.type_expression) in
+            let expr = List.fold_right ~f:(fun (l, t) r -> O.e_a_record_access r l t) ~init:expr record_path in
+            List.fold_right ~f:(fun (t, u) e -> O.e_a_type_inst e t u) ~init:expr (List.rev types)
     )
     | I.E_mod_in { module_binder ; rhs ; let_result } -> (
       let mod_decl = Location.wrap ~loc:expr.location @@
