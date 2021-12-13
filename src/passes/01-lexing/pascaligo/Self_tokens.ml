@@ -6,6 +6,7 @@
 module Core   = LexerLib.Core
 module Region = Simple_utils.Region
 module Utils  = Simple_utils.Utils
+module Trace  = Simple_utils.Trace
 
 (* Signature *)
 
@@ -16,8 +17,10 @@ module type S =
 
     type message = string Region.reg
 
+    type lexer_error = Lexing_shared.Errors.t
+
     val filter :
-      (lex_unit list, message) result -> (token list, message) result
+      raise:lexer_error Trace.raise -> (lex_unit list, message) result -> (token list, message) result
   end
 
 (* Filters *)
@@ -28,6 +31,8 @@ type message = string Region.reg
 
 type token = Token.t
 type lex_unit = token Core.lex_unit
+
+type lexer_error = Lexing_shared.Errors.t
 
 (* Filtering out the markup *)
 
@@ -42,4 +47,4 @@ let tokens_of = function
 
 (* Exported *)
 
-let filter = Utils.(tokens_of <@ Style.check)
+let filter ~raise:_ = Utils.(tokens_of <@ Style.check)

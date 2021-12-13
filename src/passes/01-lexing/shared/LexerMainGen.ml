@@ -5,6 +5,7 @@
 
 module Region = Simple_utils.Region
 module FQueue = Simple_utils.FQueue
+module Trace  = Simple_utils.Trace
 module Markup = LexerLib.Markup
 module Core   = LexerLib.Core
 
@@ -150,13 +151,27 @@ module Make (File        : FILE)
             | [] -> Token.mk_eof Region.ghost
           in Stdlib.Ok token
         else
-          let lex_units = Scan.LexUnits.from_lexbuf config lexbuf
-          in match Self_tokens.filter lex_units with
-               Stdlib.Ok tokens ->
-                 store  := tokens;
-                 called := true;
-                 scan lexbuf
-             | Error _ as err -> err
+          let lex_units = Scan.LexUnits.from_lexbuf config lexbuf in
+          Trace.try_with 
+            (fun ~raise ->
+              match Self_tokens.filter ~raise lex_units with
+                  Stdlib.Ok tokens ->
+                    store  := tokens;
+                    called := true;
+                    scan lexbuf
+                | Error _ as err -> err
+            )
+            (function 
+            | `Lexing_generic {region; value } -> 
+                let b = Buffer.create 100 in
+                let fmt = Format.formatter_of_buffer b in
+                Format.pp_print_string fmt value;
+                Error ({region; value = Buffer.contents b})
+            | `Unbalanced_token region ->
+                Error ({region; value = "Unbalanced token.\nPlease ensure that left braces/parenthesis are properly balanced with right braces/parenthesis."})
+            )
+            
+          
 
     (* Scanning all tokens with or without a preprocessor *)
 
@@ -179,7 +194,13 @@ module Make (File        : FILE)
           match config#input with
             Some path -> Scan.LexUnits.from_file config path
           |      None -> Scan.LexUnits.from_channel config stdin
-      in match Self_tokens.filter lex_units with
-           Stdlib.Error msg -> print_in_red msg
-         | Ok _ -> ()
+      in
+      Trace.try_with 
+        (fun ~raise ->
+          match Self_tokens.filter ~raise lex_units with
+            Stdlib.Error msg -> print_in_red msg
+          | Ok _ -> ())
+          (function e -> 
+            Errors.error_ppformat ~display_format:Human_readable Format.std_formatter e)
+      
   end

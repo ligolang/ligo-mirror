@@ -10,6 +10,7 @@ module Utils     = Simple_utils.Utils
 module Core      = LexerLib.Core
 module Markup    = LexerLib.Markup
 module Directive = LexerLib.Directive
+module Trace  = Simple_utils.Trace
 
 (* Signature *)
 
@@ -20,8 +21,10 @@ module type S =
 
     type message = string Region.reg
 
+    type lexer_error = Lexing_shared.Errors.t
+
     val filter :
-      (lex_unit list, message) result -> (token list, message) result
+      raise:lexer_error Trace.raise -> (lex_unit list, message) result -> (token list, message) result
   end
 
 (* Utilities *)
@@ -39,6 +42,8 @@ type message = string Region.reg
 type token = Token.t
 
 type lex_unit = token Core.lex_unit
+
+type lexer_error = Lexing_shared.Errors.t
 
 (* Filtering out the markup *)
 
@@ -207,7 +212,7 @@ let vertical_bar_insert units = apply vertical_bar_insert units
 
 (* COMPOSING FILTERS (exported) *)
 
-let filter =
+let filter ~raise:_ =
   attributes
   <@ automatic_semicolon_insertion
   <@ vertical_bar_insert

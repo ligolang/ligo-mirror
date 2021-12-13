@@ -1479,3 +1479,9 @@ let y = (n: int): int =>
   let a: int = 7;
   let rec b: int => int = (c: int): int => c;
   z;
+
+let foo = (_: (int, int) => int) => 1;
+
+let list_of_funcs = [x => x, y => y];
+
+let f = ((x, y): (int, int => int)): int => y(x);
