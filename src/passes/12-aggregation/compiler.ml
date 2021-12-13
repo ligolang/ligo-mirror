@@ -38,7 +38,7 @@ module Data = struct
   let pp_data : Format.formatter -> t -> unit = fun ppf data ->
     Format.fprintf ppf "@[<h>curr_path: [%a]@.%a@]" (PP_helpers.list_sep_d PP_helpers.string) data.curr_path pp_module_env data.env
   let empty = { curr_path = [] ; env = [] }
-  let find_module v data = 
+  let find_module v data =
     let f = function
       | Module {name ; item } -> if String.equal name v then Some item else None
       | Expression _ -> None
@@ -60,7 +60,7 @@ module Data = struct
     )
   let extend_module : t -> module_variable -> module_env -> t = fun data name item ->
     { data with env = add_to_module data.env data.curr_path (Module {name ; item }) }
-    
+
   let name_in_current_path data (name: O.expression_variable) =
     let loc = name.location in
     let (name,_) = Var.internal_get_name_and_counter name.wrap_content in
@@ -118,6 +118,14 @@ module Data = struct
            | _ -> resolve_module_path (List.Ne.of_list path) data.env in
          List.find_map res_env ~f
       | Some v -> Some v
+
+  let rename_mod : t -> module_variable -> module_variable -> t = fun data n m ->
+    let f = function
+      | Module { name ; item } when String.equal n name -> Some (Module { name = m ; item })
+      | _ -> None in
+    let env = data.env in
+    let env = List.rev @@ List.update_first (List.rev env) ~f in
+    { data with env }
 end
 
 type result =
@@ -147,11 +155,13 @@ and compile_declaration ~raise : Data.t -> I.declaration_loc list -> (hole:resul
       )
       | I.Declaration_module { module_binder ; module_ ; module_attr = _ } -> (
         let (Module_Fully_Typed decls) = module_ in
+        let module_binder_ = module_binder ^ "$tmp" in
         let data' =
           (* update the current path and create a new empty module in the environment *)
-          Data.push_path module_binder (Data.extend_module data module_binder [])
-        in 
+          Data.push_path module_binder_ (Data.extend_module data module_binder_ [])
+        in
         let f, data_mod = compile_declaration ~raise data' decls in
+        let data_mod = Data.rename_mod data_mod module_binder_ module_binder in
         let f_rest , data_rest = compile_declaration ~raise { data_mod with curr_path = data.curr_path } tl in
         (fun ~hole ->
           let hold_rest = Rec (f_rest ~hole) in
