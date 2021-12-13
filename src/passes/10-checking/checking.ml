@@ -1,7 +1,6 @@
 open Simple_utils.Trace
 module Errors=Errors
 open Errors
-module Context = Context
 
 module I = Ast_core
 module O = Ast_typed
@@ -178,7 +177,7 @@ match Location.unwrap d with
   )
   | Module_alias {alias;binders} -> (
     let f context binder =
-      trace_option ~raise (unbound_module_variable context binder d.location)
+      trace_option ~raise (unbound_module_variable binder d.location)
       @@ Context.get_module context binder 
     in
     let (hd, tl) = binders in
@@ -219,7 +218,7 @@ and evaluate_otype ~raise (c:context) (t:O.type_expression) : O.type_expression 
           | Some (_,type_) ->
             if Ast_typed.Misc.type_expression_eq (acc,type_) then type_
             else if I.LMap.mem (Label "M_left") m.content || I.LMap.mem (Label "M_right") m.content then type_
-            else raise.raise (redundant_constructor c k t.location)
+            else raise.raise (redundant_constructor k t.location)
           | None -> acc in
       let _ = O.LMap.fold aux m.content ty in ()
     in
@@ -243,12 +242,12 @@ and evaluate_otype ~raise (c:context) (t:O.type_expression) : O.type_expression 
     let name : O.type_variable = Var.todo_cast variable in
     match Context.get_type c name with
     | Some x -> x
-    | None -> raise.raise (unbound_type_variable c name t.location)
+    | None -> raise.raise (unbound_type_variable name t.location)
   )
   | T_module_accessor {module_name; element} ->
     let module_ = match Context.get_module c module_name with
       Some m -> m
-    | None   -> raise.raise @@ unbound_module_variable c module_name t.location
+    | None   -> raise.raise @@ unbound_module_variable module_name t.location
     in
     evaluate_otype ~raise module_ element
   | T_singleton x -> return (T_singleton x)
@@ -288,7 +287,7 @@ and evaluate_type ~raise (c:context) (t:I.type_expression) : O.type_expression =
           | Some (_,type_) ->
             if Ast_typed.Misc.type_expression_eq (acc,type_) then type_
             else if I.LMap.mem (Label "M_left") m.fields || I.LMap.mem (Label "M_right") m.fields then type_
-            else raise.raise (redundant_constructor c k t.location)
+            else raise.raise (redundant_constructor k t.location)
           | None -> acc in
       let _ = O.LMap.fold aux m.fields ty in ()
     in
@@ -318,11 +317,11 @@ and evaluate_type ~raise (c:context) (t:I.type_expression) : O.type_expression =
           that the variable could be put in the extended context
           via an annotation *)
        raise.raise (not_annotated t.location)
-    | None -> raise.raise (unbound_type_variable c name t.location)
+    | None -> raise.raise (unbound_type_variable name t.location)
   )
   | T_app {type_operator;arguments} -> (
     let name : O.type_variable = Var.todo_cast type_operator in
-    let operator = trace_option ~raise (unbound_type_variable c name t.location) @@
+    let operator = trace_option ~raise (unbound_type_variable name t.location) @@
       Context.get_type c name
     in
     let is_fully_applied location (t:O.type_expression) =
@@ -375,7 +374,7 @@ and evaluate_type ~raise (c:context) (t:I.type_expression) : O.type_expression =
   | T_module_accessor {module_name; element} ->
     let module_ = match Context.get_module c module_name with
       Some m -> m
-    | None   -> raise.raise @@ unbound_module_variable c module_name t.location
+    | None   -> raise.raise @@ unbound_module_variable module_name t.location
     in
     evaluate_type ~raise module_ element
   | T_singleton x -> return (T_singleton x)
@@ -409,7 +408,7 @@ and type_expression' ~raise ~test ~protocol_version ?(args = []) ?last : context
   | E_variable name' ->
       let name = cast_var name' in
       let tv' =
-        trace_option ~raise (unbound_variable context name e.location)
+        trace_option ~raise (unbound_variable name e.location)
         @@ Context.get_value context name in
       (match tv' with
        | { type_content = T_for_all _ ; type_meta = _; orig_var=_ ; location=_} ->
@@ -479,7 +478,7 @@ and type_expression' ~raise ~test ~protocol_version ?(args = []) ?last : context
   )
   (* Sum *)
   | E_constructor {constructor; element} ->
-      let (avs, c_tv, sum_tv) = trace_option ~raise (unbound_constructor context constructor e.location) @@
+      let (avs, c_tv, sum_tv) = trace_option ~raise (unbound_constructor constructor e.location) @@
         Context.get_constructor_parametric constructor context in
       let expr' = type_expression' ~raise ~test ~protocol_version context element in
       let table = infer_type_application ~raise ~loc:element.location TMap.empty c_tv expr'.type_expression in
@@ -733,7 +732,7 @@ and type_expression' ~raise ~test ~protocol_version ?(args = []) ?last : context
     return (E_mod_in {module_binder; rhs; let_result}) let_result.type_expression
   | E_mod_alias {alias; binders; result} ->
     let aux c binder =
-      trace_option ~raise (unbound_module_variable c binder e.location) @@
+      trace_option ~raise (unbound_module_variable binder e.location) @@
       Context.get_module c binder in
     let env = List.Ne.fold_left ~f:aux ~init:context binders in
     let e' = Context.add_module alias env context in
@@ -773,7 +772,7 @@ and type_expression' ~raise ~test ~protocol_version ?(args = []) ?last : context
   | E_module_accessor {module_name; element} ->
     let module_env = match Context.get_module context module_name with
       Some m -> m
-    | None   -> raise.raise @@ unbound_module_variable context module_name e.location
+    | None   -> raise.raise @@ unbound_module_variable module_name e.location
     in
     let element = type_expression' ~raise ~test  ~protocol_version ~args ?last ?tv_opt ?other_module:(Some true) module_env element in
     return (E_module_accessor {module_name; element}) element.type_expression

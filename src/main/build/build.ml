@@ -145,7 +145,7 @@ let build_expression ~raise ~add_warning : options:Compiler_options.t -> string 
     let module_         = trace ~raise self_ast_typed_tracer @@ Self_ast_typed.morph_program options.init_env module_ in
     let decl_list       = Ligo_compile.Of_typed.compile ~raise module_ in
     let env             = Environment.append contract options.init_env in
-    let _,typed_exp     = trace ~raise self_ast_typed_tracer @@ Self_ast_typed.morph_expression env typed_exp in
+    let typed_exp       = trace ~raise self_ast_typed_tracer @@ Self_ast_typed.morph_expression env typed_exp in
     let mini_c_exp      = Ligo_compile.Of_typed.compile_expression ~raise typed_exp in
     (mini_c_exp ,typed_exp) ,module_, decl_list
 

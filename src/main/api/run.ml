@@ -69,7 +69,7 @@ let evaluate_call source_file entry_point parameter amount balance sender source
       let app              = Compile.Of_core.apply entry_point core_param in
       let typed_app        = Compile.Of_core.compile_expression ~raise ~options ~init_prog:typed_prg app in
       let env              = Environment.append typed_prg options.init_env in
-      let _,typed_app      = trace ~raise Main_errors.self_ast_typed_tracer @@ Self_ast_typed.morph_expression env typed_app in
+      let typed_app        = trace ~raise Main_errors.self_ast_typed_tracer @@ Self_ast_typed.morph_expression env typed_app in
       let compiled_applied = Compile.Of_typed.compile_expression ~raise typed_app in
 
       let michelson        = Compile.Of_mini_c.aggregate_and_compile_expression ~raise ~options mini_c_prg compiled_applied in

@@ -64,4 +64,4 @@ let monomorphise_module_data data m = Monomorphisation.mono_polymorphic_module [
 let monomorphise_expression e = Monomorphisation.mono_polymorphic_expression [] Monomorphisation.empty_data e
 
 let morph_program ~raise = Morph_module_in_record.peephole_program ~raise
-let morph_expression ~raise env = Morph_module_in_record.(fold_map_expression (peephole_expression ~raise)) @@ Checking.Context.init ~env ()
+let morph_expression ~raise = Morph_module_in_record.peephole_expression ~raise
