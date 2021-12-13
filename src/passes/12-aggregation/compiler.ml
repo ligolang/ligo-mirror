@@ -86,7 +86,7 @@ module Data = struct
 
   let extend_expression : t -> expression_variable -> Ast_aggregated.expression -> t = fun data name term ->
     { data with env = add_to_module data.env data.curr_path (Expression {name ; item = term }) }
-  
+
   let resolve_variable : t -> expression_variable -> expression_variable option =
     fun data v ->
       let res_env = resolve_module_path (List.Ne.of_list data.curr_path) data.env in
@@ -111,8 +111,8 @@ and compile_declaration ~raise : Data.t -> I.declaration_loc list -> (hole:resul
   fun data lst ->
     match lst with
     | hd::tl -> (
-      let () = Format.eprintf "\nCompile_declaration '%a'\n" I.PP.declaration hd.wrap_content in
-      let () = Format.eprintf "%a\n" Data.pp_data data in
+      (* let () = Format.eprintf "\nCompile_declaration '%a'\n" I.PP.declaration hd.wrap_content in
+       * let () = Format.eprintf "%a\n" Data.pp_data data in *)
       let skip () = compile_declaration ~raise data tl in
       match hd.wrap_content with
       | I.Declaration_type _ -> skip ()
@@ -196,8 +196,8 @@ and compile_type ~raise : I.type_expression -> O.type_expression =
 
 and compile_expression ~raise : Data.t -> I.expression -> O.expression =
   fun data expr ->
-    let () = Format.eprintf "compile_expression '%a'\n" I.PP.expression expr in
-    let () = Format.eprintf "%a\n" Data.pp_data data in
+    (* let () = Format.eprintf "compile_expression '%a'\n" I.PP.expression expr in
+     * let () = Format.eprintf "%a\n" Data.pp_data data in *)
     let self ?(data = data) = compile_expression ~raise data in
     let return expression_content : O.expression =
       let type_expression = compile_type ~raise expr.type_expression in
@@ -269,8 +269,8 @@ and compile_expression ~raise : Data.t -> I.expression -> O.expression =
       return @@ O.E_constant { cons_name ; arguments }
     )
     | I.E_module_accessor { module_name; element} -> (
-      O.e_a_int (Z.of_int 42)
-      (* let rec aux : string List.Ne.t -> (O.type_expression * O.type_expression) list -> I.expression -> string List.Ne.t * (O.type_expression * O.type_expression) list * _ option =
+      (* O.e_a_int (Z.of_int 42) *)
+      let rec aux : string List.Ne.t -> (O.type_expression * O.type_expression) list -> I.expression -> _ * string List.Ne.t * (O.type_expression * O.type_expression) list * _ option =
         fun acc_path acc_types exp ->
           match exp.expression_content with
           | E_module_accessor {module_name ; element} ->
@@ -281,31 +281,30 @@ and compile_expression ~raise : Data.t -> I.expression -> O.expression =
             let exp_ty = compile_type ~raise exp.type_expression in
             aux acc_path ((type_, exp_ty) :: acc_types) forall
           | E_variable v ->
-            let (name,_int_opt) = Var.internal_get_name_and_counter v.wrap_content in (* feels wrong *)
-            Simple_utils.List.Ne.cons name acc_path, acc_types, None
+            v, acc_path, acc_types, None
           | E_record_accessor _ ->
             let rec aux' (e : I.expression) acc_path = match e.expression_content with
               | E_variable v ->
-                let (name,_int_opt) = Var.internal_get_name_and_counter v.wrap_content in (* feels wrong *)
-                name, acc_path
+                v, acc_path
               | E_record_accessor { record ; path } ->
                 aux' record ((path, compile_type ~raise e.type_expression) :: acc_path)
               | _ -> failwith "oops" in
-            let name, path = aux' exp [] in
-            Simple_utils.List.Ne.cons name acc_path, acc_types, Some path
+            let v, path = aux' exp [] in
+            v, acc_path, acc_types, Some path
           | _ -> failwith "TODO: corner case, not allowed in the syntax"
       in
-      let path, types, record_path = aux (List.Ne.of_list [module_name]) [] element in
+      let v, path, types, record_path = aux (List.Ne.of_list [module_name]) [] element in
       let path = List.Ne.rev path in
+      let path = data.curr_path @ List.Ne.to_list path in
       match record_path with
       | None ->
          (* module_access_to_record_access mod_env path types *)
-         let expr = O.e_a_variable (module_path_to_lident var_env path) (compile_type ~raise expr.type_expression) in
+         let expr = O.e_a_variable (Data.prefix_var path v) (compile_type ~raise expr.type_expression) in
          List.fold_right ~f:(fun (t, u) e -> O.e_a_type_inst e t u) ~init:expr (List.rev types)
       | Some record_path ->
-         let expr = O.e_a_variable (module_path_to_lident var_env path) (compile_type ~raise expr.type_expression) in
+         let expr = O.e_a_variable (Data.prefix_var path v) (compile_type ~raise expr.type_expression) in
          let expr = List.fold_right ~f:(fun (l, t) r -> O.e_a_record_access r l t) ~init:expr record_path in
-         List.fold_right ~f:(fun (t, u) e -> O.e_a_type_inst e t u) ~init:expr (List.rev types) *)
+         List.fold_right ~f:(fun (t, u) e -> O.e_a_type_inst e t u) ~init:expr (List.rev types)
     )
     | I.E_mod_in { module_binder ; rhs ; let_result } -> (
       let mod_decl = Location.wrap ~loc:expr.location @@
