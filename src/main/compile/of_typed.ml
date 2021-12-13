@@ -12,7 +12,6 @@ let compile_expression_in_context : Ast_typed.expression -> Ast_typed.expression
   fun exp prg ->
     let x = Aggregation.compile_expression_in_context exp prg in
     Self_ast_aggregated.monomorphise_expression x
-    x
 
 let compile_expression ~raise : Ast_typed.expression -> Ast_aggregated.expression = fun e ->
   let x = trace ~raise aggregation_tracer @@ compile_expression e in
