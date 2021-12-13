@@ -1,6 +1,8 @@
 open Errors
-open Trace
-open Function
+open Simple_utils.Trace
+open Simple_utils.Function
+
+module Utils = Simple_utils.Utils
 
 module CST = Cst.Pascaligo
 module AST = Ast_imperative
@@ -277,8 +279,14 @@ let rec compile_expression ~raise : CST.expr -> AST.expr = fun e ->
       e_application ~loc func args
   )
   (*TODO: move to proper module*)
-  | E_Call {value=(E_ModPath {value={module_path = (module_name,[]);field};region=_},args);region}
-      when List.mem ~equal:Caml.(=) build_ins module_name#payload -> (
+
+  | E_Call {value=(E_ModPath {value={module_path = (module_name,[]);
+                                     selector=_;
+                                     field};
+                              region=_},
+                   args);
+            region}
+      when List.mem ~equal:String.equal build_ins module_name#payload -> (
     let loc = Location.lift region in
     let fun_name = compile_pseudomodule_access ~loc field module_name#payload in
     let var = module_name#payload ^ "." ^ fun_name in
@@ -931,7 +939,8 @@ and compile_block ~raise : ?next:AST.expression -> CST.block CST.reg -> AST.expr
     | None -> raise.raise @@ block_start_with_attribute block
 
 and compile_fun_decl ~raise : CST.fun_decl -> string * expression_variable * type_expression option * AST.attributes * expression =
-  fun ({kwd_recursive; fun_name; parameters; ret_type; return=r; attributes}: CST.fun_decl) ->
+  fun ({kwd_recursive; kwd_function=_; fun_name; parameters;
+      ret_type; kwd_is=_; return=r; terminator=_; attributes}: CST.fun_decl) ->
   let return a = a in
   let (fun_name, loc) = w_split fun_name in
   let fun_binder = Location.wrap ~loc @@ Var.of_name fun_name in
@@ -966,7 +975,8 @@ and compile_declaration ~raise : CST.declaration -> (expression, type_expression
   fun decl ->
   let return reg decl = [Location.wrap ~loc:(Location.lift reg) decl] in
   match decl with
-  | D_Type {value={name; type_expr; params}; region} ->
+  | D_Type {value={kwd_type=_; name; params=_; kwd_is=_;
+                   type_expr; terminator=_}; region} ->
       let name, _ = w_split name in
       let type_expr =
         let rhs = compile_type_expression ~raise type_expr in

@@ -101,11 +101,11 @@ let mk_child_list print_list = function
 type label = string
 
 let print_tree ?region state label children =
-  let ()               = print_node state ?region label in
-  let children         = List.filter_map (fun x -> x) children in
-  let arity            = List.length children in
-  let apply rank print = print (state#pad arity rank)
-  in List.iteri apply children
+  let ()           = print_node state ?region label in
+  let children     = List.filter_map ~f:(fun x -> x) children in
+  let arity        = List.length children in
+  let f rank print = print (state#pad arity rank)
+  in List.iteri ~f children
 
 let print = print_tree
 

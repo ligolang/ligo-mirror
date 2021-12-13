@@ -66,8 +66,16 @@ module type PARSER =
 
     (* The recovery API. *)
 
-    module Recovery : Merlin_recovery.RECOVERY_GENERATED
-           with module I := MenhirInterpreter
+    module Recovery :
+      sig
+        include Merlin_recovery.RECOVERY_GENERATED
+                with module I := MenhirInterpreter
+
+        module Default :
+        sig
+          val default_reg : Region.t ref
+        end
+      end
   end
 
 (* Parser errors for the Incremental API of Menhir *)
@@ -263,34 +271,44 @@ module Make (Lexer: LEXER)
       | None      -> stdout
       | Some path -> open_out path
 
-    module TracingPrinter : Merlin_recovery.PRINTER with module I = Inter
-      = Merlin_recovery.MakePrinter
-            (struct
-                module I = Inter
-                let print str =
-                  if Debug.error_recovery_tracing then
-                      Printf.fprintf tracing_channel "%s" str
+    module MerlinSpec =
+      struct
+        module I = Inter
 
-                let print_symbol = function
-                  | Inter.X s -> print @@ Parser.Recovery.print_symbol s
+        let print str =
+          if Debug.error_recovery_tracing then
+            Printf.fprintf tracing_channel "%s" str
 
-                let print_element = None
+        let print_symbol (Inter.X s) =
+          print @@ Parser.Recovery.print_symbol s
+        let print_element = None
 
-                let print_token t = print @@ Lexer.Token.to_lexeme t
-            end)
+        let print_token t = print @@ Lexer.Token.to_lexeme t
+      end
 
+    module TracingPrinter
+      : Merlin_recovery.PRINTER with module I = Inter
+      = Merlin_recovery.MakePrinter(MerlinSpec)
+
+    (* Remember last consumed token to assign the region of the
+       closest synthesised token *)
+
+    let last_token_region = ref Region.ghost
+
+    module RecoverWithDefault =
+      struct
+        include Parser.Recovery
+
+        let default_value _loc sym =
+          let stop = !last_token_region#stop in
+          Default.default_reg := Region.make stop stop;
+          default_value sym
+
+        let guide _ = false
+      end
 
     module R = Merlin_recovery.Make
-                   (Inter)
-                   (struct
-                       include Parser.Recovery
-
-                       let default_value _loc sym =
-                         default_value sym
-
-                       let guide _ = false
-                    end)
-                   (TracingPrinter)
+                 (Inter) (RecoverWithDefault) (TracingPrinter)
 
     module Recover =
       struct
@@ -327,14 +345,16 @@ module Make (Lexer: LEXER)
         let try_recovery failure_cp candidates token : 'a step =
           begin match R.attempt candidates token with
           | `Ok (Inter.InputNeeded _ as cp, _) -> Intermediate (Correct cp)
-          | `Ok _     -> InternalError "Recovery failed: impossible result of [attempt] function"
+          | `Ok _ -> InternalError "Recovery failed: \
+                                    Unexpected result of [attempt] function"
           | `Accept x -> Success x
           | `Fail ->
              begin match token with
              | token, _, _ when Token.is_eof token ->
                 begin match candidates.final with
                 | Some x -> Success x
-                | None -> InternalError "Recovery failed: cannot recover on EOF token"
+                | None ->
+                   InternalError "Recovery failed: Cannot recover on EOF token"
                 end
              (* Skip the token and return control to the user to try again
                 on the next step *)
@@ -342,17 +362,22 @@ module Make (Lexer: LEXER)
              end
           end
 
-        (* Feeds parser with [token] and returns the next intermediate step or result   *)
-        let step (parser : 'a intermediate_step) failure token : 'a step * message option =
+        (* Feeds parser with [token] and returns the next intermediate
+           step or result *)
+
+        let step (parser : 'a intermediate_step) failure token
+          : 'a step * message option =
           match parser with
-          (* If parser is in correct checkpoint (i.e. in [InputNeeded]) feed
-             with [token] like in simple [loop_handle] from the MenhirLib *)
+          (* If parser is in correct checkpoint (i.e. in
+             [InputNeeded]) feed with [token] like in simple
+             [loop_handle] from the MenhirLib *)
           | Correct (InputNeeded env as cp) ->
              begin match check_for_error (Inter.offer cp token) with
              | Ok s -> (s, None)
              | Error failure_cp ->
                 let error = failure failure_cp in
-                TracingPrinter.print @@ Printf.sprintf "Error %s\n" error.Region.value;
+                TracingPrinter.print
+                @@ Printf.sprintf "Error %s\n" error.Region.value;
                 let candidates = R.generate env in
                 (try_recovery failure_cp candidates token, Some error)
              end
@@ -360,12 +385,14 @@ module Make (Lexer: LEXER)
           | Recovering (failure_cp, candidates) ->
              (try_recovery failure_cp candidates token, None)
 
-        (* Is similar to [loop_handle] from MenhirLib but with error recovery *)
+        (* Is similar to [loop_handle] from MenhirLib but with error
+           recovery *)
+
         let loop_handle
-                (success : 'a -> 'a) (failure : 'a Inter.checkpoint -> message)
-                (supplier : unit -> token * Lexing.position * Lexing.position)
-                (initial : 'a Inter.checkpoint)
-            : (Parser.tree * message list, message Utils.nseq) Stdlib.result =
+          (success : 'a -> 'a) (failure : 'a Inter.checkpoint -> message)
+          (supplier : unit -> token * Lexing.position * Lexing.position)
+          (initial : 'a Inter.checkpoint)
+          : (Parser.tree * message list, message Utils.nseq) Stdlib.result =
           let initial = Correct initial in
           let errors = ref [] in
           let rec loop parser =
@@ -377,6 +404,8 @@ module Make (Lexer: LEXER)
                | Some error -> errors := error :: !errors;
                | None       -> ()
                end;
+               last_token_region :=
+                 (let (t, _, _) = token in Token.to_region t);
                match s with
                | Success x              -> Stdlib.Ok (success x, !errors)
                | Intermediate (parser)  -> loop parser

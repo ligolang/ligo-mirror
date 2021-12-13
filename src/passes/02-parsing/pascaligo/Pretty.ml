@@ -1,8 +1,10 @@
 (* A pretty printer for PascaLIGO *)
 
+module List = Core.List
+
 (* Vendor dependencies *)
 
-(*module Directive = LexerLib.Directive*)
+module Utils = Simple_utils.Utils
 module Region = Simple_utils.Region
 open! Region
 
@@ -57,7 +59,7 @@ let rec print cst = print_declarations cst.decl
 
 and print_declarations (node : declarations) =
   let declarations = Utils.nseq_to_list node in
-  List.filter_map print_declaration declarations
+  List.filter_map ~f:print_declaration declarations
   |> separate_map (hardline ^^ hardline) group
 
 (* IMPORTANT: The data constructors are sorted alphabetically. If you
@@ -166,7 +168,7 @@ and print_D_Fun (node : fun_decl reg) =
 and print_parameters p = print_nsepseq print_param_decl p
 
 and print_nsepseq :
-  'a.('a -> document) -> ('a, lexeme Wrap.t) Utils.nsepseq -> document =
+  'a.('a -> document) -> ('a, lexeme wrap) Utils.nsepseq -> document =
   fun print ->
     function
       head, [] -> print head
@@ -260,8 +262,8 @@ and print_type_tuple (node : type_tuple) =
   | e::items -> group (break 1 ^^ print_type_expr e ^^ string ",")
                ^^ app items in
   let components =
-    if tail = [] then head
-    else head ^^ string "," ^^ app (List.map snd tail)
+    if List.is_empty tail then head
+    else head ^^ string "," ^^ app (List.map ~f:snd tail)
   in string "(" ^^ nest 1 (components ^^ string ")")
 
 (* Cartesian type *)
@@ -328,7 +330,7 @@ and print_T_Sum (node : sum_type reg) =
   let head =
     if tail = [] then head
     else ifflat (padding_flat ^^ head) (padding_non_flat ^^ head)
-  and tail = List.map snd tail
+  and tail = List.map ~f:snd tail
   and app variant =
     group (break 1 ^^ string "| " ^^ print_variant variant) in
   let thread = head ^^ concat_map app tail
@@ -397,7 +399,7 @@ and print_block (node : block reg) =
 and print_statements (node : statements) =
   let statements = Utils.nsepseq_to_list node in
   let sep        = string ";" ^^ hardline ^^ hardline
-  in List.filter_map print_statement statements
+  in List.filter_map ~f:print_statement statements
      |> separate_map sep group
 
 and print_statement (node : statement) =
@@ -484,7 +486,7 @@ and print_cases :
     let head, tail = node in
     let head       = print_case_clause printer head in
     let head       = blank 2 ^^ head in
-    let tail       = List.map snd tail in
+    let tail       = List.map ~f:snd tail in
     let app clause = break 1 ^^ string "| "
                      ^^ print_case_clause printer clause
     in group (head ^^ concat_map app tail)
@@ -640,9 +642,9 @@ and print_tuple :
       | [x]      -> group (break 1 ^^ print x)
       | x::items -> group (break 1 ^^ print x ^^ string ",") ^^ app items in
     let components =
-      if   tail = []
+      if   List.is_empty tail
       then print head
-      else print head ^^ string "," ^^ app (List.map snd tail)
+      else print head ^^ string "," ^^ app (List.map ~f:snd tail)
     in string "(" ^^ nest 1 (components ^^ string ")")
 
 (* Pattern bytes *)

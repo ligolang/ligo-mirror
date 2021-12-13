@@ -1,6 +1,7 @@
 open Stage_common.Types
 
 open Tezos_micheline.Micheline
+module Location = Simple_utils.Location
 
 type compiled_expression = {
   expr_ty : (Location.t, string) node ;
@@ -40,7 +41,7 @@ let literal_value (l : literal) : (Location.t, string) node =
   | Literal_nat x -> Int (generated, x)
   | Literal_timestamp x -> Int (generated, x)
   | Literal_mutez x -> Int (generated, x)
-  | Literal_string x -> String (generated, Ligo_string.extract x)
+  | Literal_string x -> String (generated, Simple_utils.Ligo_string.extract x)
   | Literal_bytes x -> Bytes (generated, x)
   | Literal_address x -> String (generated, x)
   | Literal_signature x -> String (generated, x)
@@ -72,18 +73,18 @@ and apply_static_args ~raise : Environment.Protocols.t -> string -> (_, constant
     let code = Prim (generated, "code", [Seq (generated, e)], []) in
     Prim (generated, prim, [Seq (generated, [parameter; storage; code])], [])
 
-and compile_operator ~raise : Environment.Protocols.t -> constant' -> (_, constant', literal) static_args -> (Location.t, string) node list =
-  fun protocol_version c args ->
+and compile_operator ~raise : Environment.Protocols.t -> Location.t -> constant' -> (_, constant', literal) static_args -> (Location.t, string) node list =
+  fun protocol_version loc c args ->
   match Predefined.Stacking.get_operators protocol_version c with
-  | Some x -> [wipe_locations generated
-                 (* Handle predefined (and possibly special)
-                    operators, applying any type/annot/script args
-                    using apply_static_args. *)
-                 (Predefined.Stacking.unpredicate
-                    (fun prim -> wipe_locations () (apply_static_args ~raise protocol_version prim args))
-                    x)]
+  | Some x -> [(* Handle predefined (and possibly special)
+                  operators, applying any type/annot/script args
+                  using apply_static_args. *)
+               (Predefined.Stacking.unpredicate
+                  loc
+                  (fun prim -> wipe_locations () (apply_static_args ~raise protocol_version prim args))
+                  x)]
   | None ->
-    let open Trace in
+    let open Simple_utils.Trace in
     (raise.raise) (Errors.unsupported_primitive c protocol_version)
 
 let compile_expr ~raise protocol_version env outer e =

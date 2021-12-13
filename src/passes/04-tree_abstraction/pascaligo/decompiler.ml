@@ -6,7 +6,12 @@ module Wrap = Lexing_shared.Wrap
 module Token = Lexing_pascaligo.Token
 module Predefined = Predefined.Tree_abstraction.Pascaligo
 
-open Function
+open Simple_utils.Function
+module Region   = Simple_utils.Region
+module Var      = Simple_utils.Var
+module List     = Simple_utils.List
+module Location = Simple_utils.Location
+module Pair     = Simple_utils.Pair
 
 (* Utils *)
 
@@ -63,7 +68,7 @@ let inject : dialect -> string Wrap.wrap -> CST.attributes -> ('a, CST.semi) Uti
     }
 let to_block dialect a =
   CST.{enclosing=block_enclosing dialect;statements=a;terminator=terminator dialect}
-(* 
+(*
 let empty_block dialect =
   to_block dialect (CST.Instr (CST.Skip (Wrap.ghost "")),[]) *)
 
@@ -72,10 +77,10 @@ let empty_block dialect =
 let decompile_variable : type a. a Var.t -> CST.variable = fun var ->
   let var = Format.asprintf "%a" Var.pp var in
   if String.contains var '#' then
-    let var = String.split_on_char '#' var in
-    Wrap.ghost @@ "gen__" ^ (String.concat "" var)
+    let var = String.split ~on:'#' var in
+    Wrap.ghost @@ "gen__" ^ (String.concat var)
   else
-    if String.length var > 4 && String.equal "gen__" @@ String.sub var 0 5 then
+    if String.length var > 4 && String.equal "gen__" @@ String.sub var ~pos:0 ~len:5 then
       Wrap.ghost @@ "user__" ^ var
     else
       Wrap.ghost var
@@ -701,7 +706,7 @@ and decompile_to_selection : _ AST.access -> CST.selection = fun access ->
     failwith @@ Format.asprintf
     "Can't decompile access_map to selection"
 
-and decompile_lambda : dialect -> (AST.expr, AST.ty_expr) AST.lambda -> _ = fun dialect {binder;result} ->
+and decompile_lambda : dialect -> (AST.expr, AST.ty_expr) AST.lambda -> _ = fun dialect {binder;result;output_type=_} ->
     let var = decompile_variable @@ binder.var.wrap_content in
     let vpat : CST.var_pattern = {variable = var ; attributes = []} in
     let param_type = Option.map ~f:(prefix_colon <@ decompile_type_expr dialect) binder.ascr in
@@ -744,7 +749,7 @@ and decompile_declaration ~dialect : AST.declaration Location.wrap -> CST.declar
     let type_expr = decompile_type_expr dialect type_expr in
     let terminator = terminator dialect in
     CST.TypeDecl (Region.wrap_ghost (CST.{kwd_type; name; kwd_is; type_expr; terminator ; params}))
-  | Declaration_constant {binder; attr; expr} -> (
+  | Declaration_constant {binder; attr; expr;name=_} -> (
     let attributes = decompile_attributes attr in
     let name = decompile_variable binder.var.wrap_content in
     let fun_name = name in
@@ -774,7 +779,7 @@ and decompile_declaration ~dialect : AST.declaration Location.wrap -> CST.declar
       let const_decl : CST.const_decl = {kwd_const=Wrap.ghost "";pattern = PVar (Region.wrap_ghost vpat);const_type=const_type;equal=Wrap.ghost "";init;terminator; attributes} in
       CST.ConstDecl (Region.wrap_ghost const_decl)
   )
-  | Declaration_module {module_binder;module_} ->
+  | Declaration_module {module_binder;module_;module_attr=_} ->
     let kwd_module = Wrap.ghost ""
     and name = Region.wrap_ghost module_binder
     and kwd_is = Wrap.ghost "" in

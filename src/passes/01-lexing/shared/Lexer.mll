@@ -5,6 +5,11 @@
 
 [@@@warning "-42"]
 
+(* OCaml Stdlib *)
+
+module Array = Caml.Array (* Used in the generated code only *)
+module Int64 = Caml.Int64
+
 (* VENDOR DEPENDENCIES *)
 
 module Region = Simple_utils.Region
@@ -106,7 +111,7 @@ module Make (Token : Token.S) =
     let mk_int state buffer =
       let Core.{region; lexeme; state} = state#sync buffer in
       let z = Z.of_string lexeme in
-      if   Z.equal z Z.zero && lexeme <> "0"
+      if   Z.equal z Z.zero && String.(<>) lexeme "0"
       then fail region Non_canonical_zero
       else let token = Token.mk_int lexeme z region
            in Core.Token token, state
@@ -116,7 +121,7 @@ module Make (Token : Token.S) =
     let mk_nat nat state buffer =
       let Core.{region; state; _} = state#sync buffer
       and z = Z.of_string nat in
-      if   Z.equal z Z.zero && nat <> "0"
+      if   Z.equal z Z.zero && String.(<>) nat "0"
       then fail region Non_canonical_zero
       else match Token.mk_nat nat z region with
              Ok token -> Core.Token token, state
@@ -130,7 +135,7 @@ module Make (Token : Token.S) =
       match Int64.of_string_opt nat with
         None -> fail region Overflow_mutez
       | Some mutez_64 ->
-          if   Int64.equal mutez_64 Int64.zero && nat <> "0"
+          if   Int64.equal mutez_64 Int64.zero && String.(<>) nat "0"
           then fail region Non_canonical_zero
           else let suffix = "mutez" in
                match Token.mk_mutez nat ~suffix mutez_64 region with
@@ -145,7 +150,7 @@ module Make (Token : Token.S) =
       and mutez = Z.mul (Z.of_int 1_000_000) (Z.of_string nat) in
       try
         let mutez_64 = Z.to_int64 mutez in
-        if   Int64.equal mutez_64 Int64.zero && nat <> "0"
+        if   Int64.equal mutez_64 Int64.zero && String.(<>) nat "0"
         then fail region Non_canonical_zero
         else match Token.mk_mutez nat ~suffix mutez_64 region with
                Ok token -> Core.Token token, state
@@ -168,7 +173,7 @@ module Make (Token : Token.S) =
         try
           let mutez_64 = Z.to_int64 (Q.num q_mutez) in
           if   Int64.equal mutez_64 Int64.zero
-               && (integral <> "0" || fractional <> "0")
+               && String.(integral <> "0" || fractional <> "0")
           then fail region Non_canonical_zero
           else let lexeme = integral ^ "." ^ fractional in
                match Token.mk_mutez lexeme ~suffix mutez_64 region with
@@ -198,9 +203,9 @@ module Make (Token : Token.S) =
 
     (* Code injection *)
 
-    let mk_lang lang state buffer =
+    let mk_lang start lang state buffer =
       let Core.{region; state; _} = state#sync buffer in
-      let start    = region#start#shift_bytes 1 in
+      let start    = region#start#shift_bytes (String.length start) in
       let stop     = region#stop in
       let lang_reg = Region.make ~start ~stop in
       let lang     = Region.{value=lang; region=lang_reg} in
@@ -252,6 +257,7 @@ let byte       = hex_digit hex_digit
 let byte_seq   = byte | byte (byte | '_')* byte
 let bytes      = "0x" (byte_seq? as bytes)
 let directive  = '#' (blank* as space) (small+ as id) (* For #include *)
+let code_inj   = ("[%" as start) (attr as lang)
 
 (* Symbols *)
 
@@ -279,16 +285,17 @@ let symbol =
    through recursive calls. *)
 
 rule scan state = parse
-  ident | '@' ext_ident { mk_ident         state lexbuf }
-| uident                { mk_uident        state lexbuf }
-| bytes                 { mk_bytes bytes   state lexbuf }
-| nat "n"               { mk_nat   nat     state lexbuf }
-| nat "mutez"           { mk_mutez nat     state lexbuf }
-| nat tz_or_tez         { mk_tez   nat tez state lexbuf }
-| natural               { mk_int           state lexbuf }
-| symbol                { mk_sym           state lexbuf }
-| eof                   { mk_eof           state lexbuf }
-| "[%" (attr as lang)   { mk_lang  lang    state lexbuf }
+  ident
+| '@' ext_ident { mk_ident            state lexbuf }
+| uident        { mk_uident           state lexbuf }
+| bytes         { mk_bytes bytes      state lexbuf }
+| nat "n"       { mk_nat   nat        state lexbuf }
+| nat "mutez"   { mk_mutez nat        state lexbuf }
+| nat tz_or_tez { mk_tez   nat tez    state lexbuf }
+| natural       { mk_int              state lexbuf }
+| symbol        { mk_sym              state lexbuf }
+| eof           { mk_eof              state lexbuf }
+| code_inj      { mk_lang  start lang state lexbuf }
 
 | "[@" (attr as key) (blank+ (string as value))? "]" {
     let value =
@@ -301,7 +308,7 @@ rule scan state = parse
     mk_tez_dec integral fractional tez state lexbuf }
 
 | "`" | "{|" as lexeme {
-    if lexeme = fst Token.verbatim_delimiters then
+    if String.equal lexeme @@ fst Token.verbatim_delimiters then
       let Core.{region; state; _} = state#sync lexbuf in
       let thread = Core.mk_thread region in
       let verb_end = snd Token.verbatim_delimiters
@@ -328,7 +335,7 @@ and scan_verbatim verbatim_end thread state = parse
 | eof      { fail thread#opening (Unterminated_verbatim verbatim_end) }
 | "`"
 | "|}" as lexeme  {
-  if verbatim_end = lexeme then
+  if String.equal verbatim_end lexeme then
     Core.(thread, (state#sync lexbuf).state)
   else
     let Core.{state; _} = state#sync lexbuf in

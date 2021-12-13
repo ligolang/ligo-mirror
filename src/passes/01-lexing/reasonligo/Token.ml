@@ -102,7 +102,7 @@ module T =
 
     (* Virtual tokens *)
 
-    | ES6FUN of Region.t
+    | ES6FUN of lexeme Wrap.t
 
     (* End-Of-File *)
 
@@ -246,10 +246,13 @@ module T =
     (* All keywords *)
 
     let keywords =
-      let add map (key, value) = SMap.add key value map in
+      let add map (key, data) =
+        match SMap.add ~key ~data map with
+          `Ok map -> map
+        | `Duplicate -> map in
       let apply map mk_kwd =
         add map (to_lexeme (mk_kwd Region.ghost), mk_kwd)
-      in List.fold_left apply SMap.empty keywords
+      in List.fold_left ~f:apply ~init:SMap.empty keywords
 
     (* Ghost keywords *)
 
@@ -389,10 +392,13 @@ module T =
     (* All symbols *)
 
     let symbols =
-      let add map (key, value) = SMap.add key value map in
+      let add map (key, data) =
+        match SMap.add ~key ~data map with
+          `Ok map -> map
+        | `Duplicate -> map in
       let apply map mk_kwd =
         add map (to_lexeme (mk_kwd Region.ghost), mk_kwd)
-      in List.fold_left apply SMap.empty symbols
+      in List.fold_left ~f:apply ~init:SMap.empty symbols
 
     (* Ghost symbols *)
 
@@ -462,16 +468,33 @@ module T =
 
     (* IMPORTANT: These values cannot be exported in Token.mli *)
 
-    let ghost_string   s = Wrap.ghost s
-    let ghost_verbatim s = Wrap.ghost s
-    let ghost_bytes    b = Wrap.ghost ("0x" ^ Hex.show b, b)
-    let ghost_int      z = Wrap.ghost (Z.to_string z, z)
-    let ghost_nat      z = Wrap.ghost (Z.to_string z ^ "n", z)
-    let ghost_mutez    i = Wrap.ghost (Int64.to_string i ^ "mutez", i)
-    let ghost_ident    i = Wrap.ghost i
-    let ghost_uident   c = Wrap.ghost c
-    let ghost_lang     l = Region.(wrap_ghost (wrap_ghost l))
-    let ghost_attr     a = Region.(wrap_ghost (a, None))
+    let wrap_string   s = Wrap.wrap s
+    let wrap_verbatim s = Wrap.wrap s
+    let wrap_bytes    b = Wrap.wrap ("0x" ^ Hex.show b, b)
+    let wrap_int      z = Wrap.wrap (Z.to_string z, z)
+    let wrap_nat      z = Wrap.wrap (Z.to_string z ^ "n", z)
+    let wrap_mutez    i = Wrap.wrap (Int64.to_string i ^ "mutez", i)
+    let wrap_ident    i = Wrap.wrap i
+    let wrap_uident   c = Wrap.wrap c
+
+    let wrap_attr key value region =
+      Region.{value = (key, value); region}
+
+    let wrap_lang lang region =
+      let start = region#start#shift_bytes (String.length "[%") in
+      let lang_reg = Region.make ~start ~stop:region#stop in
+      Region.{region; value = {value=lang; region=lang_reg}}
+
+    let ghost_string   s = wrap_string   s   Region.ghost
+    let ghost_verbatim s = wrap_verbatim s   Region.ghost
+    let ghost_bytes    b = wrap_bytes    b   Region.ghost
+    let ghost_int      z = wrap_int      z   Region.ghost
+    let ghost_nat      z = wrap_nat      z   Region.ghost
+    let ghost_mutez    i = wrap_mutez    i   Region.ghost
+    let ghost_ident    i = wrap_ident    i   Region.ghost
+    let ghost_uident   c = wrap_uident   c   Region.ghost
+    let ghost_attr   k v = wrap_attr     k v Region.ghost
+    let ghost_lang     l = wrap_lang     l   Region.ghost
 
     let ghost_String   s = String   (ghost_string s)
     let ghost_Verbatim s = Verbatim (ghost_verbatim s)
@@ -481,13 +504,15 @@ module T =
     let ghost_Mutez    i = Mutez    (ghost_mutez i)
     let ghost_Ident    i = Ident    (ghost_ident i)
     let ghost_UIdent   c = UIdent   (ghost_uident c)
+    let ghost_Attr   k v = Attr     (ghost_attr k v)
     let ghost_Lang     l = Lang     (ghost_lang l)
-    let ghost_Attr     a = Attr     (ghost_attr a)
 
     (* VIRTUAL TOKENS *)
 
-    let ghost_es6fun = Region.ghost
-    let ghost_ES6FUN = ES6FUN ghost_es6fun
+    let wrap_es6fun      = wrap ""
+    let mk_ES6FUN region = ES6FUN (wrap_es6fun region)
+    let ghost_es6fun     = wrap_es6fun Region.ghost
+    let ghost_ES6FUN     = mk_ES6FUN Region.ghost
 
     (* END-OF-FILE TOKEN *)
 
@@ -659,7 +684,7 @@ module T =
 
     (* Virtual tokens *)
 
-    | ES6FUN region -> region, "ES6FUN"
+    | ES6FUN t -> t#region, "ES6FUN"
 
     (* End-Of-File *)
 
@@ -683,7 +708,7 @@ module T =
     type kwd_err = Invalid_keyword
 
     let mk_kwd ident region =
-      match SMap.find_opt ident keywords with
+      match SMap.find keywords ident with
         Some mk_kwd -> Ok (mk_kwd region)
       |        None -> Error Invalid_keyword
 
@@ -730,14 +755,14 @@ module T =
     type sym_err = Invalid_symbol of string
 
     let mk_sym lexeme region =
-      match SMap.find_opt lexeme symbols with
+      match SMap.find symbols lexeme with
         Some mk_sym -> Ok (mk_sym region)
       |        None -> Error (Invalid_symbol lexeme)
 
     (* Identifiers *)
 
     let mk_ident value region =
-      match SMap.find_opt value keywords with
+      match SMap.find keywords value with
         Some mk_kwd -> mk_kwd region
       |        None -> Ident (wrap value region)
 
@@ -766,7 +791,8 @@ module T =
                       "a"; "b"; "c"; "d"; "e"; "f"]
 
     let is_hex = function
-      UIdent t | Ident t -> List.mem t#payload hex_digits
+      UIdent t | Ident t ->
+        List.mem hex_digits t#payload ~equal:String.equal
     | _ -> false
 
     let is_sym = function
@@ -803,7 +829,7 @@ module T =
 
     (* String delimiters *)
 
-    let support_string_delimiter c = (c = '"')
+    let support_string_delimiter c = Char.(c = '"')
 
     (* Verbatim strings *)
 

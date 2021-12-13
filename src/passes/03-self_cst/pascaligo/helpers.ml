@@ -1,3 +1,4 @@
+module List = Simple_utils.List
 open Cst.Pascaligo
 
 (* Utility functions *)
@@ -106,7 +107,7 @@ let rec fold_expr : ('a, 'err) folded -> 'a -> expr -> 'a =
       in res
 
   | E_Cond {value;region=_} ->
-     let {kwd_if=_; test; kwd_then=_; if_so; if_not}
+     let {kwd_if=_; test; kwd_then=_; kwd_then=_; if_so; if_not}
          : (expr, expr) conditional = value in
      let res = self init test in
      let res = self res if_so in
@@ -202,7 +203,8 @@ let rec fold_expr : ('a, 'err) folded -> 'a -> expr -> 'a =
      self init value.inside
 
   | E_Fun {value;region=_} ->
-     let ({kwd_function=_; parameters=_; ret_type; kwd_is=_; return}: fun_expr) = value in
+     let ({kwd_function=_; parameters=_; ret_type; kwd_is=_;
+           return; attributes=_}: fun_expr) = value in
      let res = self init return in
      (match ret_type with
         Some (_, ty) -> self_type res ty
@@ -387,7 +389,8 @@ and fold_statement : ('a, 'err) folded -> 'a -> statement -> 'a = fun f init s  
       | None -> res)
 
   | S_VarDecl {value;region=_} ->
-    let {kwd_var=_; pattern=_; var_type; assign=_; init=expr; terminator=_} = value in
+     let {kwd_var=_; pattern=_; var_type; assign=_; init=expr;
+          terminator=_; attributes=_} = value in
     let res = self_expr init expr in
     (match var_type with
       Some (_, ty) -> self_type res ty
@@ -402,7 +405,8 @@ and fold_statement : ('a, 'err) folded -> 'a -> statement -> 'a = fun f init s  
       | None -> res)
 
   | S_Decl D_Type {value;region=_} ->
-    let {kwd_type=_;name=_;kwd_is=_;type_expr;terminator=_} = value in
+     let {kwd_type=_; name=_; params=_; kwd_is=_;
+          type_expr; terminator=_} = value in
     let res = self_type init type_expr in
     res
 
@@ -450,7 +454,7 @@ and fold_declaration : ('a, 'err) folded -> 'a -> declaration -> 'a =
     | None ->    res
     )
   | D_Type {value;region=_} ->
-    let {kwd_type=_;name=_;kwd_is=_;type_expr;terminator=_} = value in
+    let {kwd_type=_;name=_;kwd_is=_;type_expr;terminator=_;params=_} = value in
     let res = self_type init type_expr in
     res
   | D_Module {value;region=_} ->
@@ -458,7 +462,7 @@ and fold_declaration : ('a, 'err) folded -> 'a -> declaration -> 'a =
     let res = self_module init module_ in
     res
   | D_ModAlias {value;region=_} ->
-    let {kwd_module=_;alias=_;kwd_is=_;binders=_;} = value in
+    let {kwd_module=_;alias=_;kwd_is=_;binders=_;terminator=_} = value in
     init
   | D_Directive _ -> init
 
@@ -545,7 +549,7 @@ let rec map_expression : 'err mapped -> expr -> expr =
       return @@ E_Case {value;region}
   | E_Cond {value;region} ->
      let ({kwd_if=_; test; kwd_then=_; if_so; if_not}
-          : (expr, expr) conditional) = value in
+          : expr conditional) = value in
      let test = self test in
      let if_so = self if_so in
      let if_not =
@@ -652,7 +656,8 @@ let rec map_expression : 'err mapped -> expr -> expr =
        let field_expr = self e.value.field_expr in
        {e with value = {e.value with field_expr}} in
      let ne_elements = map_npseq aux value.updates.value.ne_elements in
-     let updates = {value.updates with value = {value.updates.value with ne_elements}} in
+     let updates =
+       {value.updates with value = {value.updates.value with ne_elements}} in
      let value = {value with updates} in
      return @@ E_Update {value;region}
   | E_ModPath {value; region} ->
@@ -679,12 +684,12 @@ let rec map_expression : 'err mapped -> expr -> expr =
      let value = {value with inside} in
      return @@ E_Par {value; region}
   | E_Fun {value;region} ->
-     let ({kwd_function=_; parameters=_; ret_type; kwd_is=_; return=body}
-          : fun_expr) = value in
+     let ({kwd_function=_; parameters=_; ret_type; kwd_is=_;
+           return=body; attributes=_} : fun_expr) = value in
      let body = self body in
      let ret_type =
        Option.map ~f:(fun (a,b) -> let b = self_type b in (a,b)) ret_type in
-     let value = {value with return=body;ret_type}
+     let value = {value with return=body; ret_type}
      in return @@ E_Fun {value;region}
   | E_CodeInj {value; region} ->
      let code = self value.code in
@@ -718,7 +723,7 @@ let rec map_expression : 'err mapped -> expr -> expr =
      return @@ E_Map {value;region}
   | E_BigMap {value; region} ->
      let aux (b: binding reg) =
-       let {key;arrow;value} = b.value in
+       let {key; arrow; value} = b.value in
        let key = self key in
        let value  = self value in
        let value = {key; arrow; value}
@@ -978,15 +983,16 @@ type b. (b-> b) -> (b case_clause reg,_) Utils.nsepseq reg -> (b case_clause reg
       let value = {value with init; const_type}
       in return @@ D_Const {value; region}
   | D_Fun {value; region} ->
-     let {kwd_recursive=_; kwd_function=_; fun_name=_; parameters=_; ret_type;
-          kwd_is=_; return=expr; terminator=_; attributes=_} = value in
+     let {kwd_recursive=_; kwd_function=_; fun_name=_; parameters=_;
+          ret_type; kwd_is=_; return=expr; terminator=_; attributes=_} = value in
      let expr = self_expr expr in
      let ret_type =
        Option.map ~f:(fun (a,b) -> let b = self_type b in (a,b)) ret_type in
      let value = {value with return = expr; ret_type} in
      return @@ D_Fun {value;region}
   | D_Type {value; region} ->
-      let {kwd_type=_; name=_; kwd_is=_; type_expr; terminator=_} = value in
+      let {kwd_type=_; name=_; params=_; kwd_is=_;
+           type_expr; terminator=_} = value in
       let type_expr = self_type type_expr in
       let value = {value with type_expr} in
       return @@ D_Type {value;region}

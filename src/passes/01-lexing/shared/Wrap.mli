@@ -4,18 +4,22 @@
 
 module Region = Simple_utils.Region
 
+(* Local dependencies *)
+
+type attributes = Attr.attribute Region.reg list
+
 (* Wrapping tokens with metadata *)
 
 type 'payload wrap = <
   payload    : 'payload;
-  attributes : Attr.attributes;
+  attributes : attributes;
   region     : Region.t;
 
-  set_attributes : Attr.attributes -> 'payload wrap
+  set_attributes : attributes -> 'payload wrap
 >
 
 type 'a t = 'a wrap
 
-val wrap : ?attributes:Attr.attributes -> 'a -> Region.t -> 'a wrap
+val wrap : ?attributes:attributes -> 'a -> Region.t -> 'a wrap
 
 val ghost : 'a -> 'a wrap

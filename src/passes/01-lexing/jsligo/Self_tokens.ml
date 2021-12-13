@@ -52,7 +52,7 @@ let tokens_of = function
         Token.LineCom (Token.wrap value region) :: tokens
     | Core.Markup _ -> tokens
     | Core.Directive d -> Token.Directive d :: tokens
-    in List.fold_left apply [] lex_units |> List.rev |> ok
+    in List.fold_left ~f:apply ~init:[] lex_units |> List.rev |> ok
 | Error _ as err -> err
 
 (* Automatic Semicolon Insertion *)
@@ -89,7 +89,7 @@ let automatic_semicolon_insertion tokens =
     else (
       match token with
         RBRACE _ as t ->
-        inner (t :: SEMI (Token.wrap ";" (Region.make ~start:(r#shift_one_uchar (-1))#stop ~stop:r#stop)) :: token :: result) rest
+        inner (t :: SEMI (Token.wrap_semi (Region.make ~start:(r#shift_one_uchar (-1))#stop ~stop:r#stop)) :: token :: result) rest
       | _ ->
         inner (t :: token :: result) rest
     )
@@ -105,17 +105,12 @@ let automatic_semicolon_insertion units =
 
 let attribute_regexp = Str.regexp "@\\([a-zA-Z:0-9_]+\\)"
 
-let collect_attributes str =
-  let rec inner result str =
-    try
-      let r = Str.search_forward attribute_regexp str 0 in
-      let s = Str.matched_group 0 str in
-      let s = String.sub s 1 (String.length s - 1) in
-      let next = String.sub str (r + String.length s)
-                            (String.length str - (r + String.length s)) in
-      inner (s :: result) next
-    with Not_found -> result
-  in inner [] str
+let collect_attributes str : string list =
+  let x : Str.split_result list = Str.full_split attribute_regexp str in
+  let f (acc : string list) = function
+    Str.Text _ -> acc
+  | Str.Delim string -> string :: acc
+  in List.rev (List.fold_left ~f ~init:[] x)
 
 let attributes tokens =
   let open! Token in
@@ -123,9 +118,9 @@ let attributes tokens =
     LineCom c :: tl
   | BlockCom c :: tl ->
       let attrs = collect_attributes c#payload in
-      let attrs =
-        List.map (fun a -> Attr {region=c#region; value=(a,None)}) attrs in
-      inner (attrs @ result) tl
+      let apply key = Token.mk_attr ~key c#region in
+      let attrs = List.map ~f:apply attrs
+      in inner (attrs @ result) tl
   | hd :: tl -> inner (hd :: result) tl
   | [] -> List.rev result
   in inner [] tokens
@@ -139,7 +134,7 @@ let inject_zwsp lex_units =
   let rec aux acc = function
     [] -> List.rev acc
   | (Core.Token GT _ as gt1) :: (Core.Token GT reg :: _ as units) ->
-      aux (Core.Token (ZWSP reg#region) :: gt1 :: acc) units
+      aux (Core.Token (Token.mk_ZWSP reg#region) :: gt1 :: acc) units
   | unit::units -> aux (unit::acc) units
   in aux [] lex_units
 
@@ -158,7 +153,7 @@ let print_unit = function
     Printf.printf "%s\n" (Directive.to_string ~offsets:true `Point d)
 
 let print_units units =
-  apply (fun units -> List.iter print_unit units; units) units
+  apply (fun units -> List.iter ~f:print_unit units; units) units
 
 (* Printing tokens *)
 
@@ -166,7 +161,7 @@ let print_token token =
   Printf.printf "%s\n" (Token.to_string ~offsets:true `Point token)
 
 let print_tokens tokens =
-  apply (fun tokens -> List.iter print_token tokens; tokens) tokens
+  apply (fun tokens -> List.iter ~f:print_token tokens; tokens) tokens
 
 
 (* insert vertical bar for sum type *)

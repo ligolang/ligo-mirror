@@ -392,11 +392,8 @@ let_declaration:
 %inline attributes:
   ioption(nseq("[@attr]") { Utils.nseq_to_list $1 }) {
     let l = list_of_option $1 in
-    let filter (attr: Attr.t reg) =
-      {attr with value = fst attr.value } in
-    List.map filter l
-             (*    List.map unwrap l*)
-  }
+    let filter (attr: Attr.t reg) = {attr with value = fst attr.value}
+    in List.map filter l }
 
 let_binding:
   var_pattern type_parameters parameters let_lhs_type "=" expr {

@@ -65,7 +65,7 @@ let rec print_cst state {statements; _} =
   let statements = Utils.nseq_to_list statements in
   let apply len rank = print_toplevel_statement (state#pad len rank)
   in print_node state "<ast>";
-     List.iteri (List.length statements |> apply) statements
+     List.iteri ~f:(List.length statements |> apply) statements
 
 and print_toplevel_statement state = function
   TopLevel (stmt, _) -> print_statement state stmt
@@ -79,7 +79,7 @@ and print_statement state = function
     print_loc_node state "SBlock" region;
     let statements = Utils.nsepseq_to_list inside in
     let apply len rank = print_statement (state#pad len rank) in
-    List.iteri (List.length statements |> apply) statements
+    List.iteri ~f:(List.length statements |> apply) statements
 | SExpr e ->
     print_node  state "SExpr";
     print_expr (state#pad 1 0) e
@@ -123,21 +123,21 @@ and print_statement state = function
 and print_let_stmt state (node: let_decl reg) =
   let {attributes; bindings; _} : let_decl = node.value in
   let val_bindings = Utils.nsepseq_to_list bindings in
-  (if attributes <> [] then
+  (if not (List.is_empty attributes) then
     print_attributes state attributes);
   print_loc_node state "SLet" node.region;
   let len = List.length val_bindings in
   let apply rank = print_val_binding (state#pad len rank) in
-  List.iteri apply val_bindings
+  List.iteri ~f:apply val_bindings
 
 and print_const_stmt state (node: const_decl reg) =
   let {attributes; bindings; _} : const_decl = node.value in
   let val_bindings = Utils.nsepseq_to_list bindings in
-  (if attributes <> [] then
+  (if not (List.is_empty attributes) then
     print_attributes state attributes);
   print_loc_node state "SConst" node.region;
   let apply len rank = print_val_binding (state#pad len rank) in
-  List.iteri (List.length val_bindings |> apply) val_bindings
+  List.iteri ~f:(List.length val_bindings |> apply) val_bindings
 
 and print_for_of state {index; expr; statement; _} =
   print_ident state index;
@@ -151,8 +151,8 @@ and print_while state {expr; statement; _} =
 and print_import state  {alias; module_path; _} =
   print_ident state alias;
   let items = Utils.nsepseq_to_list module_path in
-  let aux p = print_ident state p in
-  List.iter aux items
+  let f p = print_ident state p in
+  List.iter ~f items
 
 and print_namespace state (n, name, {value = {inside = statements;_}; _}, attributes) =
   print_loc_node state "<namespace>" n#region;
@@ -160,8 +160,7 @@ and print_namespace state (n, name, {value = {inside = statements;_}; _}, attrib
   print_ident    state name;
   let statements = Utils.nsepseq_to_list statements in
   let apply len rank = print_statement (state#pad len rank) in
-  List.iteri (List.length statements |> apply) statements
-
+  List.iteri ~f:(List.length statements |> apply) statements
 
 and print_switch_statement state node =
   let {expr; cases; _} = node in
@@ -170,7 +169,7 @@ and print_switch_statement state node =
   let cases = Utils.nseq_to_list cases in
   let length = List.length cases + 1 in
   let apply len rank = print_case (state#pad len (rank+1))
-  in List.iteri (apply length) cases
+  in List.iteri ~f:(apply length) cases
 
 and print_case state = function
   Switch_case { expr; statements; _ } ->
@@ -178,22 +177,22 @@ and print_case state = function
     print_expr state expr;
     (match statements with
     | Some statements ->
-      let statements = Utils.nsepseq_to_list statements in
-      let apply len rank = print_statement (state#pad len rank) in
-      List.iteri (List.length statements |> apply) statements
+        let statements = Utils.nsepseq_to_list statements in
+        let apply len rank = print_statement (state#pad len rank) in
+        List.iteri ~f:(List.length statements |> apply) statements
     | None -> ())
 | Switch_default_case { statements; _ } ->
     print_node state "<default>";
     (match statements with
     | Some statements ->
-      let statements = Utils.nsepseq_to_list statements in
-      let apply len rank = print_statement (state#pad len rank) in
-      List.iteri (List.length statements |> apply) statements
+        let statements = Utils.nsepseq_to_list statements in
+        let apply len rank = print_statement (state#pad len rank) in
+        List.iteri ~f:(List.length statements |> apply) statements
     | None -> ())
 
 and print_val_binding state (node: val_binding reg) =
   let {binders; lhs_type; expr; _} = node.value in
-  let fields = if lhs_type = None then 2 else 3 in
+  let fields = if Option.is_none lhs_type then 2 else 3 in
   let arity = 0 in
   print_node state "<binding>";
   print_pattern (state#pad fields arity) binders;
@@ -210,7 +209,7 @@ and print_val_binding state (node: val_binding reg) =
 
 and print_pvar state (node: var_pattern reg) =
   let {variable; attributes} = node.value in
-  if attributes = [] then
+  if List.is_empty attributes then
     print_ident state variable
   else
     (print_node       state "PVar";
@@ -237,12 +236,12 @@ and print_pattern state = function
     print_loc_node state "<object>" region;
     let properties = Utils.nsepseq_to_list inside in
     let apply len rank = print_pattern (state#pad len rank) in
-    List.iteri (List.length properties |> apply) properties
+    List.iteri ~f:(List.length properties |> apply) properties
 | PArray {value = {inside; _}; region} ->
     print_loc_node state "<array>" region;
     let items = Utils.nsepseq_to_list inside in
     let apply len rank = print_pattern (state#pad len rank) in
-    List.iteri (List.length items |> apply) items
+    List.iteri ~f:(List.length items |> apply) items
 
 and print_type_decl state decl =
   print_ident     (state#pad 2 0) decl.name;
@@ -251,14 +250,14 @@ and print_type_decl state decl =
 and print_ne_injection :
   'a.(state -> 'a -> unit) -> state -> 'a ne_injection -> unit =
   fun printer state inj ->
-    let ne_elements    = Utils.nsepseq_to_list inj.ne_elements in
-    let length         = List.length ne_elements in
-    let arity          = if inj.attributes = [] then length else length + 1
+    let ne_elements = Utils.nsepseq_to_list inj.ne_elements in
+    let length      = List.length ne_elements in
+    let arity       = if List.is_empty inj.attributes
+                      then length else length + 1
     and apply len rank = printer (state#pad len rank)
-    in List.iteri (apply arity) ne_elements;
-       let state = state#pad arity (arity-1)
-       in
-       if inj.attributes <> [] then
+    in List.iteri ~f:(apply arity) ne_elements;
+       let state = state#pad arity (arity-1) in
+       if not (List.is_empty inj.attributes) then
         print_attributes state inj.attributes
 
 and print_bytes state {value=lexeme,hex; region} =
@@ -279,8 +278,8 @@ and print_expr state = function
 | ESeq {value; region} ->
     print_loc_node state "ESeq" region;
     let exprs = Utils.nsepseq_to_list value in
-    let apply len rank = print_expr (state#pad len rank) in
-    List.iteri (List.length exprs |> apply) exprs
+    let apply len rank = print_expr (state#pad len rank)
+    in List.iteri ~f:(List.length exprs |> apply) exprs
 | EAssign (lhs, _, rhs) ->
     print_node state "EAssign";
     print_expr (state#pad 1 0) lhs;
@@ -305,8 +304,8 @@ and print_expr state = function
     (match inside with
       Some inside ->
         let items  = Utils.nsepseq_to_list inside in
-        let apply len rank = print_array_item (state#pad len rank) in
-        List.iteri (List.length items |> apply) items
+        let apply len rank = print_array_item (state#pad len rank)
+        in List.iteri ~f:(List.length items |> apply) items
     | None ->
         print_loc_node state "<empty>" region)
 | EConstr e_constr ->
@@ -315,8 +314,8 @@ and print_expr state = function
 | EObject {value = {inside; _}; region} ->
     print_loc_node state "EObject" region;
     let properties  = Utils.nsepseq_to_list inside in
-    let apply len rank = print_property (state#pad len rank) in
-    List.iteri (List.length properties |> apply) properties
+    let apply len rank = print_property (state#pad len rank)
+    in List.iteri ~f:(List.length properties |> apply) properties
 | EString e_string ->
     print_node state "EString";
     print_string_expr (state#pad 1 0) e_string
@@ -376,7 +375,7 @@ and print_property state = function
 
 and print_fun_expr state node =
   let {parameters; lhs_type; body; _} = node in
-  let fields = if lhs_type = None then 2 else 3 in
+  let fields = if Option.is_none lhs_type then 2 else 3 in
   let () =
     let state = state#pad fields 0 in
     print_node state "<parameters>";
@@ -396,7 +395,7 @@ and print_fun_expr state node =
         let apply len rank = print_statement (state#pad len rank) in
 
         print_loc_node state "<function_body>" region;
-        List.iteri (List.length statements |> apply) statements
+        List.iteri ~f:(List.length statements |> apply) statements
     | ExpressionBody e_body ->
         print_node state "<expression body>";
         print_expr (state#pad 1 0) e_body
@@ -418,7 +417,7 @@ and print_tuple_expr state (node: (expr, comma) Utils.nsepseq reg) =
   let exprs          = Utils.nsepseq_to_list node.value in
   let length         = List.length exprs in
   let apply len rank = print_expr (state#pad len rank)
-  in List.iteri (apply length) exprs
+  in List.iteri ~f:(apply length) exprs
 
 and print_arguments state = function
   | Multiple x ->
@@ -542,7 +541,7 @@ and print_type_expr state = function
     let args, _, range = value in
     print_fun_type_args state args;
     print_loc_node state "<result>" region;
-    List.iteri (apply 2) [range]
+    List.iteri ~f:(apply 2) [range]
 | TPar {value={inside;_}; region} ->
     print_loc_node  state "TPar" region;
     print_type_expr (state#pad 1 0) inside
@@ -574,29 +573,29 @@ and print_fun_type_args state {inside; _} =
   print_node state "<parameters>";
   let fun_type_args = Utils.nsepseq_to_list inside in
   let apply len rank = print_fun_type_arg (state#pad len rank) in
-  List.iteri (List.length fun_type_args |> apply) fun_type_args
+  List.iteri ~f:(List.length fun_type_args |> apply) fun_type_args
 
 and print_sum_type state {variants; attributes; _} =
   let variants = Utils.nsepseq_to_list variants.value in
   let arity    = List.length variants in
-  let arity    = if attributes = [] then arity else arity+1 in
+  let arity    = if List.is_empty attributes then arity else arity+1 in
   let apply arity rank variant =
     let state = state#pad arity rank
     in print_variant state variant in
-  let () = List.iteri (apply arity) variants in
-  if attributes <> [] then
+  let () = List.iteri ~f:(apply arity) variants in
+  if not (List.is_empty attributes) then
     let state = state#pad arity (arity-1)
     in print_attributes state attributes
 
 and print_variant state (node : variant reg) =
   let {attributes; tuple; _} = node.value in
-  let arity = if attributes = [] then 0 else 1 in
+  let arity = if List.is_empty attributes then 0 else 1 in
   let {constr; params} = tuple.value.inside in
   let params =
     match params with
       None -> []
     | Some (_, seq) -> Utils.nsepseq_to_list seq in
-  let arity = if params = [] then arity else arity+1 in
+  let arity = if List.is_empty params then arity else arity+1 in
   let rank = 0 in
   let () = print_ident state constr in
   let rank =
@@ -604,34 +603,34 @@ and print_variant state (node : variant reg) =
       [] -> rank
     | components ->
         let apply len rank = print_type_expr (state#pad len rank)
-        in List.iteri (List.length components |> apply) components; rank+1 in
-  let () = if attributes <> [] then
+        in List.iteri ~f:(List.length components |> apply) components; rank+1 in
+  let () = if not (List.is_empty attributes) then
              print_attributes (state#pad arity rank) attributes
   in ()
 
 and print_type_tuple state {value; _} =
   let components     = Utils.nsepseq_to_list value.inside in
   let apply len rank = print_type_expr (state#pad len rank)
-  in List.iteri (List.length components |> apply) components
+  in List.iteri ~f:(List.length components |> apply) components
 
 and print_attributes state attributes =
   print_node state "<attributes>";
   let length         = List.length attributes in
   let apply len rank = print_ident (state#pad len rank)
-  in List.iteri (apply length) attributes
+  in List.iteri ~f:(apply length) attributes
 
 and print_field_decl state {value; _} =
-  let arity = if value.attributes = [] then 1 else 2 in
+  let arity = if List.is_empty value.attributes then 1 else 2 in
   print_ident      state value.field_name;
   print_type_expr  (state#pad arity 0) value.field_type;
-  if value.attributes <> [] then
+  if not (List.is_empty value.attributes) then
     print_attributes (state#pad arity 1) value.attributes
 
 and print_cartesian state {inside;_} =
   let t_exprs        = Utils.nsepseq_to_list inside in
   let arity          = List.length t_exprs in
   let apply len rank = print_type_expr (state#pad len rank)
-  in List.iteri (apply arity) t_exprs;
+  in List.iteri ~f:(apply arity) t_exprs;
 
 (* PRINTING (client-slide) *)
 

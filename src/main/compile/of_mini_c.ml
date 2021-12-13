@@ -4,6 +4,7 @@ open Proto_alpha_utils
 open Trace
 open! Stacking
 open Tezos_micheline
+open Simple_utils
 
 let dummy_locations : 'l 'p. ('l, 'p) Micheline.node -> (Location.t, 'p) Micheline.node =
   fun e ->
@@ -42,7 +43,7 @@ let aggregate_and_compile ~raise : options:Compiler_options.t -> program -> form
 
 let aggregate_and_compile_contract ~raise : options:Compiler_options.t ->  program -> string -> Stacking.compiled_expression =
     fun ~options program name ->
-  let (exp, idx) = trace_option ~raise entrypoint_not_found @@ Mini_c.get_entry program name in
+  let (exp, idx) = trace_option ~raise main_entrypoint_not_found @@ Mini_c.get_entry program name in
   let program' = List.take program idx in
   aggregate_and_compile ~raise ~options program' (ContractForm exp)
 
@@ -62,6 +63,6 @@ let aggregate ~raise = fun program form ->
   Self_mini_c.all_expression ~raise aggregated
 
 let aggregate_contract ~raise = fun (program : Types.program) name ->
-  let (exp, idx) = trace_option ~raise entrypoint_not_found @@ get_entry program name in
+  let (exp, idx) = trace_option ~raise main_entrypoint_not_found @@ get_entry program name in
   let program' = List.take program idx in
   aggregate ~raise program' (ContractForm exp)

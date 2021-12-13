@@ -18,6 +18,7 @@ module Region    = Simple_utils.Region
 
 (* Internal dependencies *)
 
+module Attr = Lexing_shared.Attr
 module Tree = Cst_shared.Tree
 
 type state = Tree.state
@@ -34,7 +35,7 @@ type ('a, 'sep) nsepseq = ('a, 'sep) Utils.nsepseq
 let print_list :
   state -> ?region:Region.t -> label -> 'a Tree.printer -> 'a list -> unit =
   fun state ?region label print list ->
-    let children = List.map (Tree.mk_child print) list
+    let children = List.map ~f:(Tree.mk_child print) list
     in Tree.print ?region state label children
 
 let print_nsepseq state ?region label print  node =
@@ -51,7 +52,7 @@ let print_attribute state (node : Attr.t reg) =
         Tree.mk_child Tree.print_node value]
       in Tree.print state "<attributes>" children
 
-let print_attributes state (node : Attr.attributes) =
+let print_attributes state (node : Attr.attribute reg list) =
   print_list state "<attributes>" print_attribute node
 
 (* Preprocessing directives *)
@@ -165,7 +166,7 @@ and print_param_kind state = function
 | `Const kwd_const -> Tree.print_literal state kwd_const
 
 and print_variable state (node : variable) =
-  if node#attributes = [] then
+  if List.is_empty node#attributes then
     Tree.print_literal state node
   else
     let children = [
@@ -284,7 +285,7 @@ and print_module_path :
   'a.'a Tree.printer -> label -> state -> 'a module_path reg -> unit =
   fun print label state {value; region} ->
     let children =
-      (List.map (Tree.mk_child Tree.print_literal)
+      (List.map ~f:(Tree.mk_child Tree.print_literal)
       @@ Utils.nsepseq_to_list value.module_path)
       @ [Tree.mk_child print value.field]
     in Tree.print state label ~region children
@@ -303,7 +304,7 @@ and print_compound :
   'a.'a Tree.printer -> label -> state -> 'a compound reg -> unit =
   fun print label state {value; region} ->
     let children =
-      (List.map (Tree.mk_child print)
+      (List.map ~f:(Tree.mk_child print)
        @@ Utils.sepseq_to_list value.elements)
       @ [Tree.mk_child_list print_attributes value.attributes]
     in Tree.print state label ~region children
@@ -326,7 +327,7 @@ and print_T_String state (node : lexeme wrap) =
 and print_T_Sum state (node : sum_type reg) =
   let node = node.value in
   let variants =
-    List.map (Tree.mk_child print_variant)
+    List.map ~f:(Tree.mk_child print_variant)
   @@ Utils.nsepseq_to_list node.variants in
   let attributes =
     [Tree.mk_child_list print_attributes node.attributes]
@@ -439,7 +440,7 @@ and print_case :
       Tree.print_unary state "<condition>" print_expr in
 
     let cases =
-      List.map (Tree.mk_child @@ print_case_clause print)
+      List.map ~f:(Tree.mk_child @@ print_case_clause print)
     @@ Utils.nsepseq_to_list value.cases in
 
     let children = Tree.mk_child print_case_test value.expr :: cases
@@ -1047,7 +1048,7 @@ and print_E_Proj state (node : projection reg) =
   let Region.{value; region} = node in
   let children =
     Tree.mk_child print_expr value.record_or_tuple
-    :: (List.map (Tree.mk_child print_selection)
+    :: (List.map ~f:(Tree.mk_child print_selection)
         @@ Utils.nsepseq_to_list value.field_path)
   in Tree.print state "E_Proj" ~region children
 

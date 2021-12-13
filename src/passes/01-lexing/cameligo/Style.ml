@@ -45,8 +45,9 @@ let is_bytes  = function Token.Bytes _ -> true | _ -> false
 let hex_digits = ["A"; "B"; "C"; "D"; "E"; "F";
                   "a"; "b"; "c"; "d"; "e"; "f"]
 
-let is_hexa = function
-  Token.UIdent t | Token.Ident t -> List.mem t#payload hex_digits
+let is_hex = function
+  Token.UIdent t | Token.Ident t ->
+    List.mem hex_digits t#payload ~equal:String.equal
 | _ -> false
 
 let is_sym =
@@ -100,7 +101,7 @@ let rec check orig = function
               else fail region Missing_break
          else
            if   is_bytes token
-           then if   is_int next || is_hexa next
+           then if   is_int next || is_hex next
                 then fail region Odd_lengthed_bytes
                 else
                   if   is_sym next || is_eof next

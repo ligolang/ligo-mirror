@@ -114,7 +114,7 @@ type ctor        = lexeme wrap
 type language    = lexeme reg   (* Not [wrap] *)
 
 type attribute   = Attr.t
-type attributes  = Attr.attributes
+type attributes  = Attr.attribute reg list
 
 (* Parentheses *)
 

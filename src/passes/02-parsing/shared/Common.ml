@@ -227,8 +227,16 @@ module type LIGO_PARSER =
 
     (* The recovery API. *)
 
-    module Recovery : Merlin_recovery.RECOVERY_GENERATED
-           with module I := MenhirInterpreter
+    module Recovery :
+      sig
+        include Merlin_recovery.RECOVERY_GENERATED
+                with module I := MenhirInterpreter
+
+        module Default :
+          sig
+            val default_reg : Region.t ref
+          end
+      end
   end
 
 (* Making parsers for CSTs and expressions *)
@@ -275,7 +283,8 @@ module MakeTwoParsers
           end
       end
 
-    module ContractParser = Partial (ContractCST) (ContractParser_Menhir)
+    module ContractParser =
+      Partial (ContractCST) (ContractParser_Menhir)
 
     let from_file  = ContractParser.parse_file
     let parse_file = from_file
