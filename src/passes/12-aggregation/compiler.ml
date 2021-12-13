@@ -89,12 +89,14 @@ module Data = struct
 
   let resolve_variable : t -> expression_variable -> expression_variable option =
     fun data v ->
-      let res_env = resolve_module_path (List.Ne.of_list data.curr_path) data.env in
       let f = function
         | Expression { name ; _ } when Var.equal name.wrap_content v.wrap_content ->
           Some (name_in_current_path data name)
         | (Module _ | Expression _) -> None
       in
+      let res_env = match data.curr_path with
+      | [] -> data.env
+      | _ -> resolve_module_path (List.Ne.of_list data.curr_path) data.env in
       List.find_map res_env ~f
 end
 
