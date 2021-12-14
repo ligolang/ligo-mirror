@@ -13,58 +13,39 @@ type err = Errors.aggregation_error raise
     List.fold lst  *)
 
 module Data = struct
-  type path = string list
+  type uniq_ident = int
+  type path_id = (module_variable * uniq_ident)
+  type path = path_id list
   type env_item =
     | Expression of { name: expression_variable ; item: Ast_aggregated.expression  }
-    | Module of { name: module_variable ; item: module_env }
+    | Module of { name: path_id ; item: module_env }
 
   and module_env = env_item list
 
   type t = {
     curr_path : path ;
-    env : module_env
+    env : module_env ;
   }
 
   let rec pp_module_env : Format.formatter -> module_env -> unit = fun ppf env ->
     let aux : Format.formatter -> env_item -> unit = fun ppf ->
-      function | Expression {name;item} ->
-                  Format.fprintf ppf "%a -> %a" Var.pp name.wrap_content O.PP.expression item
-               | Module {name;item} ->
-                  Format.fprintf ppf "%a -> %a" Ast_typed.PP.module_variable name pp_module_env item in
+      function | Expression {name;item} -> ignore item ;
+                  Format.fprintf ppf "%a -> XX" Var.pp name.wrap_content (*O.PP.expression item *)
+               | Module {name = (name,id);item} ->
+                  Format.fprintf ppf "(%a, %d) -> %a" Ast_typed.PP.module_variable name id pp_module_env item in
     Format.fprintf ppf "@[<h>env:[%a]@]"
       (* (List.length env) *)
       PP_helpers.(list_sep aux (tag ","))
       env
   let pp_data : Format.formatter -> t -> unit = fun ppf data ->
-    Format.fprintf ppf "@[<h>curr_path: [%a]@.%a@]" (PP_helpers.list_sep_d PP_helpers.string) data.curr_path pp_module_env data.env
+    Format.fprintf ppf "@[<h>curr_path: [%a]@.%a@]" (PP_helpers.list_sep_d (PP_helpers.pair PP_helpers.string PP_helpers.int)) data.curr_path pp_module_env data.env
   let empty = { curr_path = [] ; env = [] }
-  let find_module v data =
-    let f = function
-      | Module {name ; item } -> if String.equal name v then Some item else None
-      | Expression _ -> None
-    in
-    List.find_map data.env ~f
-  let push_path : module_variable -> t -> t = fun s m -> { m with curr_path = m.curr_path @ [s] }
-  let rec add_to_module : module_env -> string list -> env_item -> module_env = fun env path new_item ->
-    match path with
-    | [] -> new_item :: env
-    | m :: path -> (
-      let f =
-        function
-        | Module { name ; item } when String.equal name m ->
-          let item = add_to_module item path new_item in
-          Some (Module { name ; item })
-        | _ -> None
-      in
-      List.rev @@ List.update_first (List.rev env) ~f
-    )
-  let extend_module : t -> module_variable -> module_env -> t = fun data name item ->
-    { data with env = add_to_module data.env data.curr_path (Module {name ; item }) }
+  let path_equal : path_id -> path_id -> bool = fun (n1,i1) (n2,i2) -> String.equal n1 n2 && Int.equal i1 i2
 
   let name_in_current_path data (name: O.expression_variable) =
     let loc = name.location in
     let (name,_) = Var.internal_get_name_and_counter name.wrap_content in
-    let str : string = List.fold_right ~f:(fun s r -> s ^ "#" ^ r) ~init:name data.curr_path in
+    let str : string = List.fold_right ~f:(fun (s,_) r -> s ^ "#" ^ r) ~init:name data.curr_path in
     Location.wrap ~loc (Var.of_name str)
 
   let prefix_var prefix (name: O.expression_variable) =
@@ -73,20 +54,74 @@ module Data = struct
     let str : string = List.fold_right ~f:(fun s r -> s ^ "#" ^ r) ~init:name prefix in
     Location.wrap ~loc (Var.of_name str)
 
-  let modules : module_env -> (module_variable * module_env) list = fun env ->
+  let modules : module_env -> (path_id * module_env) list = fun env ->
     List.filter_map env ~f:(function | Module {name;item} -> Some (name, item) | Expression _ -> None)
 
-  let resolve_module_path binders env =
-    let aux (e : module_env) (m : module_variable) =
-      match List.Assoc.find (modules e) ~equal:String.equal m with
-        | None -> failwith (Format.asprintf "coner case: could not resolve module alias rhs. This shouldn't pass typechecking: %s" m)
-        | Some e -> e
-    in
-    List.Ne.fold_left aux env binders
+  let resolve_module_path : t -> module_variable List.Ne.t -> module_env =
+    fun data requested_path ->
+      let requested_path = List.Ne.to_list requested_path in
+      let f (e: module_env) (m : module_variable) =
+        let modules_cur_level = modules e in
+        let last_of_path =
+          List.last data.curr_path
+        in
+        match last_of_path with
+        | Some (_,i) -> (
+          let lst = List.filter modules_cur_level ~f:(fun ((a,_),_) -> String.equal a m) in
+          if List.length lst > 1 then (
+            match List.Assoc.find modules_cur_level ~equal:path_equal (m,i-1) with
+            | None -> failwith (Format.asprintf "1coner case: could not resolve module alias rhs. This shouldn't pass typechecking: %s" m)
+            | Some e -> e
+          ) else (
+            match List.Assoc.find modules_cur_level ~equal:(fun (a,_) (b,_) -> String.equal a b) (m,-42) with
+            | None -> failwith (Format.asprintf "2coner case: could not resolve module alias rhs. This shouldn't pass typechecking: %s" m)
+            | Some e -> e
+          )
+        )
+        | None -> (
+          let lst = List.filter modules_cur_level ~f:(fun ((a,_),_) -> String.equal a m) in
+          let lst = List.max_elt lst ~compare:(fun ((_,a),_) ((_,b),_) -> Int.compare a b) in 
+          (* let () = Format.eprintf "\n\n!!\n%a\n%a\n" pp_data data (PP_helpers.list_sep_d PP_helpers.string) requested_path in *)
+          match lst with
+          | Some (_,x) -> x
+          | None -> failwith (Format.asprintf "coner case: could not resolve module alias rhs. This shouldn't pass typechecking: %s" m)
+        )
+      in
+      List.fold_left ~f ~init:data.env requested_path
 
+  let rec add_to_module : module_env -> path -> env_item -> module_env = fun env path new_item ->
+    match path with
+    | [] -> new_item :: env
+    | m :: path -> (
+      let f =
+        function
+        | Module { name ; item } when path_equal name m ->
+          let item = add_to_module item path new_item in
+          Some (Module { name ; item })
+        | _ -> None
+      in
+      List.rev @@ List.update_first (List.rev env) ~f
+    )
+  let enter_new_module : t -> module_variable -> t = fun data name ->
+    (* update the current path and create a new empty module in the environment *)
+    let cur_env = match data.curr_path with
+      | [] -> data.env
+      | _ -> resolve_module_path data (List.Ne.of_list (List.map ~f:fst data.curr_path))
+    in
+    let i = List.count cur_env ~f:(function Module { name = (name',_); _ } when String.equal name name' -> true | _ -> false) in
+    let env = add_to_module data.env data.curr_path (Module {name = (name,i); item = [] }) in
+    let curr_path = data.curr_path @ [(name,i)] in
+    { env ; curr_path }
   let extend_expression : t -> expression_variable -> Ast_aggregated.expression -> t = fun data name term ->
     { data with env = add_to_module data.env data.curr_path (Expression {name ; item = term }) }
-
+  let add_alias : t -> module_variable -> module_env -> t = fun data name item ->
+    let cur_env = match data.curr_path with
+      | [] -> data.env
+      | _ -> resolve_module_path data (List.Ne.of_list (List.map ~f:fst data.curr_path))
+    in
+    let i = List.count cur_env ~f:(function Module { name = (name',_); _ } when String.equal name name' -> true | _ -> false) in
+    let env = add_to_module data.env data.curr_path (Module {name = (name,i); item }) in
+    { data with env }
   let resolve_variable : t -> expression_variable -> expression_variable option =
     fun data v ->
       let f = function
@@ -96,36 +131,30 @@ module Data = struct
       in
       let res_env = match data.curr_path with
       | [] -> data.env
-      | _ -> resolve_module_path (List.Ne.of_list data.curr_path) data.env in
+      | _ -> resolve_module_path data (List.Ne.of_list (List.map ~f:fst data.curr_path)) in
       List.find_map res_env ~f
 
-  let resolve_variable_in_path : t -> module_variable list -> module_variable list -> expression_variable -> expression_variable option =
-    fun data curr_path path v ->
-      print_endline (Format.asprintf "data: %a" pp_data data);
+  let resolve_variable_in_path : t -> module_variable list -> expression_variable -> expression_variable option =
+    fun data path v ->
+      (* print_endline (Format.asprintf "data: %a" pp_data data); *)
       let f = function
         | Expression { name ; _ } when Var.equal name.wrap_content v.wrap_content ->
           Some (prefix_var path name)
         | (Module _ | Expression _) -> None
       in
       let res_env = match path with
-      | [] -> data.env
-      | _ -> resolve_module_path (List.Ne.of_list path) data.env in
+        | [] -> data.env
+        | _ -> resolve_module_path data (List.Ne.of_list path)
+      in
       match List.find_map res_env ~f with
       | None ->
-         let path = curr_path @ path in
+         let path = (List.map ~f:fst data.curr_path) @ path in
          let res_env = match path with
            | [] -> data.env
-           | _ -> resolve_module_path (List.Ne.of_list path) data.env in
+           | _ -> resolve_module_path data (List.Ne.of_list path) in
          List.find_map res_env ~f
       | Some v -> Some v
 
-  let rename_mod : t -> module_variable -> module_variable -> t = fun data n m ->
-    let f = function
-      | Module { name ; item } when String.equal n name -> Some (Module { name = m ; item })
-      | _ -> None in
-    let env = data.env in
-    let env = List.rev @@ List.update_first (List.rev env) ~f in
-    { data with env }
 end
 
 type result =
@@ -155,13 +184,8 @@ and compile_declaration ~raise : Data.t -> I.declaration_loc list -> (hole:resul
       )
       | I.Declaration_module { module_binder ; module_ ; module_attr = _ } -> (
         let (Module_Fully_Typed decls) = module_ in
-        let module_binder_ = module_binder ^ "$tmp" in
-        let data' =
-          (* update the current path and create a new empty module in the environment *)
-          Data.push_path module_binder_ (Data.extend_module data module_binder_ [])
-        in
+        let data' = Data.enter_new_module data module_binder in
         let f, data_mod = compile_declaration ~raise data' decls in
-        let data_mod = Data.rename_mod data_mod module_binder_ module_binder in
         let f_rest , data_rest = compile_declaration ~raise { data_mod with curr_path = data.curr_path } tl in
         (fun ~hole ->
           let hold_rest = Rec (f_rest ~hole) in
@@ -172,18 +196,14 @@ and compile_declaration ~raise : Data.t -> I.declaration_loc list -> (hole:resul
           match el with
           | Data.Expression {name ; item} ->
             O.e_a_let_in (Data.prefix_var prefix name) item acc (known_attributes_for_modules None)
-          | Data.Module {name ; item} -> (
+          | Data.Module {name=(name,_) ; item} -> (
             List.fold item ~f:(aux (prefix@[name])) ~init:acc
           )
         in
-        let resolve (e : Data.module_env) (m : module_variable) =
-          match List.Assoc.find (Data.modules e) ~equal:String.equal m with
-            | None -> failwith (Format.asprintf "coner case: could not resolve module alias rhs. This shouldn't pass typechecking: %s" m)
-            | Some e -> e
-        in
-        let env : Data.module_env = List.Ne.fold_left resolve data.env binders in
+        let env : Data.module_env = Data.resolve_module_path data binders in
+        let data = Data.add_alias data alias env in
         let (f, data) = compile_declaration ~raise data tl in
-        (fun ~hole -> List.fold env ~f:(aux (data.curr_path @ [alias])) ~init:(f ~hole)), data
+        (fun ~hole -> List.fold env ~f:(aux ((List.map ~f:fst data.curr_path) @ [alias])) ~init:(f ~hole)), data
       )
     )
     | [] -> (
@@ -229,7 +249,7 @@ and compile_type ~raise : I.type_expression -> O.type_expression =
 and compile_expression ~raise : Data.t -> I.expression -> O.expression =
   fun data expr ->
     (* let () = Format.eprintf "compile_expression '%a'\n" I.PP.expression expr in
-     * let () = Format.eprintf "%a\n" Data.pp_data data in *)
+     let () = Format.eprintf "%a\n" Data.pp_data data in *)
     let self ?(data = data) = compile_expression ~raise data in
     let return expression_content : O.expression =
       let type_expression = compile_type ~raise expr.type_expression in
@@ -301,7 +321,6 @@ and compile_expression ~raise : Data.t -> I.expression -> O.expression =
       return @@ O.E_constant { cons_name ; arguments }
     )
     | I.E_module_accessor { module_name; element} -> (
-      (* O.e_a_int (Z.of_int 42) *)
       let rec aux : string List.Ne.t -> (O.type_expression * O.type_expression) list -> I.expression -> _ * string List.Ne.t * (O.type_expression * O.type_expression) list * _ option =
         fun acc_path acc_types exp ->
           match exp.expression_content with
@@ -328,9 +347,9 @@ and compile_expression ~raise : Data.t -> I.expression -> O.expression =
       let v, path, types, record_path = aux (List.Ne.of_list [module_name]) [] element in
       let path = List.Ne.rev path in
       let path = List.Ne.to_list path in
-      print_endline (Format.asprintf "%a" I.PP.expression expr);
-      match Data.resolve_variable_in_path data data.curr_path path v with
-      | None -> failwith (Format.asprintf "%a | %a | %a" (PP_helpers.list_sep_d PP_helpers.string) data.curr_path (PP_helpers.list_sep_d PP_helpers.string) path O.PP.expression_variable v);
+      (* print_endline (Format.asprintf "%a" I.PP.expression expr); *)
+      match Data.resolve_variable_in_path data path v with
+      | None -> failwith (Format.asprintf "%a | %a | %a" (PP_helpers.list_sep_d (PP_helpers.pair PP_helpers.string PP_helpers.int)) data.curr_path (PP_helpers.list_sep_d PP_helpers.string) path O.PP.expression_variable v);
       | Some v ->
          match record_path with
          | None ->
@@ -355,18 +374,13 @@ and compile_expression ~raise : Data.t -> I.expression -> O.expression =
         match el with
         | Data.Expression {name ; item} ->
           O.e_a_let_in (Data.prefix_var prefix name) item acc (known_attributes_for_modules None)
-        | Data.Module {name ; item} -> (
+        | Data.Module {name = (name,_) ; item} -> (
           List.fold item ~f:(aux (prefix@[name])) ~init:acc
         )
       in
-      let resolve (e : Data.module_env) (m : module_variable) =
-        match List.Assoc.find (Data.modules e) ~equal:String.equal m with
-          | None -> failwith (Format.asprintf "coner case: could not resolve module alias rhs. This shouldn't pass typechecking: %s" m)
-          | Some e -> e
-      in
-      let env : Data.module_env = List.Ne.fold_left resolve data.env binders in
+      let env : Data.module_env = Data.resolve_module_path data binders in
       let result = self ~data result in
-      List.fold env ~f:(aux (data.curr_path @ [alias])) ~init:result
+      List.fold env ~f:(aux ((List.map ~f:fst data.curr_path) @ [alias])) ~init:result
     )
 
 and compile_cases ~raise : Data.t -> I.matching_expr -> O.matching_expr =
